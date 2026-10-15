@@ -1,0 +1,28 @@
+{
+  "name": "apresentacao-planejamento-unita",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Apresentação Obra/Cliente de Planejamento e Controle (substitui o Power BI One Page). Front HTML/CSS/JS sem build; servidor fino Node com contrato REST portável para PHP.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server/index.mjs",
+    "dev": "node --watch server/index.mjs",
+    "exemplo": "node --env-file=.env.exemplo server/index.mjs",
+    "vendor": "node server/tools/copiar-vendor.mjs",
+    "fixture": "node tests/fixtures/gerar-exemplo.mjs",
+    "test": "node --test \"tests/domain/*.test.mjs\" \"tests/api/*.test.mjs\"",
+    "test:e2e": "playwright test --config playwright.config.cjs",
+    "check": "node tests/tools/checar-projeto.mjs",
+    "verificar": "npm run check && npm test && npm run test:e2e",
+    "verificar:vercel": "npm run check && npm test",
+    "migrar:supabase": "node server/tools/migrar-para-supabase.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "chart.js": "4.4.7",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  }
+}

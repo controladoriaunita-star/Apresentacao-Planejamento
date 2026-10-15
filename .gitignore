@@ -1,0 +1,15 @@
+node_modules/
+# Dados de execução (usuários, cadastros, uploads, cache) — ficam só no servidor
+data/*
+!data/.gitkeep
+# Credenciais locais
+.env
+.env.local
+# Saídas de teste
+test-results/
+playwright-report/
+# Arquivos de referência grandes/sensíveis (ficam na pasta, fora do git)
+*.pbix
+*.xlsm
+*.xlsx
+IDENTIDADE_VISUAL_PARA_APP.html

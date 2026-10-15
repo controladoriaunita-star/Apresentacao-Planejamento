@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "apresentacao-exemplo",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "exemplo"],
+      "port": 5211
+    },
+    {
+      "name": "apresentacao",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
+      "port": 5210
+    }
+  ]
+}

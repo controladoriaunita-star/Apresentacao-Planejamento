@@ -1,0 +1,784 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Manual de uso da apresentação</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Relatório no padrão visual Unità v1.0: grafite + laranja como acento, Sora nos títulos, Inter no texto.
+   Layout: faixa de capa grafite, sumário fixo à esquerda (telas largas) e telas anotadas com legenda numerada. */
+:root {
+  --laranja: #fe5000; --laranja-suave: #fff1ea; --grafite: #231f20;
+  --fundo: #f8f7f6; --superficie: #ffffff; --borda: #e2dfdc; --texto: #1a1817; --apagado: #77716d; --codigo: #f0eeec;
+  --info: #2563a8; --info-suave: #e8f0fa; --ok: #1e8a4c; --ok-suave: #e7f5ec;
+  --sombra: 0 1px 2px rgb(26 24 23 / 0.04), 0 4px 18px rgb(26 24 23 / 0.06);
+  --display: 'Sora', 'Inter', system-ui, sans-serif; --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --fundo: #1a1817; --superficie: #2b2827; --borda: #3d3937; --texto: #f0eeec; --apagado: #a19b96; --codigo: #3d3937;
+  --laranja-suave: #3a2418; --info-suave: #1d2a3a; --ok-suave: #1b2e22; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --fundo: #1a1817; --superficie: #2b2827; --borda: #3d3937; --texto: #f0eeec; --apagado: #a19b96; --codigo: #3d3937;
+  --laranja-suave: #3a2418; --info-suave: #1d2a3a; --ok-suave: #1b2e22; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fundo); color: var(--texto); font: 15px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4 { font-family: var(--display); text-wrap: balance; margin: 0; }
+code { font: 12.5px ui-monospace, Consolas, monospace; background: var(--codigo); padding: 1px 5px; border-radius: 5px; overflow-wrap: anywhere; }
+a { color: var(--laranja); }
+.capa { background: var(--grafite); color: #fff; border-bottom: 3px solid var(--laranja); }
+.capa .in { max-width: 1240px; margin: 0 auto; padding-block: 40px 44px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.capa .eyebrow { color: var(--laranja); font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.capa h1 { font-size: clamp(28px, 4vw, 42px); margin-top: 8px; letter-spacing: -0.02em; }
+.capa p { color: rgb(255 255 255 / .72); max-width: 70ch; margin: 10px 0 0; }
+.capa .logo { height: 40px; width: auto; display: block; }
+.corpo { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 40px; padding-block: 32px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+nav.sumario { position: sticky; top: 16px; align-self: start; font-size: 13.5px; }
+nav.sumario b { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--apagado); margin-bottom: 8px; }
+nav.sumario a { display: block; color: var(--texto); text-decoration: none; padding: 5px 10px; border-left: 2px solid var(--borda); }
+nav.sumario a:hover { border-left-color: var(--laranja); color: var(--laranja); }
+main { min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+main > section.capitulo { display: flex; flex-direction: column; gap: 16px; scroll-margin-top: 16px; }
+.capitulo + .capitulo { border-top: 1px solid var(--borda); padding-top: 36px; margin-top: 16px; }
+.capitulo > h2 { font-size: 26px; letter-spacing: -0.01em; }
+.capitulo > .rotulo { color: var(--laranja); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.capitulo h3 { font-size: 18px; margin-top: 8px; }
+.capitulo p, .capitulo li { max-width: 78ch; }
+.nota { background: var(--info-suave); border-left: 3px solid var(--info); padding: 12px 16px; border-radius: 10px; font-size: 14px; }
+.validar { background: var(--laranja-suave); border-left: 3px solid var(--laranja); padding: 12px 16px; border-radius: 10px; font-size: 14px; }
+.validar b:first-child, .nota b:first-child { display: block; margin-bottom: 2px; }
+.passos { counter-reset: passo; list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.passos li { counter-increment: passo; position: relative; padding: 12px 16px 12px 52px; background: var(--superficie); border: 1px solid var(--borda); border-radius: 12px; }
+.passos li::before { content: counter(passo); position: absolute; left: 14px; top: 12px; width: 26px; height: 26px; border-radius: 50%; background: var(--grafite); color: #fff; font: 600 13px/26px var(--display); text-align: center; }
+.tela { margin: 0; }
+.tela-quadro { position: relative; border-radius: 14px; overflow: hidden; box-shadow: var(--sombra); border: 1px solid var(--borda); background: var(--superficie); max-width: 100%; }
+.tela-quadro img { display: block; width: 100%; height: auto; }
+.marca { position: absolute; border: 2px solid var(--laranja); border-radius: 8px; background: rgb(254 80 0 / .06); transition: background .15s, box-shadow .15s; }
+.marca b { position: absolute; left: -11px; top: -11px; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 12px; background: var(--laranja); color: #fff; font: 700 12px/24px var(--display); text-align: center; box-shadow: 0 0 0 2px #fff; }
+.marca:hover, .marca.ativa { background: rgb(254 80 0 / .18); box-shadow: 0 0 0 4px rgb(254 80 0 / .25); }
+.tela figcaption { font-size: 13px; color: var(--apagado); margin-top: 8px; }
+.tela figcaption span { opacity: .8; }
+.legenda ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+.legenda li { display: flex; gap: 12px; background: var(--superficie); border: 1px solid var(--borda); border-radius: 12px; padding: 12px 14px; scroll-margin-top: 16px; transition: border-color .15s; min-width: 0; }
+.legenda li.ativa, .legenda li:target { border-color: var(--laranja); box-shadow: 0 0 0 3px rgb(254 80 0 / .15); }
+.legenda .num { flex-shrink: 0; width: 26px; height: 26px; border-radius: 13px; background: var(--laranja); color: #fff; font: 700 12px/26px var(--display); text-align: center; }
+.legenda li > div { min-width: 0; }
+.legenda h4 { font-size: 14.5px; }
+.legenda p { margin: 4px 0 0; font-size: 13.5px; color: var(--texto); }
+.legenda .origem, .legenda .calculo { color: var(--texto); }
+.legenda .origem span, .legenda .calculo span { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 1px 7px; border-radius: 999px; margin-right: 6px; vertical-align: 1px; }
+.legenda .origem span { background: var(--info-suave); color: var(--info); }
+.legenda .calculo span { background: var(--ok-suave); color: var(--ok); }
+.tabela { overflow-x: auto; border: 1px solid var(--borda); border-radius: 12px; background: var(--superficie); }
+.tabela table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.tabela th, .tabela td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--borda); vertical-align: top; }
+.tabela th { font-size: 12px; color: var(--apagado); font-weight: 600; background: var(--fundo); }
+.tabela tr:last-child td { border-bottom: 0; }
+.cartoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.cartao { background: var(--superficie); border: 1px solid var(--borda); border-radius: 12px; padding: 14px 16px; }
+.cartao h4 { font-size: 15px; } .cartao p { margin: 6px 0 0; font-size: 13.5px; }
+.cartao .papel { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--laranja); }
+footer { text-align: center; color: var(--apagado); font-size: 12.5px; padding-block: 0 40px; }
+@media (max-width: 900px) { .corpo { grid-template-columns: 1fr; } nav.sumario { position: static; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="capa"><div class="in">
+  <img class="logo" src="img/logo-unita-white.png" alt="Unità Engenharia" width="140" height="54">
+  <div class="eyebrow" style="margin-top:18px">Planejamento e Controle</div>
+  <h1>Manual de uso da apresentação</h1>
+  <p>Como acessar, navegar pelas apresentações Obra e Cliente e manter o conteúdo (obras, TxC, fotos e telas do cliente).</p>
+</div></header>
+<div class="corpo">
+  <nav class="sumario" aria-label="Sumário"><b>Sumário</b><a href="#acesso">Acesso e perfis</a><a href="#navegacao">Navegação e filtros</a><a href="#abas">As abas</a><a href="#planejamento">Tarefas do Planejamento</a><a href="#usuarios">Usuários</a><a href="#duvidas">Dúvidas comuns</a></nav>
+  <main><section class="capitulo" id="acesso"><div class="rotulo">Começando</div><h2>Acesso e perfis</h2>
+  <div class="cartoes">
+    <div class="cartao"><span class="papel">Dev</span><h4>Acesso total</h4><p>Vê as duas apresentações, cadastra conteúdo, gerencia usuários e acompanha as fontes de dados e o INCC.</p></div>
+    <div class="cartao"><span class="papel">Planejamento</span><h4>Cadastra o conteúdo</h4><p>Cadastro de obras, TxC, fotos, telas do cliente, INCC manual e o botão "Atualizar dados".</p></div>
+    <div class="cartao"><span class="papel">Viewer</span><h4>Só visualiza</h4><p>Abre as apresentações Obra e Cliente, sem administração.</p></div>
+  </div>
+  
+  <figure class="tela" data-tela="login">
+    <div class="tela-quadro">
+      <img src="img/login.jpg" alt="Tela de entrada" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#login-1" data-n="1" style="left:38.94%;top:47.72%;width:22.12%;height:7.50%" aria-label="Ponto 1: E-mail e senha"><b>1</b></a><a class="marca" href="#login-2" data-n="2" style="left:38.94%;top:66.28%;width:22.12%;height:4.44%" aria-label="Ponto 2: Entrar"><b>2</b></a>
+    </div>
+    <figcaption>Tela de entrada <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="login-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>E-mail e senha</h4>
+          <p>Cada pessoa recebe o acesso do Dev (Administração → Usuários). A senha pode ser trocada em &quot;Minha conta&quot; (clique no seu nome no topo).</p>
+          
+          
+        </div>
+      </li>
+      <li id="login-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Entrar</h4>
+          <p>No primeiro uso do sistema esta tela pede para criar o usuário Dev.</p>
+          
+          
+        </div>
+      </li></ol></section>
+  <h3>Abrir o sistema no computador</h3>
+  <ol class="passos">
+    <li>Dê dois cliques em <code>Abrir apresentacao local.bat</code>, na pasta do projeto. Ele sobe o servidor e abre o navegador em <code>http://localhost:5210</code>.</li>
+    <li>Mantenha a janela preta aberta enquanto usa a apresentação. Para encerrar, feche essa janela.</li>
+    <li>Na primeira abertura do dia o servidor lê as planilhas do SharePoint (cerca de 10 segundos). Depois disso as telas abrem na hora.</li>
+  </ol>
+</section><section class="capitulo" id="navegacao"><div class="rotulo">Começando</div><h2>Navegação e filtros</h2>
+  
+  <figure class="tela" data-tela="capa-obra">
+    <div class="tela-quadro">
+      <img src="img/capa-obra.jpg" alt="Capa da apresentação Obra" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#capa-obra-1" data-n="1" style="left:77.50%;top:11.89%;width:9.25%;height:4.89%" aria-label="Ponto 1: Mês de referência"><b>1</b></a><a class="marca" href="#capa-obra-2" data-n="2" style="left:13.25%;top:38.74%;width:17.72%;height:15.36%" aria-label="Ponto 2: Obras ativas"><b>2</b></a><a class="marca" href="#capa-obra-3" data-n="3" style="left:31.84%;top:38.74%;width:17.72%;height:15.36%" aria-label="Ponto 3: Assertividade média"><b>3</b></a><a class="marca" href="#capa-obra-4" data-n="4" style="left:50.44%;top:38.74%;width:17.72%;height:15.36%" aria-label="Ponto 4: Unidades construídas no mês"><b>4</b></a><a class="marca" href="#capa-obra-5" data-n="5" style="left:69.03%;top:38.74%;width:17.72%;height:15.36%" aria-label="Ponto 5: Maior assertividade do mês"><b>5</b></a><a class="marca" href="#capa-obra-6" data-n="6" style="left:13.25%;top:58.10%;width:73.50%;height:14.22%" aria-label="Ponto 6: Atalhos"><b>6</b></a>
+    </div>
+    <figcaption>Capa da apresentação Obra <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="capa-obra-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Mês de referência</h4>
+          <p>Escolha o mês do fechamento. Ele vale para todas as abas.</p>
+          
+          
+        </div>
+      </li>
+      <li id="capa-obra-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Obras ativas</h4>
+          <p>Clique para abrir a lista de obras com avanço e assertividade.</p>
+          
+          
+        </div>
+      </li>
+      <li id="capa-obra-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Assertividade média</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="capa-obra-4" data-n="4">
+        <span class="num">4</span>
+        <div>
+          <h4>Unidades construídas no mês</h4>
+          <p>Depende do Nº de UH no cadastro de obras.</p>
+          
+          
+        </div>
+      </li>
+      <li id="capa-obra-5" data-n="5">
+        <span class="num">5</span>
+        <div>
+          <h4>Maior assertividade do mês</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="capa-obra-6" data-n="6">
+        <span class="num">6</span>
+        <div>
+          <h4>Atalhos</h4>
+          <p>Levam a cada aba. As abas também ficam no menu do topo.</p>
+          
+          
+        </div>
+      </li></ol></section>
+  <ol class="passos">
+    <li><b>Obra ou Cliente:</b> use o botão "Obra | Cliente" no topo. A apresentação Cliente usa as colunas do cliente, esconde imagens marcadas como internas e mostra as telas extras do cliente.</li>
+    <li><b>Apresentar:</b> coloca o navegador em tela cheia e esconde filtros e botões de edição. Esc ou o mesmo botão sai.</li>
+    <li><b>Atualizar dados:</b> (Planejamento/Dev) relê as planilhas no SharePoint na hora, sem esperar o cache de 30 minutos.</li>
+  </ol>
+  
+  <figure class="tela" data-tela="filtro-obras">
+    <div class="tela-quadro">
+      <img src="img/filtro-obras.jpg" alt="Filtro de obras, no estilo do Excel" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#filtro-obras-1" data-n="1" style="left:2.19%;top:14.78%;width:19.88%;height:4.22%" aria-label="Ponto 1: Pesquisar"><b>1</b></a><a class="marca" href="#filtro-obras-2" data-n="2" style="left:1.94%;top:20.11%;width:20.38%;height:4.00%" aria-label="Ponto 2: Selecionar tudo / todos os resultados"><b>2</b></a><a class="marca" href="#filtro-obras-3" data-n="3" style="left:1.94%;top:24.33%;width:20.38%;height:4.00%" aria-label="Ponto 3: Cliente"><b>3</b></a><a class="marca" href="#filtro-obras-4" data-n="4" style="left:1.56%;top:45.44%;width:21.13%;height:5.89%" aria-label="Ponto 4: OK aplica"><b>4</b></a>
+    </div>
+    <figcaption>Filtro de obras, no estilo do Excel <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="filtro-obras-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Pesquisar</h4>
+          <p>Digite parte do nome da obra ou do cliente.</p>
+          
+          
+        </div>
+      </li>
+      <li id="filtro-obras-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Selecionar tudo / todos os resultados</h4>
+          <p>Com pesquisa, marca só o que apareceu.</p>
+          
+          
+        </div>
+      </li>
+      <li id="filtro-obras-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Cliente</h4>
+          <p>A seta recolhe; a caixa marca todas as obras do cliente.</p>
+          
+          
+        </div>
+      </li>
+      <li id="filtro-obras-4" data-n="4">
+        <span class="num">4</span>
+        <div>
+          <h4>OK aplica</h4>
+          <p>Com pesquisa ativa, aplica só os resultados marcados (como no Excel). Cancelar fecha sem mudar.</p>
+          
+          
+        </div>
+      </li></ol></section>
+  <div class="nota"><b>Várias obras</b>No Resumo Geral, várias obras somam os valores em R$ e ponderam os percentuais pelo orçamento. Nas abas de uma obra só (Físico, Econômico, TxC, Fotos) aparece o seletor "Obra exibida" para escolher entre as filtradas.</div>
+</section><section class="capitulo" id="abas"><div class="rotulo">Usando a apresentação</div><h2>As abas</h2>
+  <h3>Resumo Geral</h3>
+  <p>Tudo em uma tela, sem rolagem: quadro CEF × Físico, análise econômica, curvas, realizado × planejado, assertividade, custos por unidade, INCC, NH-NU e andamento. "+ Infos da obra" abre a ficha completa da obra.</p>
+  
+  <figure class="tela" data-tela="resumo-geral">
+    <div class="tela-quadro">
+      <img src="img/resumo-geral.jpg" alt="Resumo Geral" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#resumo-geral-1" data-n="1" style="left:0.00%;top:6.44%;width:100.00%;height:7.67%" aria-label="Ponto 1: Filtros"><b>1</b></a><a class="marca" href="#resumo-geral-2" data-n="2" style="left:2.69%;top:22.78%;width:24.78%;height:36.09%" aria-label="Ponto 2: CEF × Físico"><b>2</b></a><a class="marca" href="#resumo-geral-3" data-n="3" style="left:1.50%;top:61.65%;width:27.16%;height:36.58%" aria-label="Ponto 3: Análise econômica"><b>3</b></a><a class="marca" href="#resumo-geral-4" data-n="4" style="left:29.41%;top:21.33%;width:69.09%;height:17.83%" aria-label="Ponto 4: Curva acumulada"><b>4</b></a><a class="marca" href="#resumo-geral-5" data-n="5" style="left:29.41%;top:40.50%;width:69.09%;height:17.83%" aria-label="Ponto 5: Realizado × planejado"><b>5</b></a><a class="marca" href="#resumo-geral-6" data-n="6" style="left:29.41%;top:59.66%;width:69.09%;height:17.83%" aria-label="Ponto 6: Assertividade"><b>6</b></a><a class="marca" href="#resumo-geral-7" data-n="7" style="left:29.41%;top:78.83%;width:23.25%;height:19.39%" aria-label="Ponto 7: Custos por UH / AE / AP / AC"><b>7</b></a><a class="marca" href="#resumo-geral-8" data-n="8" style="left:53.41%;top:78.83%;width:14.53%;height:19.39%" aria-label="Ponto 8: INCC"><b>8</b></a><a class="marca" href="#resumo-geral-9" data-n="9" style="left:68.69%;top:78.83%;width:14.53%;height:19.39%" aria-label="Ponto 9: NH-NU"><b>9</b></a><a class="marca" href="#resumo-geral-10" data-n="10" style="left:83.97%;top:78.83%;width:14.53%;height:19.39%" aria-label="Ponto 10: Andamento geral"><b>10</b></a><a class="marca" href="#resumo-geral-11" data-n="11" style="left:91.03%;top:16.44%;width:7.47%;height:3.56%" aria-label="Ponto 11: + Infos da obra"><b>11</b></a>
+    </div>
+    <figcaption>Resumo Geral <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="resumo-geral-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Filtros</h4>
+          <p>De/Até mudam os meses dos gráficos; o mês de referência muda os quadros.</p>
+          
+          
+        </div>
+      </li>
+      <li id="resumo-geral-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>CEF × Físico</h4>
+          <p>Selos verdes ▲ = adiantado, vermelhos ▼ = atrasado.</p>
+          
+          
+        </div>
+      </li>
+      <li id="resumo-geral-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Análise econômica</h4>
+          <p>Passe o mouse num valor compacto para ver o completo.</p>
+          
+          
+        </div>
+      </li>
+      <li id="resumo-geral-4" data-n="4">
+        <span class="num">4</span>
+        <div>
+          <h4>Curva acumulada</h4>
+          <p>Passe o mouse no gráfico para ver os valores do mês.</p>
+          
+          
+        </div>
+      </li>
+      <li id="resumo-geral-5" data-n="5">
+        <span class="num">5</span>
+        <div>
+          <h4>Realizado × planejado</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="resumo-geral-6" data-n="6">
+        <span class="num">6</span>
+        <div>
+          <h4>Assertividade</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="resumo-geral-7" data-n="7">
+        <span class="num">7</span>
+        <div>
+          <h4>Custos por UH / AE / AP / AC</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="resumo-geral-8" data-n="8">
+        <span class="num">8</span>
+        <div>
+          <h4>INCC</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="resumo-geral-9" data-n="9">
+        <span class="num">9</span>
+        <div>
+          <h4>NH-NU</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="resumo-geral-10" data-n="10">
+        <span class="num">10</span>
+        <div>
+          <h4>Andamento geral</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="resumo-geral-11" data-n="11">
+        <span class="num">11</span>
+        <div>
+          <h4>+ Infos da obra</h4>
+          
+          
+          
+        </div>
+      </li></ol></section>
+  <h3>Resumo Físico</h3>
+  
+  <figure class="tela" data-tela="resumo-fisico">
+    <div class="tela-quadro">
+      <img src="img/resumo-fisico.jpg" alt="Resumo Físico" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#resumo-fisico-1" data-n="1" style="left:1.50%;top:24.11%;width:97.00%;height:10.54%" aria-label="Ponto 1: Comentário e metas do mês"><b>1</b></a><a class="marca" href="#resumo-fisico-2" data-n="2" style="left:19.06%;top:36.54%;width:22.49%;height:4.22%" aria-label="Ponto 2: Projeção econômica"><b>2</b></a><a class="marca" href="#resumo-fisico-3" data-n="3" style="left:41.55%;top:36.54%;width:50.15%;height:4.22%" aria-label="Ponto 3: Mês de referência"><b>3</b></a><a class="marca" href="#resumo-fisico-4" data-n="4" style="left:91.71%;top:36.54%;width:8.29%;height:4.22%" aria-label="Ponto 4: Mês seguinte"><b>4</b></a><a class="marca" href="#resumo-fisico-6" data-n="6" style="left:1.56%;top:45.10%;width:98.44%;height:4.67%" aria-label="Ponto 6: Linha da obra"><b>6</b></a><a class="marca" href="#resumo-fisico-7" data-n="7" style="left:2.31%;top:55.56%;width:1.50%;height:2.67%" aria-label="Ponto 7: Seta"><b>7</b></a><a class="marca" href="#resumo-fisico-8" data-n="8" style="left:5.06%;top:63.11%;width:6.09%;height:2.28%" aria-label="Ponto 8: Comentário"><b>8</b></a><a class="marca" href="#resumo-fisico-9" data-n="9" style="left:62.84%;top:18.78%;width:17.35%;height:3.56%" aria-label="Ponto 9: Ocultar projeção e pesos"><b>9</b></a>
+    </div>
+    <figcaption>Resumo Físico <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="resumo-fisico-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Comentário e metas do mês</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="resumo-fisico-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Projeção econômica</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="resumo-fisico-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Mês de referência</h4>
+          <p>Colunas em destaque laranja.</p>
+          
+          
+        </div>
+      </li>
+      <li id="resumo-fisico-4" data-n="4">
+        <span class="num">4</span>
+        <div>
+          <h4>Mês seguinte</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="resumo-fisico-5" data-n="5">
+        <span class="num">5</span>
+        <div>
+          <h4>Pesos</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="resumo-fisico-6" data-n="6">
+        <span class="num">6</span>
+        <div>
+          <h4>Linha da obra</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="resumo-fisico-7" data-n="7">
+        <span class="num">7</span>
+        <div>
+          <h4>Seta</h4>
+          <p>Mostra ou esconde as atividades filhas.</p>
+          
+          
+        </div>
+      </li>
+      <li id="resumo-fisico-8" data-n="8">
+        <span class="num">8</span>
+        <div>
+          <h4>Comentário</h4>
+          <p>Clique no selo para ler.</p>
+          
+          
+        </div>
+      </li>
+      <li id="resumo-fisico-9" data-n="9">
+        <span class="num">9</span>
+        <div>
+          <h4>Ocultar projeção e pesos</h4>
+          <p>Deixa a tabela mais limpa para a reunião.</p>
+          
+          
+        </div>
+      </li></ol></section>
+  <h3>Resumo Econômico</h3>
+  
+  <figure class="tela" data-tela="resumo-economico">
+    <div class="tela-quadro">
+      <img src="img/resumo-economico.jpg" alt="Resumo Econômico" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#resumo-economico-1" data-n="1" style="left:1.50%;top:24.11%;width:97.00%;height:8.71%" aria-label="Ponto 1: Indicadores da obra"><b>1</b></a><a class="marca" href="#resumo-economico-2" data-n="2" style="left:1.56%;top:34.71%;width:96.88%;height:4.22%" aria-label="Ponto 2: Grupos de colunas"><b>2</b></a><a class="marca" href="#resumo-economico-3" data-n="3" style="left:1.56%;top:43.27%;width:96.88%;height:4.67%" aria-label="Ponto 3: Linha da obra"><b>3</b></a><a class="marca" href="#resumo-economico-6" data-n="6" style="left:0.00%;top:89.62%;width:100.00%;height:10.38%" aria-label="Ponto 6: Rodapé fixo"><b>6</b></a>
+    </div>
+    <figcaption>Resumo Econômico <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="resumo-economico-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Indicadores da obra</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="resumo-economico-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Grupos de colunas</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="resumo-economico-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Linha da obra</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="resumo-economico-4" data-n="4">
+        <span class="num">4</span>
+        <div>
+          <h4>Detalhe do item</h4>
+          <p>Clique na seta (ou no selo de comentário) para abrir.</p>
+          
+          
+        </div>
+      </li>
+      <li id="resumo-economico-5" data-n="5">
+        <span class="num">5</span>
+        <div>
+          <h4>Comentários do item</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="resumo-economico-6" data-n="6">
+        <span class="num">6</span>
+        <div>
+          <h4>Rodapé fixo</h4>
+          <p>Continua visível enquanto você rola a tabela.</p>
+          
+          
+        </div>
+      </li></ol></section>
+  <h3>Tempo x Caminho e Acompanhamento Fotográfico</h3>
+  
+  <figure class="tela" data-tela="tempo-caminho">
+    <div class="tela-quadro">
+      <img src="img/tempo-caminho.jpg" alt="Tempo x Caminho" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#tempo-caminho-1" data-n="1" style="left:4.98%;top:24.11%;width:13.60%;height:4.22%" aria-label="Ponto 1: Escolha o mês"><b>1</b></a><a class="marca" href="#tempo-caminho-2" data-n="2" style="left:1.50%;top:29.67%;width:97.00%;height:4.78%" aria-label="Ponto 2: Escolha a torre"><b>2</b></a><a class="marca" href="#tempo-caminho-3" data-n="3" style="left:1.50%;top:36.00%;width:76.00%;height:57.78%" aria-label="Ponto 3: Navegue"><b>3</b></a><a class="marca" href="#tempo-caminho-4" data-n="4" style="left:70.71%;top:37.33%;width:6.04%;height:3.50%" aria-label="Ponto 4: Ampliar"><b>4</b></a><a class="marca" href="#tempo-caminho-5" data-n="5" style="left:78.50%;top:36.00%;width:20.00%;height:29.24%" aria-label="Ponto 5: Comentário"><b>5</b></a><a class="marca" href="#tempo-caminho-7" data-n="7" style="left:89.80%;top:18.78%;width:8.70%;height:3.56%" aria-label="Ponto 7: Cadastrar"><b>7</b></a>
+    </div>
+    <figcaption>Tempo x Caminho <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="tempo-caminho-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Escolha o mês</h4>
+          <p>Só aparecem meses com imagens.</p>
+          
+          
+        </div>
+      </li>
+      <li id="tempo-caminho-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Escolha a torre</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="tempo-caminho-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Navegue</h4>
+          <p>Setas na imagem ou ← → no teclado.</p>
+          
+          
+        </div>
+      </li>
+      <li id="tempo-caminho-4" data-n="4">
+        <span class="num">4</span>
+        <div>
+          <h4>Ampliar</h4>
+          <p>Esc para sair.</p>
+          
+          
+        </div>
+      </li>
+      <li id="tempo-caminho-5" data-n="5">
+        <span class="num">5</span>
+        <div>
+          <h4>Comentário</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="tempo-caminho-6" data-n="6">
+        <span class="num">6</span>
+        <div>
+          <h4>Miniaturas</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="tempo-caminho-7" data-n="7">
+        <span class="num">7</span>
+        <div>
+          <h4>Cadastrar</h4>
+          <p>Atalho para o cadastro (Planejamento/Dev).</p>
+          
+          
+        </div>
+      </li></ol></section>
+</section><section class="capitulo" id="planejamento"><div class="rotulo">Planejamento</div><h2>Tarefas do Planejamento</h2>
+  <h3>1. Cadastrar ou atualizar as obras</h3>
+  <ol class="passos">
+    <li>Administração → <b>Cadastro de obras</b>.</li>
+    <li>Para várias obras de uma vez: <b>Importar planilha</b> e arraste a planilha "Painel de Obras" (mesmos cabeçalhos do Power BI). Obras existentes são atualizadas.</li>
+    <li>Para uma obra: <b>Cadastrar</b>/<b>Editar</b> na linha, preencha e salve. Campos que alimentam cálculos mostram "Usado em" logo abaixo.</li>
+  </ol>
+  
+  <figure class="tela" data-tela="admin-cadastro">
+    <div class="tela-quadro">
+      <img src="img/admin-cadastro.jpg" alt="Cadastro de obras" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#admin-cadastro-1" data-n="1" style="left:1.50%;top:14.67%;width:15.00%;height:22.33%" aria-label="Ponto 1: Seções"><b>1</b></a><a class="marca" href="#admin-cadastro-2" data-n="2" style="left:80.77%;top:10.78%;width:10.68%;height:4.44%" aria-label="Ponto 2: Importar planilha"><b>2</b></a><a class="marca" href="#admin-cadastro-3" data-n="3" style="left:92.07%;top:10.78%;width:6.43%;height:4.44%" aria-label="Ponto 3: Nova obra"><b>3</b></a><a class="marca" href="#admin-cadastro-4" data-n="4" style="left:18.06%;top:21.44%;width:80.38%;height:5.89%" aria-label="Ponto 4: Editar a obra"><b>4</b></a>
+    </div>
+    <figcaption>Cadastro de obras <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="admin-cadastro-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Seções</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="admin-cadastro-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Importar planilha</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="admin-cadastro-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Nova obra</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="admin-cadastro-4" data-n="4">
+        <span class="num">4</span>
+        <div>
+          <h4>Editar a obra</h4>
+          
+          
+          
+        </div>
+      </li></ol></section>
+  <h3>2. Cadastrar TxC e fotos do mês</h3>
+  <ol class="passos">
+    <li>Administração → <b>TxC e fotos</b>, escolha "Tempo x Caminho" ou "Acompanhamento fotográfico" e clique em <b>Cadastrar imagens</b> (ou use "Cadastrar" dentro da própria aba).</li>
+    <li>Escolha a obra e o mês, informe a torre (TxC) ou o local (fotos) e escreva o comentário.</li>
+    <li>Arraste as imagens. Cada imagem vira um registro com os mesmos dados; a ordem segue a seleção.</li>
+    <li>Desmarque "Exibir na apresentação ao cliente" para imagens internas.</li>
+  </ol>
+  
+  <figure class="tela" data-tela="admin-midia-form">
+    <div class="tela-quadro">
+      <img src="img/admin-midia-form.jpg" alt="Cadastro de imagens" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#admin-midia-form-1" data-n="1" style="left:21.75%;top:23.19%;width:56.50%;height:19.22%" aria-label="Ponto 1: Obra, mês, torre/local, ordem"><b>1</b></a><a class="marca" href="#admin-midia-form-2" data-n="2" style="left:21.75%;top:47.03%;width:56.50%;height:10.67%" aria-label="Ponto 2: Comentário"><b>2</b></a><a class="marca" href="#admin-midia-form-3" data-n="3" style="left:21.75%;top:62.31%;width:56.50%;height:9.11%" aria-label="Ponto 3: Arraste as imagens"><b>3</b></a><a class="marca" href="#admin-midia-form-4" data-n="4" style="left:21.75%;top:73.19%;width:56.50%;height:2.44%" aria-label="Ponto 4: Exibir ao cliente"><b>4</b></a>
+    </div>
+    <figcaption>Cadastro de imagens <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="admin-midia-form-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Obra, mês, torre/local, ordem</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="admin-midia-form-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Comentário</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="admin-midia-form-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Arraste as imagens</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="admin-midia-form-4" data-n="4">
+        <span class="num">4</span>
+        <div>
+          <h4>Exibir ao cliente</h4>
+          
+          
+          
+        </div>
+      </li></ol></section>
+  <h3>3. Montar uma tela para o cliente</h3>
+  <ol class="passos">
+    <li>Administração → <b>Telas do cliente</b> → <b>Nova tela</b>.</li>
+    <li>Dê título e ordem. Marque as obras em que a tela aparece (nenhuma marcada = todas).</li>
+    <li>Adicione blocos: <b>Planilha</b> (exibida só para leitura; informe a aba se não for a primeira), <b>Imagem</b> ou <b>Texto</b>, em largura inteira ou meia.</li>
+    <li>Salve e confira em "Ver". A tela aparece no menu da apresentação Cliente.</li>
+  </ol>
+  
+  <figure class="tela" data-tela="admin-tela-form">
+    <div class="tela-quadro">
+      <img src="img/admin-tela-form.jpg" alt="Editor de tela do cliente" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#admin-tela-form-1" data-n="1" style="left:21.75%;top:10.94%;width:56.50%;height:7.50%" aria-label="Ponto 1: Título, subtítulo e ordem"><b>1</b></a><a class="marca" href="#admin-tela-form-2" data-n="2" style="left:21.75%;top:32.67%;width:56.50%;height:28.83%" aria-label="Ponto 2: Bloco"><b>2</b></a>
+    </div>
+    <figcaption>Editor de tela do cliente <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="admin-tela-form-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Título, subtítulo e ordem</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="admin-tela-form-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Bloco</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="admin-tela-form-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Adicionar bloco</h4>
+          
+          
+          
+        </div>
+      </li></ol></section>
+  <h3>4. Conferir as fontes e o INCC</h3>
+  <ol class="passos">
+    <li>Administração → <b>Fontes e INCC</b> mostra quando as planilhas foram lidas e quantas linhas cada aba tem.</li>
+    <li>O INCC-DI se atualiza sozinho pelo Banco Central. Se a FGV publicar um índice diferente, corrija o mês em "Corrigir um mês manualmente".</li>
+  </ol>
+</section><section class="capitulo" id="usuarios"><div class="rotulo">Dev</div><h2>Usuários</h2>
+  <figure class="tela" data-tela="admin-usuarios">
+    <div class="tela-quadro">
+      <img src="img/admin-usuarios.jpg" alt="Usuários" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#admin-usuarios-1" data-n="1" style="left:90.84%;top:10.78%;width:7.66%;height:4.44%" aria-label="Ponto 1: Novo usuário"><b>1</b></a><a class="marca" href="#admin-usuarios-2" data-n="2" style="left:18.06%;top:17.11%;width:80.38%;height:22.00%" aria-label="Ponto 2: Lista"><b>2</b></a>
+    </div>
+    <figcaption>Usuários <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="admin-usuarios-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Novo usuário</h4>
+          <p>Nome, e-mail, papel (Dev, Planejamento ou Viewer) e senha inicial. Combine a senha por um canal seguro.</p>
+          
+          
+        </div>
+      </li>
+      <li id="admin-usuarios-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Lista</h4>
+          <p>Editar muda papel, desativa ou redefine a senha. Usuário desativado perde o acesso na hora.</p>
+          
+          
+        </div>
+      </li></ol></section></section><section class="capitulo" id="duvidas"><div class="rotulo">Ajuda</div><h2>Dúvidas comuns</h2><div class="tabela"><table><thead><tr><th>Situação</th><th>O que fazer</th></tr></thead>
+    <tbody><tr><td>Os números não batem com a planilha</td><td>Clique em <b>Atualizar dados</b> (o cache é de 30 min). Confira o mês de referência no filtro.</td></tr><tr><td>Aparece &quot;Dados possivelmente desatualizados&quot;</td><td>O SharePoint não respondeu; a apresentação mostra a última leitura. Tente &quot;Atualizar dados&quot; mais tarde.</td></tr><tr><td>Custos por UH, NH-NU ou unidades do mês aparecem &quot;—&quot;</td><td>Falta Nº de UH ou áreas no cadastro da obra.</td></tr><tr><td>INCC base aparece &quot;—&quot;</td><td>Preencha &quot;INCC do orçamento base&quot; ou a &quot;Data-base INCC&quot; no cadastro da obra.</td></tr><tr><td>Obra não aparece no filtro</td><td>Ela precisa existir nas planilhas ou no cadastro de obras. Confira a grafia do nome.</td></tr><tr><td>Resumo Físico demora a abrir</td><td>Só acontece na primeira leitura após ligar o servidor (a aba tem ~25 mil linhas).</td></tr><tr><td>Sem imagens no TxC/Fotos</td><td>Cadastre em Administração → TxC e fotos. Na visão Cliente, confira &quot;Exibir na apresentação ao cliente&quot;.</td></tr><tr><td>Esqueci a senha</td><td>Peça ao Dev para redefinir em Administração → Usuários.</td></tr></tbody></table></div></section></main>
+</div>
+<footer>Unità Engenharia · Planejamento e Controle · relatório gerado a partir da versão em desenvolvimento (capturas com dados fictícios)</footer>
+<script>
+// Destaca o par marca ↔ item da legenda ao passar o mouse ou focar.
+document.querySelectorAll('.tela').forEach((tela) => {
+  const legenda = tela.nextElementSibling;
+  const alternar = (n, ligar) => {
+    tela.querySelector('.marca[data-n="' + n + '"]')?.classList.toggle('ativa', ligar);
+    legenda?.querySelector('li[data-n="' + n + '"]')?.classList.toggle('ativa', ligar);
+  };
+  for (const el of [...tela.querySelectorAll('.marca'), ...(legenda ? legenda.querySelectorAll('li') : [])]) {
+    el.addEventListener('mouseenter', () => alternar(el.dataset.n, true));
+    el.addEventListener('mouseleave', () => alternar(el.dataset.n, false));
+    el.addEventListener('focus', () => alternar(el.dataset.n, true));
+    el.addEventListener('blur', () => alternar(el.dataset.n, false));
+  }
+});
+</script>

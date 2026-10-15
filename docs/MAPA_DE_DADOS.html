@@ -1,0 +1,929 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mapa de dados da apresentação</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Relatório no padrão visual Unità v1.0: grafite + laranja como acento, Sora nos títulos, Inter no texto.
+   Layout: faixa de capa grafite, sumário fixo à esquerda (telas largas) e telas anotadas com legenda numerada. */
+:root {
+  --laranja: #fe5000; --laranja-suave: #fff1ea; --grafite: #231f20;
+  --fundo: #f8f7f6; --superficie: #ffffff; --borda: #e2dfdc; --texto: #1a1817; --apagado: #77716d; --codigo: #f0eeec;
+  --info: #2563a8; --info-suave: #e8f0fa; --ok: #1e8a4c; --ok-suave: #e7f5ec;
+  --sombra: 0 1px 2px rgb(26 24 23 / 0.04), 0 4px 18px rgb(26 24 23 / 0.06);
+  --display: 'Sora', 'Inter', system-ui, sans-serif; --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --fundo: #1a1817; --superficie: #2b2827; --borda: #3d3937; --texto: #f0eeec; --apagado: #a19b96; --codigo: #3d3937;
+  --laranja-suave: #3a2418; --info-suave: #1d2a3a; --ok-suave: #1b2e22; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --fundo: #1a1817; --superficie: #2b2827; --borda: #3d3937; --texto: #f0eeec; --apagado: #a19b96; --codigo: #3d3937;
+  --laranja-suave: #3a2418; --info-suave: #1d2a3a; --ok-suave: #1b2e22; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fundo); color: var(--texto); font: 15px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4 { font-family: var(--display); text-wrap: balance; margin: 0; }
+code { font: 12.5px ui-monospace, Consolas, monospace; background: var(--codigo); padding: 1px 5px; border-radius: 5px; overflow-wrap: anywhere; }
+a { color: var(--laranja); }
+.capa { background: var(--grafite); color: #fff; border-bottom: 3px solid var(--laranja); }
+.capa .in { max-width: 1240px; margin: 0 auto; padding-block: 40px 44px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.capa .eyebrow { color: var(--laranja); font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.capa h1 { font-size: clamp(28px, 4vw, 42px); margin-top: 8px; letter-spacing: -0.02em; }
+.capa p { color: rgb(255 255 255 / .72); max-width: 70ch; margin: 10px 0 0; }
+.capa .logo { height: 40px; width: auto; display: block; }
+.corpo { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 40px; padding-block: 32px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+nav.sumario { position: sticky; top: 16px; align-self: start; font-size: 13.5px; }
+nav.sumario b { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--apagado); margin-bottom: 8px; }
+nav.sumario a { display: block; color: var(--texto); text-decoration: none; padding: 5px 10px; border-left: 2px solid var(--borda); }
+nav.sumario a:hover { border-left-color: var(--laranja); color: var(--laranja); }
+main { min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+main > section.capitulo { display: flex; flex-direction: column; gap: 16px; scroll-margin-top: 16px; }
+.capitulo + .capitulo { border-top: 1px solid var(--borda); padding-top: 36px; margin-top: 16px; }
+.capitulo > h2 { font-size: 26px; letter-spacing: -0.01em; }
+.capitulo > .rotulo { color: var(--laranja); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.capitulo h3 { font-size: 18px; margin-top: 8px; }
+.capitulo p, .capitulo li { max-width: 78ch; }
+.nota { background: var(--info-suave); border-left: 3px solid var(--info); padding: 12px 16px; border-radius: 10px; font-size: 14px; }
+.validar { background: var(--laranja-suave); border-left: 3px solid var(--laranja); padding: 12px 16px; border-radius: 10px; font-size: 14px; }
+.validar b:first-child, .nota b:first-child { display: block; margin-bottom: 2px; }
+.passos { counter-reset: passo; list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.passos li { counter-increment: passo; position: relative; padding: 12px 16px 12px 52px; background: var(--superficie); border: 1px solid var(--borda); border-radius: 12px; }
+.passos li::before { content: counter(passo); position: absolute; left: 14px; top: 12px; width: 26px; height: 26px; border-radius: 50%; background: var(--grafite); color: #fff; font: 600 13px/26px var(--display); text-align: center; }
+.tela { margin: 0; }
+.tela-quadro { position: relative; border-radius: 14px; overflow: hidden; box-shadow: var(--sombra); border: 1px solid var(--borda); background: var(--superficie); max-width: 100%; }
+.tela-quadro img { display: block; width: 100%; height: auto; }
+.marca { position: absolute; border: 2px solid var(--laranja); border-radius: 8px; background: rgb(254 80 0 / .06); transition: background .15s, box-shadow .15s; }
+.marca b { position: absolute; left: -11px; top: -11px; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 12px; background: var(--laranja); color: #fff; font: 700 12px/24px var(--display); text-align: center; box-shadow: 0 0 0 2px #fff; }
+.marca:hover, .marca.ativa { background: rgb(254 80 0 / .18); box-shadow: 0 0 0 4px rgb(254 80 0 / .25); }
+.tela figcaption { font-size: 13px; color: var(--apagado); margin-top: 8px; }
+.tela figcaption span { opacity: .8; }
+.legenda ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+.legenda li { display: flex; gap: 12px; background: var(--superficie); border: 1px solid var(--borda); border-radius: 12px; padding: 12px 14px; scroll-margin-top: 16px; transition: border-color .15s; min-width: 0; }
+.legenda li.ativa, .legenda li:target { border-color: var(--laranja); box-shadow: 0 0 0 3px rgb(254 80 0 / .15); }
+.legenda .num { flex-shrink: 0; width: 26px; height: 26px; border-radius: 13px; background: var(--laranja); color: #fff; font: 700 12px/26px var(--display); text-align: center; }
+.legenda li > div { min-width: 0; }
+.legenda h4 { font-size: 14.5px; }
+.legenda p { margin: 4px 0 0; font-size: 13.5px; color: var(--texto); }
+.legenda .origem, .legenda .calculo { color: var(--texto); }
+.legenda .origem span, .legenda .calculo span { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 1px 7px; border-radius: 999px; margin-right: 6px; vertical-align: 1px; }
+.legenda .origem span { background: var(--info-suave); color: var(--info); }
+.legenda .calculo span { background: var(--ok-suave); color: var(--ok); }
+.tabela { overflow-x: auto; border: 1px solid var(--borda); border-radius: 12px; background: var(--superficie); }
+.tabela table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.tabela th, .tabela td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--borda); vertical-align: top; }
+.tabela th { font-size: 12px; color: var(--apagado); font-weight: 600; background: var(--fundo); }
+.tabela tr:last-child td { border-bottom: 0; }
+.cartoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.cartao { background: var(--superficie); border: 1px solid var(--borda); border-radius: 12px; padding: 14px 16px; }
+.cartao h4 { font-size: 15px; } .cartao p { margin: 6px 0 0; font-size: 13.5px; }
+.cartao .papel { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--laranja); }
+footer { text-align: center; color: var(--apagado); font-size: 12.5px; padding-block: 0 40px; }
+@media (max-width: 900px) { .corpo { grid-template-columns: 1fr; } nav.sumario { position: static; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="capa"><div class="in">
+  <img class="logo" src="img/logo-unita-white.png" alt="Unità Engenharia" width="140" height="54">
+  <div class="eyebrow" style="margin-top:18px">Funcionalidades e origem das informações</div>
+  <h1>Mapa de dados da apresentação</h1>
+  <p>Cada tela da apresentação Obra/Cliente com pontos numerados: o que é, de onde vem (aba e coluna) e como é calculado. Use para validar os números contra o Power BI e as planilhas.</p>
+</div></header>
+<div class="corpo">
+  <nav class="sumario" aria-label="Sumário"><b>Sumário</b><a href="#fontes">De onde vêm os dados</a><a href="#capa">Capa (Início)</a><a href="#filtros">Filtros estilo Excel</a><a href="#resumo-geral">Resumo Geral</a><a href="#ficha">Ficha da obra (+ Infos da obra)</a><a href="#resumo-fisico">Resumo Físico</a><a href="#resumo-economico">Resumo Econômico (IEC)</a><a href="#galeria">Tempo x Caminho e Acompanhamento Fotográfico</a><a href="#telas-cliente">Telas do cliente</a><a href="#administracao">Administração</a></nav>
+  <main><section class="capitulo" id="fontes"><div class="rotulo">Visão geral</div><h2>De onde vêm os dados</h2>
+  <p>A apresentação lê quatro abas de uma planilha no SharePoint pelo Microsoft Graph e completa com informações cadastradas no próprio app. Nada é calculado no servidor: ele só entrega as planilhas, e os cálculos (as medidas que existiam no Power BI) rodam no navegador, no código de <code>public/js/domain</code>.</p>
+  <div class="tabela"><table><thead><tr><th>Fonte</th><th>O que traz</th><th>Como chega</th><th>Atualização</th></tr></thead>
+    <tbody><tr><td><code>BD_Infos Gerais</code></td><td>Curvas físicas mês a mês por obra (previsto, replanejado, realizado, metas, CEF/Banco), assertividade, homens/mês, comentários e principais metas</td><td>Graph: <code>drives/{drive}/items/{item}/workbook/worksheets('BD_Infos Gerais')/usedRange</code></td><td>Cache de 30 min no servidor; botão <b>Atualizar dados</b> relê na hora</td></tr><tr><td><code>BD_Físico por atividade</code></td><td>Mesmas curvas por item da EAP (pai e filho), pesos e comentários por atividade (~25 mil linhas)</td><td>Graph, aba <code>BD_Físico por atividade</code>; o navegador recebe só a obra aberta</td><td>Pré-carregada quando o servidor inicia; mesmo cache</td></tr><tr><td><code>BD_Orc</code></td><td>Orçamento base físico por item e total (ITEM = Geral) e descrição dos itens</td><td>Graph, aba <code>BD_Orc</code></td><td>Mesmo cache</td></tr><tr><td><code>BD_Econômico</code></td><td>Custos, saldos, projeção, resultado, IEC, aditivos e comentários por item e mês</td><td>Graph, aba <code>BD_Econômico</code></td><td>Mesmo cache</td></tr><tr><td>Cadastro de obras (no app)</td><td>Nº de UH, áreas, INCC base, prazos, equipe, endereço, situação</td><td>Administração → Cadastro de obras (ou importação da planilha &quot;Painel de Obras&quot;)</td><td>Na hora em que o Planejamento salva</td></tr><tr><td>INCC-DI</td><td>Número-índice mês a mês</td><td>Histórico FGV (1994–ago/2026) + Banco Central, série SGS 192 (variação % mensal)</td><td>Automático 1× por dia; correção manual em Fontes e INCC</td></tr><tr><td>TxC, fotos e telas do cliente</td><td>Imagens, planilhas e textos</td><td>Administração (upload) — ficam no servidor, fora do SharePoint</td><td>Na hora</td></tr></tbody></table></div>
+  <div class="nota"><b>Junção entre as abas</b>As abas são ligadas pelo <b>nome da obra</b>, ignorando maiúsculas, acentos e espaços ("MetroCasa" = "Metrocasa"). O BD_Econômico não tem o Nº da obra UAU, por isso o nome é a chave.</div>
+  <div class="nota"><b>Mês de referência</b>As planilhas trazem 36 meses por obra, inclusive os futuros. O mês de referência padrão é o último mês em que alguma obra filtrada teve <code>Realizado Mês</code> &gt; 0, sem passar do mês atual. Pode ser trocado no filtro.</div>
+  <h3>Visão Obra × visão Cliente</h3>
+  <p>A apresentação Cliente usa as colunas "- Cliente" da planilha no lugar das "- Obra". O resto (metas, realizado, valores econômicos) é igual.</p>
+  <div class="tabela"><table><thead><tr><th>Informação</th><th>Visão Obra</th><th>Visão Cliente</th></tr></thead>
+    <tbody><tr><td>Previsto original</td><td><code>Previsto Original Acumulado/Mês - Obra</code></td><td><code>Previsto Original Acumulado/Mês - Cliente</code></td></tr><tr><td>1º replanejado</td><td><code>1º Replanejado Acumulado/Mês - Obra</code></td><td><code>1º Replanejado Acumulado/Mês - Cliente</code></td></tr><tr><td>Planejado atual</td><td><code>Replanejado Atual Acumulado/Mês - Obra</code></td><td><code>Replanejado Atual Acumulado/Mês - Cliente</code></td></tr><tr><td>Comentário do mês</td><td><code>Comentário Obra</code></td><td><code>Comentário Cliente</code></td></tr><tr><td>Principais metas</td><td><code>Principais Metas Obra</code></td><td><code>Principais metas Cliente</code></td></tr><tr><td>Comentário por atividade</td><td><code>Comentários - Obra</code></td><td><code>Comentários - Cliente</code></td></tr><tr><td>Peso de atraso</td><td><code>Peso Atraso / Adiantamento</code></td><td><code>Peso Atraso / Adiantamento Cliente</code></td></tr></tbody></table></div>
+</section><section class="capitulo" id="capa"><div class="rotulo">Aba Início</div><h2>Capa (Início)</h2>
+  <figure class="tela" data-tela="capa-obra">
+    <div class="tela-quadro">
+      <img src="img/capa-obra.jpg" alt="Início (apresentação Obra)" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#capa-obra-1" data-n="1" style="left:77.50%;top:11.89%;width:9.25%;height:4.89%" aria-label="Ponto 1: Mês de referência"><b>1</b></a><a class="marca" href="#capa-obra-2" data-n="2" style="left:13.25%;top:38.74%;width:17.72%;height:15.36%" aria-label="Ponto 2: Obras ativas"><b>2</b></a><a class="marca" href="#capa-obra-3" data-n="3" style="left:31.84%;top:38.74%;width:17.72%;height:15.36%" aria-label="Ponto 3: Assertividade média da empresa"><b>3</b></a><a class="marca" href="#capa-obra-4" data-n="4" style="left:50.44%;top:38.74%;width:17.72%;height:15.36%" aria-label="Ponto 4: Unidades construídas no mês"><b>4</b></a><a class="marca" href="#capa-obra-5" data-n="5" style="left:69.03%;top:38.74%;width:17.72%;height:15.36%" aria-label="Ponto 5: Obra com maior assertividade no mês"><b>5</b></a><a class="marca" href="#capa-obra-6" data-n="6" style="left:13.25%;top:58.10%;width:73.50%;height:14.22%" aria-label="Ponto 6: Atalhos para as abas"><b>6</b></a>
+    </div>
+    <figcaption>Início (apresentação Obra) <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="capa-obra-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Mês de referência</h4>
+          <p>Muda o mês de todos os indicadores da capa e das outras abas.</p>
+          <p class="origem"><span>Origem</span>meses existentes em <code>BD_Infos Gerais</code></p>
+          
+        </div>
+      </li>
+      <li id="capa-obra-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Obras ativas</h4>
+          <p>Clique para ver a lista com avanço e assertividade de cada obra.</p>
+          <p class="origem"><span>Origem</span>aba <code>BD_Infos Gerais</code> (item Geral, mês de referência) + Situação do cadastro de obras</p>
+          <p class="calculo"><span>Cálculo</span>obra com <code>Realizado Mês</code> &gt; 0 nos últimos 3 meses e <code>Realizado Acumulado</code> &lt; 100%. A Situação do cadastro (ativa/concluída/paralisada) prevalece.</p>
+        </div>
+      </li>
+      <li id="capa-obra-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Assertividade média da empresa</h4>
+          
+          <p class="origem"><span>Origem</span><code>Assertividade</code> em aba <code>BD_Infos Gerais</code> (item Geral, mês de referência)</p>
+          <p class="calculo"><span>Cálculo</span>média simples entre as obras que fecharam o mês (Realizado Mês &gt; 0). O Power BI dividia pelo total de obras, contando as sem fechamento como zero.</p>
+        </div>
+      </li>
+      <li id="capa-obra-4" data-n="4">
+        <span class="num">4</span>
+        <div>
+          <h4>Unidades construídas no mês</h4>
+          
+          <p class="origem"><span>Origem</span><code>Nº de UH</code> (cadastro) e <code>Realizado Mês</code> (aba <code>BD_Infos Gerais</code> (item Geral, mês de referência))</p>
+          <p class="calculo"><span>Cálculo</span>Σ Nº de UH × Realizado Mês das obras ativas. Obras sem Nº de UH no cadastro ficam de fora (o cartão avisa quantas).</p>
+        </div>
+      </li>
+      <li id="capa-obra-5" data-n="5">
+        <span class="num">5</span>
+        <div>
+          <h4>Obra com maior assertividade no mês</h4>
+          
+          <p class="origem"><span>Origem</span><code>Assertividade</code> em aba <code>BD_Infos Gerais</code> (item Geral, mês de referência)</p>
+          
+        </div>
+      </li>
+      <li id="capa-obra-6" data-n="6">
+        <span class="num">6</span>
+        <div>
+          <h4>Atalhos para as abas</h4>
+          <p>Na visão Cliente aparecem também as telas criadas pelo Planejamento.</p>
+          
+          
+        </div>
+      </li></ol></section>
+  <figure class="tela" data-tela="capa-cliente">
+    <div class="tela-quadro">
+      <img src="img/capa-cliente.jpg" alt="Início (apresentação Cliente)" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#capa-cliente-1" data-n="1" style="left:13.25%;top:36.74%;width:73.50%;height:4.89%" aria-label="Ponto 1: Obra apresentada"><b>1</b></a><a class="marca" href="#capa-cliente-2" data-n="2" style="left:13.25%;top:45.63%;width:23.92%;height:15.36%" aria-label="Ponto 2: Avanço físico realizado"><b>2</b></a><a class="marca" href="#capa-cliente-3" data-n="3" style="left:38.04%;top:45.63%;width:23.92%;height:15.36%" aria-label="Ponto 3: Planejado acumulado"><b>3</b></a><a class="marca" href="#capa-cliente-4" data-n="4" style="left:62.83%;top:45.63%;width:23.92%;height:15.36%" aria-label="Ponto 4: Desvio"><b>4</b></a><a class="marca" href="#capa-cliente-5" data-n="5" style="left:69.71%;top:1.36%;width:7.74%;height:3.50%" aria-label="Ponto 5: Troca Obra / Cliente"><b>5</b></a>
+    </div>
+    <figcaption>Início (apresentação Cliente) <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="capa-cliente-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Obra apresentada</h4>
+          <p>A capa do cliente mostra uma obra só; não há indicadores da empresa.</p>
+          
+          
+        </div>
+      </li>
+      <li id="capa-cliente-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Avanço físico realizado</h4>
+          
+          <p class="origem"><span>Origem</span><code>Realizado Acumulado</code> em aba <code>BD_Infos Gerais</code> (item Geral, mês de referência)</p>
+          
+        </div>
+      </li>
+      <li id="capa-cliente-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Planejado acumulado</h4>
+          
+          <p class="origem"><span>Origem</span><code>Replanejado Atual Acumulado - Cliente</code> em aba <code>BD_Infos Gerais</code> (item Geral, mês de referência)</p>
+          
+        </div>
+      </li>
+      <li id="capa-cliente-4" data-n="4">
+        <span class="num">4</span>
+        <div>
+          <h4>Desvio</h4>
+          
+          
+          <p class="calculo"><span>Cálculo</span>Realizado acumulado − Planejado acumulado (positivo = adiantado).</p>
+        </div>
+      </li>
+      <li id="capa-cliente-5" data-n="5">
+        <span class="num">5</span>
+        <div>
+          <h4>Troca Obra / Cliente</h4>
+          <p>Muda a apresentação inteira para as colunas &quot;- Cliente&quot; e mostra as telas do cliente no menu.</p>
+          
+          
+        </div>
+      </li></ol></section></section><section class="capitulo" id="filtros"><div class="rotulo">Todas as abas</div><h2>Filtros estilo Excel</h2>
+  <figure class="tela" data-tela="filtro-obras">
+    <div class="tela-quadro">
+      <img src="img/filtro-obras.jpg" alt="Filtro de obras aberto" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#filtro-obras-1" data-n="1" style="left:2.19%;top:14.78%;width:19.88%;height:4.22%" aria-label="Ponto 1: Pesquisa"><b>1</b></a><a class="marca" href="#filtro-obras-2" data-n="2" style="left:1.94%;top:20.11%;width:20.38%;height:4.00%" aria-label="Ponto 2: (Selecionar tudo / todos os resultados)"><b>2</b></a><a class="marca" href="#filtro-obras-3" data-n="3" style="left:1.94%;top:24.33%;width:20.38%;height:4.00%" aria-label="Ponto 3: Grupo por cliente"><b>3</b></a><a class="marca" href="#filtro-obras-4" data-n="4" style="left:1.56%;top:45.44%;width:21.13%;height:5.89%" aria-label="Ponto 4: Contagem, Cancelar e OK"><b>4</b></a>
+    </div>
+    <figcaption>Filtro de obras aberto <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="filtro-obras-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Pesquisa</h4>
+          <p>Filtra a lista pelo nome da obra ou do cliente, sem diferenciar acentos.</p>
+          
+          
+        </div>
+      </li>
+      <li id="filtro-obras-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>(Selecionar tudo / todos os resultados)</h4>
+          <p>Com pesquisa ativa, marca só os resultados — e o OK aplica só eles, como no Excel.</p>
+          
+          
+        </div>
+      </li>
+      <li id="filtro-obras-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Grupo por cliente</h4>
+          <p>A seta recolhe/expande; a caixa marca todas as obras do cliente.</p>
+          <p class="origem"><span>Origem</span>coluna <code>Cliente</code> de <code>BD_Infos Gerais</code> / <code>BD_Orc</code> (ou do cadastro)</p>
+          
+        </div>
+      </li>
+      <li id="filtro-obras-4" data-n="4">
+        <span class="num">4</span>
+        <div>
+          <h4>Contagem, Cancelar e OK</h4>
+          <p>Os filtros de mês (De, Até, Mês de referência) usam o mesmo componente, agrupados por ano.</p>
+          
+          
+        </div>
+      </li></ol></section></section><section class="capitulo" id="resumo-geral"><div class="rotulo">Aba Resumo Geral</div><h2>Resumo Geral</h2>
+  <p>Com várias obras no filtro, os percentuais são média ponderada pelo orçamento base físico de cada obra e os valores em R$ são somados (o Power BI mostrava o maior valor entre as obras). A página ocupa exatamente a altura da tela; em telas baixas os valores da análise econômica aparecem compactos (R$ 13,5 mi).</p>
+  
+  <figure class="tela" data-tela="resumo-geral">
+    <div class="tela-quadro">
+      <img src="img/resumo-geral.jpg" alt="Resumo Geral" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#resumo-geral-1" data-n="1" style="left:0.00%;top:6.44%;width:100.00%;height:7.67%" aria-label="Ponto 1: Filtros"><b>1</b></a><a class="marca" href="#resumo-geral-2" data-n="2" style="left:2.69%;top:22.78%;width:24.78%;height:36.09%" aria-label="Ponto 2: Quadro CEF × Físico"><b>2</b></a><a class="marca" href="#resumo-geral-3" data-n="3" style="left:1.50%;top:61.65%;width:27.16%;height:36.58%" aria-label="Ponto 3: Análise econômica"><b>3</b></a><a class="marca" href="#resumo-geral-4" data-n="4" style="left:29.41%;top:21.33%;width:69.09%;height:17.83%" aria-label="Ponto 4: Curva acumulada atual × original"><b>4</b></a><a class="marca" href="#resumo-geral-5" data-n="5" style="left:29.41%;top:40.50%;width:69.09%;height:17.83%" aria-label="Ponto 5: Realizado × planejado (mês)"><b>5</b></a><a class="marca" href="#resumo-geral-6" data-n="6" style="left:29.41%;top:59.66%;width:69.09%;height:17.83%" aria-label="Ponto 6: Assertividade"><b>6</b></a><a class="marca" href="#resumo-geral-7" data-n="7" style="left:29.41%;top:78.83%;width:23.25%;height:19.39%" aria-label="Ponto 7: Custos por (sem correção)"><b>7</b></a><a class="marca" href="#resumo-geral-8" data-n="8" style="left:53.41%;top:78.83%;width:14.53%;height:19.39%" aria-label="Ponto 8: INCC"><b>8</b></a><a class="marca" href="#resumo-geral-9" data-n="9" style="left:68.69%;top:78.83%;width:14.53%;height:19.39%" aria-label="Ponto 9: NH-NU"><b>9</b></a><a class="marca" href="#resumo-geral-10" data-n="10" style="left:83.97%;top:78.83%;width:14.53%;height:19.39%" aria-label="Ponto 10: Andamento geral"><b>10</b></a><a class="marca" href="#resumo-geral-11" data-n="11" style="left:91.03%;top:16.44%;width:7.47%;height:3.56%" aria-label="Ponto 11: + Infos da obra"><b>11</b></a>
+    </div>
+    <figcaption>Resumo Geral <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="resumo-geral-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Filtros</h4>
+          <p><b>De / Até</b> = meses mostrados nos gráficos. <b>Mês de referência</b> = mês dos quadros e da linha vertical tracejada dos gráficos.</p>
+          
+          
+        </div>
+      </li>
+      <li id="resumo-geral-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Quadro CEF × Físico</h4>
+          
+          <p class="origem"><span>Origem</span>aba <code>BD_Infos Gerais</code> (item Geral, mês de referência) — colunas &quot;Banco 1ª Fase&quot; (CEF) e curvas da obra (Físico)</p>
+          <p class="calculo"><span>Cálculo</span><b>Mês de referência</b> — Avanço mês: CEF <code>Realizado/Projetado Mês - Banco 1ª Fase</code>, Físico <code>Realizado Mês</code>; Avanço acm: <code>Realizado/Projetado Acumulado - Banco 1ª Fase</code> / <code>Realizado Acumulado</code>; Cronograma: <code>Cronograma Acumulado - Banco 1ª Fase</code> / <code>Previsto Original Acumulado - Obra</code>; Previsto (rep1): <code>Previsto Acumulado - Banco 1ª Fase</code> / <code>Replanejado Atual Acumulado - Obra</code>; Desvio = Avanço acm − Previsto. <b>Mês seguinte</b> — CEF: as mesmas colunas do mês seguinte; Físico: Projetado mês = <code>Meta Mês - Mês Subsequente</code>, Projetado acm = <code>Meta Acumulada - Mês Subsequente</code> (do mês de referência), Cronograma e Previsto do mês seguinte; Desvio = Projetado acm − Previsto. Obra sem curva CEF: CEF zerado.</p>
+        </div>
+      </li>
+      <li id="resumo-geral-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Análise econômica</h4>
+          
+          <p class="origem"><span>Origem</span>aba <code>BD_Econômico</code> (item Geral, mês de referência) e <code>BD_Orc</code> (ITEM = Geral)</p>
+          <p class="calculo"><span>Cálculo</span>Orçado = <code>Orçamento Base Físico</code> (BD_Orc, Geral) · Projetado = <code>Custo Projetado Total</code> · Desvio R$ = Orçado − Projetado · IEC = <code>IEC Obra</code> · % de indireto = Custo Projetado do <b>item 16</b> ÷ do Geral · Custo pago e a pagar = <code>Custo Pago</code> + <code>NFs Lançadas</code> · Saldos = <code>Saldos OC</code> + <code>Saldos Contratos</code> · Orç. de término = <code>Orçamento de Término</code> · Passível de reajuste = <code>Custo Passível de Reajuste</code> · Aditivos aprovados = <code>Total de Aditivos</code> − <code>Aditivos sem Aprovação</code> · Custos não incidentes = <code>Custos Fora Contrato</code>.</p>
+        </div>
+      </li>
+      <li id="resumo-geral-4" data-n="4">
+        <span class="num">4</span>
+        <div>
+          <h4>Curva acumulada atual × original</h4>
+          
+          <p class="origem"><span>Origem</span>aba <code>BD_Infos Gerais</code> (item Geral, mês de referência), mês a mês</p>
+          <p class="calculo"><span>Cálculo</span>Previsto original (tracejado) = <code>Previsto Original Acumulado</code>; Realizado = <code>Realizado Acumulado</code> até o mês de referência; Planejado atual = <code>Replanejado Atual Acumulado</code>. A sequência repetida no fim da série (100%, 100%…) é cortada, como as medidas &quot;Sem Repetição&quot; do Power BI.</p>
+        </div>
+      </li>
+      <li id="resumo-geral-5" data-n="5">
+        <span class="num">5</span>
+        <div>
+          <h4>Realizado × planejado (mês)</h4>
+          
+          <p class="origem"><span>Origem</span><code>Realizado Mês</code> e <code>Replanejado Atual Mês</code> (aba <code>BD_Infos Gerais</code> (item Geral, mês de referência))</p>
+          
+        </div>
+      </li>
+      <li id="resumo-geral-6" data-n="6">
+        <span class="num">6</span>
+        <div>
+          <h4>Assertividade</h4>
+          
+          <p class="origem"><span>Origem</span>coluna <code>Assertividade</code> de <code>BD_Infos Gerais</code>, até o mês de referência</p>
+          
+        </div>
+      </li>
+      <li id="resumo-geral-7" data-n="7">
+        <span class="num">7</span>
+        <div>
+          <h4>Custos por (sem correção)</h4>
+          
+          <p class="origem"><span>Origem</span>cadastro de obras (UH e áreas), <code>BD_Orc</code> e aba <code>BD_Econômico</code> (item Geral, mês de referência)</p>
+          <p class="calculo"><span>Cálculo</span>(Orçado − <code>Resultado Sem Correção</code>) ÷ Nº de UH, Área equivalente, Área privativa total e Área construída.</p>
+        </div>
+      </li>
+      <li id="resumo-geral-8" data-n="8">
+        <span class="num">8</span>
+        <div>
+          <h4>INCC</h4>
+          
+          <p class="origem"><span>Origem</span>cadastro (<code>INCC do orçamento base</code> ou data-base) + série INCC-DI (FGV/Banco Central)</p>
+          <p class="calculo"><span>Cálculo</span>% reajuste = índice do mês de referência ÷ índice base − 1. O Power BI fazia base ÷ mês (resultado invertido).</p>
+        </div>
+      </li>
+      <li id="resumo-geral-9" data-n="9">
+        <span class="num">9</span>
+        <div>
+          <h4>NH-NU</h4>
+          
+          <p class="origem"><span>Origem</span><code>Homens/ mês</code> (aba <code>BD_Infos Gerais</code> (item Geral, mês de referência)) e Nº de UH (cadastro)</p>
+          <p class="calculo"><span>Cálculo</span>Homens/mês × Nº de UH × Realizado Mês ÷ 100 — mesma medida do Power BI, mantida a pedido.</p>
+        </div>
+      </li>
+      <li id="resumo-geral-10" data-n="10">
+        <span class="num">10</span>
+        <div>
+          <h4>Andamento geral</h4>
+          
+          <p class="origem"><span>Origem</span><code>Realizado Acumulado</code> (aba <code>BD_Infos Gerais</code> (item Geral, mês de referência))</p>
+          
+        </div>
+      </li>
+      <li id="resumo-geral-11" data-n="11">
+        <span class="num">11</span>
+        <div>
+          <h4>+ Infos da obra</h4>
+          <p>Abre a ficha da obra em tela cheia (próximo capítulo).</p>
+          
+          
+        </div>
+      </li></ol></section>
+  <div class="validar"><b>Para validar</b>As correções em relação ao Power BI (aditivos aprovados, % de reajuste, desvio do mês seguinte, avanço mês CEF, saldos sem dupla contagem, assertividade média) estão listadas em <code>docs/CALCULOS.md</code>. Se alguma não for desejada, a regra está isolada e volta ao comportamento original.</div>
+</section><section class="capitulo" id="ficha"><div class="rotulo">Resumo Geral</div><h2>Ficha da obra (+ Infos da obra)</h2>
+  <figure class="tela" data-tela="ficha-obra">
+    <div class="tela-quadro">
+      <img src="img/ficha-obra.jpg" alt="Ficha da obra em tela cheia" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#ficha-obra-1" data-n="1" style="left:13.25%;top:10.44%;width:73.50%;height:13.24%" aria-label="Ponto 1: Identificação"><b>1</b></a><a class="marca" href="#ficha-obra-2" data-n="2" style="left:13.25%;top:27.13%;width:73.50%;height:23.86%" aria-label="Ponto 2: Destaques"><b>2</b></a><a class="marca" href="#ficha-obra-3" data-n="3" style="left:13.25%;top:52.99%;width:36.25%;height:28.89%" aria-label="Ponto 3: Equipe"><b>3</b></a><a class="marca" href="#ficha-obra-4" data-n="4" style="left:50.50%;top:52.99%;width:36.25%;height:28.89%" aria-label="Ponto 4: Características"><b>4</b></a><a class="marca" href="#ficha-obra-5" data-n="5" style="left:13.25%;top:83.66%;width:36.25%;height:16.34%" aria-label="Ponto 5: Prazos"><b>5</b></a><a class="marca" href="#ficha-obra-6" data-n="6" style="left:50.50%;top:83.66%;width:36.25%;height:16.34%" aria-label="Ponto 6: Orçamento e INCC"><b>6</b></a>
+    </div>
+    <figcaption>Ficha da obra em tela cheia <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="ficha-obra-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Identificação</h4>
+          
+          <p class="origem"><span>Origem</span>cadastro: cliente, obra, endereço, bairro, cidade, Nº UAU, situação</p>
+          
+        </div>
+      </li>
+      <li id="ficha-obra-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Destaques</h4>
+          
+          <p class="origem"><span>Origem</span>Avanço físico = <code>Realizado Acumulado</code> do último mês fechado (BD_Infos Gerais); demais: cadastro (UH, unidades habitáveis, áreas, coeficiente AE/AP, torres, banda)</p>
+          
+        </div>
+      </li>
+      <li id="ficha-obra-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Equipe</h4>
+          
+          <p class="origem"><span>Origem</span>cadastro: diretoria, gestão (GGO de construção), coordenação, engenharia, planejamento</p>
+          
+        </div>
+      </li>
+      <li id="ficha-obra-4" data-n="4">
+        <span class="num">4</span>
+        <div>
+          <h4>Características</h4>
+          
+          <p class="origem"><span>Origem</span>cadastro: tipologia, padrão, sistema estrutural, fundação</p>
+          
+        </div>
+      </li>
+      <li id="ficha-obra-5" data-n="5">
+        <span class="num">5</span>
+        <div>
+          <h4>Prazos</h4>
+          
+          <p class="origem"><span>Origem</span>cadastro: início, fim meta, fim cliente final, fim incorporador, prazo inicial e meta</p>
+          
+        </div>
+      </li>
+      <li id="ficha-obra-6" data-n="6">
+        <span class="num">6</span>
+        <div>
+          <h4>Orçamento e INCC</h4>
+          
+          <p class="origem"><span>Origem</span>cadastro: orçamento base, mês do orçamento, INCC do orçamento, data-base INCC</p>
+          
+        </div>
+      </li></ol></section></section><section class="capitulo" id="resumo-fisico"><div class="rotulo">Aba Resumo Físico</div><h2>Resumo Físico</h2>
+  <p>Uma linha por item da EAP da obra no mês de referência. Itens pai (ex.: <code>04</code>) recolhem os filhos (<code>04.01</code>). A linha da obra (total) vem do BD_Infos Gerais.</p>
+  
+  <figure class="tela" data-tela="resumo-fisico">
+    <div class="tela-quadro">
+      <img src="img/resumo-fisico.jpg" alt="Resumo Físico com o item Estrutura expandido" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#resumo-fisico-1" data-n="1" style="left:1.50%;top:24.11%;width:97.00%;height:10.54%" aria-label="Ponto 1: Comentário do mês e principais metas"><b>1</b></a><a class="marca" href="#resumo-fisico-2" data-n="2" style="left:19.06%;top:36.54%;width:22.49%;height:4.22%" aria-label="Ponto 2: Projeção econômica"><b>2</b></a><a class="marca" href="#resumo-fisico-3" data-n="3" style="left:41.55%;top:36.54%;width:50.15%;height:4.22%" aria-label="Ponto 3: Mês de referência"><b>3</b></a><a class="marca" href="#resumo-fisico-4" data-n="4" style="left:91.71%;top:36.54%;width:8.29%;height:4.22%" aria-label="Ponto 4: Mês seguinte"><b>4</b></a><a class="marca" href="#resumo-fisico-6" data-n="6" style="left:1.56%;top:45.10%;width:98.44%;height:4.67%" aria-label="Ponto 6: Linha da obra (total)"><b>6</b></a><a class="marca" href="#resumo-fisico-7" data-n="7" style="left:2.31%;top:55.56%;width:1.50%;height:2.67%" aria-label="Ponto 7: Recolher / expandir"><b>7</b></a><a class="marca" href="#resumo-fisico-8" data-n="8" style="left:5.06%;top:63.11%;width:6.09%;height:2.28%" aria-label="Ponto 8: Marcador de comentário"><b>8</b></a><a class="marca" href="#resumo-fisico-9" data-n="9" style="left:62.84%;top:18.78%;width:17.35%;height:3.56%" aria-label="Ponto 9: Ocultar / exibir projeção econômica e pesos"><b>9</b></a>
+    </div>
+    <figcaption>Resumo Físico com o item Estrutura expandido <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="resumo-fisico-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Comentário do mês e principais metas</h4>
+          
+          <p class="origem"><span>Origem</span><code>Comentário Obra</code> e <code>Principais Metas Obra</code> (aba <code>BD_Infos Gerais</code> (item Geral, mês de referência); na visão Cliente, as colunas do cliente)</p>
+          
+        </div>
+      </li>
+      <li id="resumo-fisico-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Projeção econômica</h4>
+          
+          <p class="origem"><span>Origem</span>Orçamento = <code>Orçamento Base Físico</code> do item (<code>BD_Orc</code>); Orç. projetado = <code>Custo Projetado Total</code> e IEC = <code>IEC Obra</code> do mesmo item em <code>BD_Econômico</code> (só itens pai)</p>
+          
+        </div>
+      </li>
+      <li id="resumo-fisico-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Mês de referência</h4>
+          
+          <p class="origem"><span>Origem</span><code>BD_Físico por atividade</code> (item e mês)</p>
+          <p class="calculo"><span>Cálculo</span>Realizado acm <code>Realizado Acumulado</code> · Realizado mês <code>Realizado Mês</code> · Planejado inicial <code>Meta Acumulada - Inicial</code> · Planejado acm <code>Meta Acumulada - Atual</code> · Planejado mês <code>Meta Mês - Atual</code> · % acerto <code>Assertividade</code> · Cronograma <code>Replanejado Atual Acumulado - Obra</code> · Adiant. = Realizado acm − Cronograma.</p>
+        </div>
+      </li>
+      <li id="resumo-fisico-4" data-n="4">
+        <span class="num">4</span>
+        <div>
+          <h4>Mês seguinte</h4>
+          
+          <p class="origem"><span>Origem</span><code>BD_Físico por atividade</code></p>
+          <p class="calculo"><span>Cálculo</span>Planejado mês <code>Meta Mês - Mês Subsequente</code> · Planejado acm <code>Meta Acumulado - Mês Subsequente</code> · Previsto = <code>Replanejado Atual Acumulado</code> do mês seguinte · Adiant. = Planejado acm − Previsto.</p>
+        </div>
+      </li>
+      <li id="resumo-fisico-5" data-n="5">
+        <span class="num">5</span>
+        <div>
+          <h4>Pesos</h4>
+          
+          <p class="origem"><span>Origem</span><code>Peso Atraso / Adiantamento</code> e <code>Peso Planejado na Meta</code> (<code>BD_Físico por atividade</code>)</p>
+          
+        </div>
+      </li>
+      <li id="resumo-fisico-6" data-n="6">
+        <span class="num">6</span>
+        <div>
+          <h4>Linha da obra (total)</h4>
+          
+          <p class="origem"><span>Origem</span>aba <code>BD_Infos Gerais</code> (item Geral, mês de referência) e Orçamento Geral do <code>BD_Orc</code></p>
+          
+        </div>
+      </li>
+      <li id="resumo-fisico-7" data-n="7">
+        <span class="num">7</span>
+        <div>
+          <h4>Recolher / expandir</h4>
+          <p>Começa recolhido; &quot;Expandir tudo&quot;/&quot;Recolher tudo&quot; no topo. Pai = código sem ponto.</p>
+          
+          
+        </div>
+      </li>
+      <li id="resumo-fisico-8" data-n="8">
+        <span class="num">8</span>
+        <div>
+          <h4>Marcador de comentário</h4>
+          <p>O mesmo selo é usado no Resumo Econômico.</p>
+          <p class="origem"><span>Origem</span><code>Comentários - Obra</code> da atividade (visão Cliente: <code>Comentários - Cliente</code>)</p>
+          
+        </div>
+      </li>
+      <li id="resumo-fisico-9" data-n="9">
+        <span class="num">9</span>
+        <div>
+          <h4>Ocultar / exibir projeção econômica e pesos</h4>
+          <p>Esconde as colunas 2 e 5; a escolha fica lembrada no navegador.</p>
+          
+          
+        </div>
+      </li></ol></section>
+</section><section class="capitulo" id="resumo-economico"><div class="rotulo">Aba Resumo Econômico</div><h2>Resumo Econômico (IEC)</h2>
+  <p>Uma linha por item do <code>BD_Econômico</code> no mês de referência; a linha da obra é o item <code>Geral</code>. Mesma apresentação do Resumo Físico.</p>
+  
+  <figure class="tela" data-tela="resumo-economico">
+    <div class="tela-quadro">
+      <img src="img/resumo-economico.jpg" alt="Resumo Econômico com o item Estrutura expandido" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#resumo-economico-1" data-n="1" style="left:1.50%;top:24.11%;width:97.00%;height:8.71%" aria-label="Ponto 1: Indicadores do topo"><b>1</b></a><a class="marca" href="#resumo-economico-2" data-n="2" style="left:1.56%;top:34.71%;width:96.88%;height:4.22%" aria-label="Ponto 2: Colunas agrupadas"><b>2</b></a><a class="marca" href="#resumo-economico-3" data-n="3" style="left:1.56%;top:43.27%;width:96.88%;height:4.67%" aria-label="Ponto 3: Linha da obra"><b>3</b></a><a class="marca" href="#resumo-economico-6" data-n="6" style="left:0.00%;top:89.62%;width:100.00%;height:10.38%" aria-label="Ponto 6: Rodapé congelado"><b>6</b></a>
+    </div>
+    <figcaption>Resumo Econômico com o item Estrutura expandido <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="resumo-economico-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Indicadores do topo</h4>
+          
+          <p class="origem"><span>Origem</span>aba <code>BD_Econômico</code> (item Geral, mês de referência)</p>
+          <p class="calculo"><span>Cálculo</span><code>Avanço</code>, <code>Custo Lançado</code>, <code>Orçamento de Término</code>, <code>Custo Projetado Total</code>, <code>Resultado Projetado Obra</code>, <code>IEC Obra</code>, <code>Resultado Sem Correção</code>, <code>IEC Sem correção</code>, <code>% Contratado</code>. Valores em R$ compactos; o completo aparece ao passar o mouse e na linha da obra.</p>
+        </div>
+      </li>
+      <li id="resumo-economico-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Colunas agrupadas</h4>
+          <p>Execução, Projeção, Resultado, Sem correção e Contratação — mesmas colunas acima, por item.</p>
+          
+          
+        </div>
+      </li>
+      <li id="resumo-economico-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Linha da obra</h4>
+          
+          <p class="origem"><span>Origem</span><code>BD_Econômico</code>, item <code>Geral</code></p>
+          
+        </div>
+      </li>
+      <li id="resumo-economico-4" data-n="4">
+        <span class="num">4</span>
+        <div>
+          <h4>Detalhe do item (3 × 4)</h4>
+          
+          <p class="origem"><span>Origem</span><code>BD_Econômico</code>, item e mês</p>
+          <p class="calculo"><span>Cálculo</span>Custos: <code>Custo Pago</code>, <code>NFs Lançadas</code>, <code>Custo em Sistema</code>, <code>Comprometimentos e Rateios</code> · Saldos: <code>Saldos OC</code>, <code>Saldos Contratos</code>, <code>Saldo de Orçamento</code>, <code>Custo Passível de Reajuste</code> · Mês e aditivos: <code>Custo Lançado Mês</code>, <code>Custo Pago Mês</code>, <code>Variação Mês - Custo</code>, <code>Total de Aditivos</code>.</p>
+        </div>
+      </li>
+      <li id="resumo-economico-5" data-n="5">
+        <span class="num">5</span>
+        <div>
+          <h4>Comentários do item</h4>
+          
+          <p class="origem"><span>Origem</span><code>Variações principais</code>, <code>Variação do mês</code>, <code>Contingências</code> (texto &quot;0&quot; é tratado como vazio)</p>
+          
+        </div>
+      </li>
+      <li id="resumo-economico-6" data-n="6">
+        <span class="num">6</span>
+        <div>
+          <h4>Rodapé congelado</h4>
+          
+          <p class="origem"><span>Origem</span>aba <code>BD_Econômico</code> (item Geral, mês de referência)</p>
+          <p class="calculo"><span>Cálculo</span><code>Custo Pago Mês</code>, <code>Custo Passível de Reajuste</code>, <code>Total de Aditivos</code>, <code>Aditivos sem Aprovação</code>, <code>Custos Fora Contrato</code>, <code>Variação Mês - Custo</code>. Fica fixo no pé da tela.</p>
+        </div>
+      </li></ol></section>
+  <div class="nota"><b>IEC igual a zero</b>Na planilha, IEC 0 significa "sem IEC" (a consulta do Power BI trocava "-" por 0); aqui aparece "—".</div>
+</section><section class="capitulo" id="galeria"><div class="rotulo">Abas Tempo x Caminho e Fotos</div><h2>Tempo x Caminho e Acompanhamento Fotográfico</h2>
+  <p>As imagens são cadastradas pelo Planejamento em <b>Administração → TxC e fotos</b>, vinculadas a obra + mês + torre (TxC) ou local (fotos). Não vêm do SharePoint. A integração direta com o app de TxC está em estudo (<code>docs/ESTUDO_TXC.md</code>).</p>
+  
+  <figure class="tela" data-tela="tempo-caminho">
+    <div class="tela-quadro">
+      <img src="img/tempo-caminho.jpg" alt="Tempo x Caminho" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#tempo-caminho-1" data-n="1" style="left:4.98%;top:24.11%;width:13.60%;height:4.22%" aria-label="Ponto 1: Meses com imagens"><b>1</b></a><a class="marca" href="#tempo-caminho-2" data-n="2" style="left:1.50%;top:29.67%;width:97.00%;height:4.78%" aria-label="Ponto 2: Torres"><b>2</b></a><a class="marca" href="#tempo-caminho-3" data-n="3" style="left:1.50%;top:36.00%;width:76.00%;height:57.78%" aria-label="Ponto 3: Imagem"><b>3</b></a><a class="marca" href="#tempo-caminho-4" data-n="4" style="left:70.71%;top:37.33%;width:6.04%;height:3.50%" aria-label="Ponto 4: Ampliar"><b>4</b></a><a class="marca" href="#tempo-caminho-5" data-n="5" style="left:78.50%;top:36.00%;width:20.00%;height:29.24%" aria-label="Ponto 5: Painel lateral"><b>5</b></a><a class="marca" href="#tempo-caminho-7" data-n="7" style="left:89.80%;top:18.78%;width:8.70%;height:3.56%" aria-label="Ponto 7: Cadastrar TxC"><b>7</b></a>
+    </div>
+    <figcaption>Tempo x Caminho <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="tempo-caminho-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Meses com imagens</h4>
+          <p>Contagem por mês; borda laranja = mês de referência. Abre no mês de referência ou no mais recente anterior.</p>
+          
+          
+        </div>
+      </li>
+      <li id="tempo-caminho-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Torres</h4>
+          
+          <p class="origem"><span>Origem</span>campo <b>Torre</b> do cadastro da imagem</p>
+          
+        </div>
+      </li>
+      <li id="tempo-caminho-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Imagem</h4>
+          <p>Setas sobre a imagem e ← → do teclado navegam.</p>
+          
+          
+        </div>
+      </li>
+      <li id="tempo-caminho-4" data-n="4">
+        <span class="num">4</span>
+        <div>
+          <h4>Ampliar</h4>
+          <p>Tela cheia; Esc fecha.</p>
+          
+          
+        </div>
+      </li>
+      <li id="tempo-caminho-5" data-n="5">
+        <span class="num">5</span>
+        <div>
+          <h4>Painel lateral</h4>
+          
+          <p class="origem"><span>Origem</span>torre, mês e <b>comentário</b> do cadastro da imagem</p>
+          
+        </div>
+      </li>
+      <li id="tempo-caminho-6" data-n="6">
+        <span class="num">6</span>
+        <div>
+          <h4>Miniaturas</h4>
+          <p>Aparecem quando há mais de uma imagem na torre.</p>
+          
+          
+        </div>
+      </li>
+      <li id="tempo-caminho-7" data-n="7">
+        <span class="num">7</span>
+        <div>
+          <h4>Cadastrar TxC</h4>
+          <p>Só para Planejamento e Dev.</p>
+          
+          
+        </div>
+      </li></ol></section>
+  
+  <figure class="tela" data-tela="fotos">
+    <div class="tela-quadro">
+      <img src="img/fotos.jpg" alt="Acompanhamento Fotográfico" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#fotos-1" data-n="1" style="left:4.98%;top:24.11%;width:6.92%;height:4.22%" aria-label="Ponto 1: Meses com fotos"><b>1</b></a><a class="marca" href="#fotos-2" data-n="2" style="left:1.50%;top:29.67%;width:97.00%;height:4.78%" aria-label="Ponto 2: Locais"><b>2</b></a><a class="marca" href="#fotos-3" data-n="3" style="left:1.50%;top:36.00%;width:76.00%;height:47.78%" aria-label="Ponto 3: Foto"><b>3</b></a><a class="marca" href="#fotos-4" data-n="4" style="left:78.50%;top:36.00%;width:20.00%;height:26.75%" aria-label="Ponto 4: Comentário"><b>4</b></a>
+    </div>
+    <figcaption>Acompanhamento Fotográfico <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="fotos-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Meses com fotos</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="fotos-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Locais</h4>
+          
+          <p class="origem"><span>Origem</span>campo <b>Local</b> do cadastro da foto</p>
+          
+        </div>
+      </li>
+      <li id="fotos-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Foto</h4>
+          <p>Na visão Cliente só aparecem as imagens marcadas &quot;Exibir na apresentação ao cliente&quot;.</p>
+          
+          
+        </div>
+      </li>
+      <li id="fotos-4" data-n="4">
+        <span class="num">4</span>
+        <div>
+          <h4>Comentário</h4>
+          
+          <p class="origem"><span>Origem</span>cadastro da foto</p>
+          
+        </div>
+      </li></ol></section>
+</section><section class="capitulo" id="telas-cliente"><div class="rotulo">Apresentação Cliente</div><h2>Telas do cliente</h2>
+  <figure class="tela" data-tela="tela-cliente">
+    <div class="tela-quadro">
+      <img src="img/tela-cliente.jpg" alt="Tela criada pelo Planejamento" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#tela-cliente-1" data-n="1" style="left:55.33%;top:1.36%;width:9.81%;height:3.50%" aria-label="Ponto 1: Tela no menu"><b>1</b></a><a class="marca" href="#tela-cliente-2" data-n="2" style="left:1.50%;top:26.67%;width:48.00%;height:61.54%" aria-label="Ponto 2: Planilha somente leitura"><b>2</b></a><a class="marca" href="#tela-cliente-3" data-n="3" style="left:50.50%;top:26.67%;width:48.00%;height:61.54%" aria-label="Ponto 3: Imagem"><b>3</b></a><a class="marca" href="#tela-cliente-4" data-n="4" style="left:1.50%;top:89.98%;width:97.00%;height:10.02%" aria-label="Ponto 4: Texto livre"><b>4</b></a>
+    </div>
+    <figcaption>Tela criada pelo Planejamento <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="tela-cliente-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Tela no menu</h4>
+          <p>Aparece na apresentação Cliente para as obras escolhidas (ou todas), na ordem definida.</p>
+          <p class="origem"><span>Origem</span>Administração → Telas do cliente</p>
+          
+        </div>
+      </li>
+      <li id="tela-cliente-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Planilha somente leitura</h4>
+          
+          <p class="origem"><span>Origem</span>arquivo XLSX/XLS/CSV enviado; abre a aba escolhida (ou a primeira), com abas clicáveis quando houver mais de uma</p>
+          
+        </div>
+      </li>
+      <li id="tela-cliente-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Imagem</h4>
+          
+          <p class="origem"><span>Origem</span>arquivo enviado</p>
+          
+        </div>
+      </li>
+      <li id="tela-cliente-4" data-n="4">
+        <span class="num">4</span>
+        <div>
+          <h4>Texto livre</h4>
+          
+          
+          
+        </div>
+      </li></ol></section></section><section class="capitulo" id="administracao"><div class="rotulo">Planejamento e Dev</div><h2>Administração</h2>
+  
+  <figure class="tela" data-tela="admin-cadastro">
+    <div class="tela-quadro">
+      <img src="img/admin-cadastro.jpg" alt="Cadastro de obras" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#admin-cadastro-1" data-n="1" style="left:1.50%;top:14.67%;width:15.00%;height:22.33%" aria-label="Ponto 1: Seções da administração"><b>1</b></a><a class="marca" href="#admin-cadastro-2" data-n="2" style="left:80.77%;top:10.78%;width:10.68%;height:4.44%" aria-label="Ponto 2: Importar planilha"><b>2</b></a><a class="marca" href="#admin-cadastro-3" data-n="3" style="left:92.07%;top:10.78%;width:6.43%;height:4.44%" aria-label="Ponto 3: Nova obra"><b>3</b></a><a class="marca" href="#admin-cadastro-4" data-n="4" style="left:18.06%;top:21.44%;width:80.38%;height:5.89%" aria-label="Ponto 4: Linha da obra"><b>4</b></a>
+    </div>
+    <figcaption>Cadastro de obras <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="admin-cadastro-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Seções da administração</h4>
+          <p>Usuários aparece só para o Dev.</p>
+          
+          
+        </div>
+      </li>
+      <li id="admin-cadastro-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Importar planilha</h4>
+          <p>Planilha &quot;Painel de Obras&quot; (mesmos cabeçalhos do Power BI). Obras já cadastradas são atualizadas.</p>
+          
+          
+        </div>
+      </li>
+      <li id="admin-cadastro-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Nova obra</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="admin-cadastro-4" data-n="4">
+        <span class="num">4</span>
+        <div>
+          <h4>Linha da obra</h4>
+          <p>Obras das planilhas sem cadastro aparecem com o selo &quot;sem cadastro&quot;.</p>
+          
+          
+        </div>
+      </li></ol></section>
+  
+  <figure class="tela" data-tela="admin-midia-form">
+    <div class="tela-quadro">
+      <img src="img/admin-midia-form.jpg" alt="Cadastro de TxC / fotos" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#admin-midia-form-1" data-n="1" style="left:21.75%;top:23.19%;width:56.50%;height:19.22%" aria-label="Ponto 1: Obra, mês, torre/local e ordem"><b>1</b></a><a class="marca" href="#admin-midia-form-2" data-n="2" style="left:21.75%;top:47.03%;width:56.50%;height:10.67%" aria-label="Ponto 2: Comentário"><b>2</b></a><a class="marca" href="#admin-midia-form-3" data-n="3" style="left:21.75%;top:62.31%;width:56.50%;height:9.11%" aria-label="Ponto 3: Área de envio"><b>3</b></a><a class="marca" href="#admin-midia-form-4" data-n="4" style="left:21.75%;top:73.19%;width:56.50%;height:2.44%" aria-label="Ponto 4: Exibir ao cliente"><b>4</b></a>
+    </div>
+    <figcaption>Cadastro de TxC / fotos <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="admin-midia-form-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Obra, mês, torre/local e ordem</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="admin-midia-form-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Comentário</h4>
+          <p>Aparece ao lado da imagem na apresentação.</p>
+          
+          
+        </div>
+      </li>
+      <li id="admin-midia-form-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Área de envio</h4>
+          <p>Arraste ou clique; várias imagens viram vários registros com os mesmos dados.</p>
+          
+          
+        </div>
+      </li>
+      <li id="admin-midia-form-4" data-n="4">
+        <span class="num">4</span>
+        <div>
+          <h4>Exibir ao cliente</h4>
+          <p>Desmarcado = só a apresentação Obra mostra.</p>
+          
+          
+        </div>
+      </li></ol></section>
+  
+  <figure class="tela" data-tela="admin-tela-form">
+    <div class="tela-quadro">
+      <img src="img/admin-tela-form.jpg" alt="Edição de tela do cliente" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#admin-tela-form-1" data-n="1" style="left:21.75%;top:10.94%;width:56.50%;height:7.50%" aria-label="Ponto 1: Título, subtítulo e ordem no menu"><b>1</b></a><a class="marca" href="#admin-tela-form-2" data-n="2" style="left:21.75%;top:32.67%;width:56.50%;height:28.83%" aria-label="Ponto 2: Bloco de conteúdo"><b>2</b></a>
+    </div>
+    <figcaption>Edição de tela do cliente <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="admin-tela-form-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Título, subtítulo e ordem no menu</h4>
+          
+          
+          
+        </div>
+      </li>
+      <li id="admin-tela-form-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>Bloco de conteúdo</h4>
+          <p>Título, largura (inteira/meia) e, para planilha, a aba a exibir. O arquivo é enviado na hora.</p>
+          
+          
+        </div>
+      </li>
+      <li id="admin-tela-form-3" data-n="3">
+        <span class="num">3</span>
+        <div>
+          <h4>Adicionar bloco</h4>
+          <p>Imagem, planilha ou texto.</p>
+          
+          
+        </div>
+      </li></ol></section>
+  
+  <figure class="tela" data-tela="admin-fontes">
+    <div class="tela-quadro">
+      <img src="img/admin-fontes.jpg" alt="Fontes de dados e INCC" loading="lazy" width="1600" height="900">
+      <a class="marca" href="#admin-fontes-1" data-n="1" style="left:18.00%;top:17.00%;width:80.50%;height:34.83%" aria-label="Ponto 1: Planilhas"><b>1</b></a><a class="marca" href="#admin-fontes-2" data-n="2" style="left:18.00%;top:51.83%;width:80.50%;height:48.17%" aria-label="Ponto 2: INCC-DI"><b>2</b></a>
+    </div>
+    <figcaption>Fontes de dados e INCC <span>· captura com dados fictícios</span></figcaption>
+  </figure>
+  <section class="legenda" aria-label="Pontos da tela"><ol>
+      <li id="admin-fontes-1" data-n="1">
+        <span class="num">1</span>
+        <div>
+          <h4>Planilhas</h4>
+          <p>Origem, horário da última leitura e linhas de cada aba.</p>
+          
+          
+        </div>
+      </li>
+      <li id="admin-fontes-2" data-n="2">
+        <span class="num">2</span>
+        <div>
+          <h4>INCC-DI</h4>
+          <p>Últimos meses, origem de cada índice (FGV, BCB/SGS ou manual), busca de meses novos e correção manual.</p>
+          
+          
+        </div>
+      </li></ol></section>
+</section></main>
+</div>
+<footer>Unità Engenharia · Planejamento e Controle · relatório gerado a partir da versão em desenvolvimento (capturas com dados fictícios)</footer>
+<script>
+// Destaca o par marca ↔ item da legenda ao passar o mouse ou focar.
+document.querySelectorAll('.tela').forEach((tela) => {
+  const legenda = tela.nextElementSibling;
+  const alternar = (n, ligar) => {
+    tela.querySelector('.marca[data-n="' + n + '"]')?.classList.toggle('ativa', ligar);
+    legenda?.querySelector('li[data-n="' + n + '"]')?.classList.toggle('ativa', ligar);
+  };
+  for (const el of [...tela.querySelectorAll('.marca'), ...(legenda ? legenda.querySelectorAll('li') : [])]) {
+    el.addEventListener('mouseenter', () => alternar(el.dataset.n, true));
+    el.addEventListener('mouseleave', () => alternar(el.dataset.n, false));
+    el.addEventListener('focus', () => alternar(el.dataset.n, true));
+    el.addEventListener('blur', () => alternar(el.dataset.n, false));
+  }
+});
+</script>

@@ -1,0 +1,63 @@
+/* App shell: header grafite com borda laranja, barra de filtros e área de conteúdo. */
+.app-header { position: sticky; top: 0; z-index: 30; background: var(--color-secondary); border-bottom: 2px solid var(--color-primary); }
+.app-header .in { display: flex; align-items: center; gap: 20px; height: var(--header-h); padding: 0 24px; }
+.app-header .logo { height: 28px; display: block; }
+.app-header nav { display: flex; gap: 4px; overflow-x: auto; min-width: 0; flex: 1; scrollbar-width: none; }
+.app-header nav a { color: var(--ink-300); text-decoration: none; font-weight: 500; font-size: 13px; padding: 6px 10px; border-radius: var(--r-control); white-space: nowrap; }
+.app-header nav a:hover { color: var(--surface); background: var(--header-hover); }
+.app-header nav a[aria-current='page'] { color: var(--surface); background: var(--header-hover); box-shadow: inset 0 -2px 0 var(--color-primary); }
+.app-header .direita { margin-left: auto; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.app-header .usuario { text-align: right; line-height: 1.2; }
+.app-header .usuario b { color: var(--surface); font-size: 13px; display: block; }
+.app-header .usuario span { color: var(--ink-400); font-size: 11px; }
+.app-header .visao { display: inline-flex; border: 1px solid var(--ink-600); border-radius: var(--r-control); overflow: hidden; }
+.app-header .visao a { color: var(--ink-300); text-decoration: none; font-size: 13px; font-weight: 500; padding: 5px 12px; }
+.app-header .visao a[aria-current='true'] { background: var(--color-primary); color: var(--color-primary-foreground); }
+
+.filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 24px; background: var(--surface); border-bottom: 1px solid var(--border-soft); position: relative; z-index: 20; }
+.filtros .info { margin-left: auto; display: flex; align-items: center; gap: 10px; text-align: right; }
+
+main.conteudo { padding: 20px 24px 40px; }
+main.conteudo.cheio { padding: 0; }
+.titulo-pagina { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.titulo-pagina h1 { font-size: 24px; letter-spacing: -0.01em; }
+.titulo-pagina p { color: var(--muted); margin-top: 2px; }
+
+/* Administração: sidebar de 240px que vira abas abaixo de 1024px */
+.admin { display: flex; gap: 24px; }
+.admin aside { width: 240px; flex-shrink: 0; }
+.admin aside nav { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
+.admin aside nav a { padding: 8px 12px; border-radius: var(--r-control); font-weight: 500; color: var(--ink-600); text-decoration: none; border-left: 2px solid transparent; }
+.admin aside nav a[aria-current='page'] { background: var(--color-primary-soft); color: var(--color-primary); border-left-color: var(--color-primary); }
+.admin .painel-admin { flex: 1; min-width: 0; }
+
+/* Login */
+.login { min-height: 100vh; display: grid; place-items: center; padding: 24px; position: relative; overflow: hidden; }
+.login .padrao { position: absolute; left: 0; bottom: -8px; width: 160%; max-width: none; opacity: 0.08; pointer-events: none; }
+.login .card { width: min(420px, 100%); padding: 32px; position: relative; }
+.login .logo { height: 48px; display: block; margin-bottom: 24px; }
+
+/* Modo apresentação (tela cheia): esconde filtros e administração */
+body.apresentando .filtros, body.apresentando .so-edicao { display: none !important; }
+body.apresentando main.conteudo { padding-top: 12px; }
+
+@media (max-width: 1700px) {
+  .app-header .usuario { display: none; }
+  .app-header .in { gap: 12px; }
+}
+@media (max-width: 1024px) {
+  .admin { flex-direction: column; }
+  .admin aside { width: auto; }
+  .admin aside nav { flex-direction: row; overflow-x: auto; }
+}
+@media (max-width: 760px) {
+  .app-header .in { padding: 0 16px; gap: 12px; }
+  .app-header .usuario { display: none; }
+  .filtros, main.conteudo { padding-left: 16px; padding-right: 16px; }
+  .filtros .info { margin-left: 0; text-align: left; }
+}
+@media print {
+  .app-header, .filtros, .so-edicao { display: none !important; }
+  main.conteudo { padding: 0; }
+  .card { break-inside: avoid; box-shadow: none; }
+}
