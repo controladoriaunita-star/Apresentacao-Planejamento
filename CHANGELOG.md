@@ -5,7 +5,12 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v11 |
+| Dev (local) | v12 |
+
+## v12 — 16/10/2026 — Resumo Físico sem comentários no cabeçalho
+
+- Retirados os quadros "Comentário do mês" e "Principais metas" do topo do Resumo Físico (obra e cliente); os
+  comentários de cada atividade continuam no marcador da tabela.
 
 ## v11 — 16/10/2026 — bateria de testes da API
 

@@ -35,7 +35,7 @@ test('todas as abas da apresentação Obra abrem sem erro', async ({ page }) => 
 test('Resumo Físico: itens pai recolhem e expandem', async ({ page }) => {
   await entrar(page, DEV);
   await page.goto('/#/obra/resumo-fisico');
-  await expect(page.getByText('Principais metas')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Expandir ou recolher Estrutura' })).toBeVisible();
   const filho = page.getByRole('cell', { name: /Estrutura\/Viga\/Lajes/ });
   await expect(filho).toBeHidden(); // começa recolhido, como a matriz do Power BI
   await page.getByRole('button', { name: 'Expandir ou recolher Estrutura' }).click();
@@ -170,11 +170,15 @@ test('capa do Cliente não mostra indicadores da empresa', async ({ page }) => {
   }
 });
 
-test('apresentação Cliente usa os comentários do cliente', async ({ page }) => {
+test('Resumo Físico não mostra os comentários gerais no cabeçalho', async ({ page }) => {
   await entrar(page, DEV);
-  await page.goto('/#/cliente/resumo-fisico');
-  await expect(page.getByText('Comentário para o cliente')).toBeVisible();
-  await expect(page.getByText('Comentário interno da obra')).toHaveCount(0);
+  for (const visao of ['obra', 'cliente']) {
+    await page.goto(`/#/${visao}/resumo-fisico`);
+    await expect(page.locator('[data-teste="simular"]')).toBeVisible();
+    for (const texto of ['Comentário do mês', 'Principais metas', 'Comentário para o cliente', 'Comentário interno da obra']) {
+      await expect(page.getByText(texto)).toHaveCount(0);
+    }
+  }
 });
 
 test('galeria de fotos: meses, locais, teclado e ampliar', async ({ page }) => {

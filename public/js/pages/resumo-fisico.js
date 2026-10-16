@@ -7,7 +7,7 @@ import { estado } from '../core/estado.js';
 import { calcularResumoFisico, itemPai } from '../domain/resumo-fisico.js';
 import { podeRetirar, simularSemItens } from '../domain/simulacao-fisico.js';
 import {
-  abrirModal, alerta, card, cardTitulo, carregando, marcadorComentario, seloCompetencia, status, vazio,
+  abrirModal, alerta, carregando, marcadorComentario, seloCompetencia, status, vazio,
 } from '../ui/componentes.js';
 import { obraUnica } from '../ui/filtros.js';
 import { icone } from '../ui/icones.js';
@@ -86,7 +86,6 @@ export async function renderResumoFisico(alvo, ctx) {
       botaoExtras,
       h('button', { class: 'btn ghost sm', type: 'button', onclick: () => tab.alternarTudo(true) }, icone('expandir', { tamanho: 16 }), 'Expandir tudo'),
       h('button', { class: 'btn ghost sm', type: 'button', onclick: () => tab.alternarTudo(false) }, icone('recolher', { tamanho: 16 }), 'Recolher tudo'))),
-    comentariosGerais(r.total),
     painel,
     planilha);
 }
@@ -106,12 +105,6 @@ function cabecalho(obra, referencia, seletor, acoes = null) {
       h('div', {}, h('div', { class: 'eyebrow' }, 'Resumo físico'), h('h1', {}, obra.nome)),
       seloCompetencia(referencia)),
     h('div', { class: 'row' }, acoes, seletor));
-}
-
-function comentariosGerais(total) {
-  const blocos = [['Comentário do mês', total?.comentario], ['Principais metas', total?.principaisMetas]].filter(([, t]) => t);
-  if (!blocos.length) return null;
-  return h('div', { class: 'comentarios' }, blocos.map(([titulo, texto]) => card({ class: 'card-pad' }, cardTitulo(titulo), h('p', {}, texto))));
 }
 
 const pct = (v) => fmtPercentual(v, 1);
