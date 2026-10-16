@@ -9,7 +9,7 @@ import { classeSinal, fmtMes, fmtMoedaCompacta, fmtPorTipo } from '../core/forma
 import {
   COLUNAS_ECONOMICO, DETALHES_ECONOMICO, INDICADORES_ECONOMICO, calcularResumoEconomico,
 } from '../domain/resumo-economico.js';
-import { kpi, marcadorComentario, vazio } from '../ui/componentes.js';
+import { kpi, marcadorComentario, seloCompetencia, vazio } from '../ui/componentes.js';
 import { obraUnica } from '../ui/filtros.js';
 import { icone } from '../ui/icones.js';
 
@@ -61,7 +61,9 @@ export function renderResumoEconomico(alvo, ctx) {
   };
 
   const titulo = h('div', { class: 'titulo-pagina' },
-    h('div', {}, h('div', { class: 'eyebrow' }, `Resumo econômico · ${fmtMes(filtro.referencia)}`), h('h1', {}, obra.nome)),
+    h('div', { class: 'titulo-com-competencia' },
+      h('div', {}, h('div', { class: 'eyebrow' }, 'Resumo econômico'), h('h1', {}, obra.nome)),
+      seloCompetencia(filtro.referencia)),
     h('div', { class: 'row' },
       r.linhas.length ? h('div', { class: 'row' },
         h('button', { class: 'btn ghost sm', type: 'button', onclick: () => r.linhas.forEach((l) => alternar(l.item, true)) }, icone('expandir', { tamanho: 16 }), 'Expandir tudo'),

@@ -2,6 +2,7 @@
  * Componentes básicos do padrão Unità, em funções que devolvem elementos.
  */
 import { h, montar } from '../core/dom.js';
+import { fmtMesLongo } from '../core/formato.js';
 import { icone } from './icones.js';
 
 export const card = (atributos, ...filhos) => h('section', { ...atributos, class: `card ${atributos?.class ?? ''}`.trim() }, ...filhos);
@@ -15,6 +16,14 @@ export function kpi(rotulo, valor, { dica = null, classe = '', classeValor = '' 
 }
 
 export const badge = (texto, tipo = 'neutral') => h('span', { class: `badge b-${tipo}` }, texto);
+
+/** Selo em destaque com o mês de competência (mês de referência) analisado na tela. */
+export function seloCompetencia(mes, { compacto = false } = {}) {
+  const texto = fmtMesLongo(mes);
+  return h('div', { class: `selo-competencia ${compacto ? 'compacto' : ''}`, 'data-teste': 'competencia' },
+    icone('calendario', { tamanho: compacto ? 16 : 22 }),
+    h('span', { class: 'selo-competencia-textos' }, h('small', {}, 'Competência'), h('b', {}, texto.charAt(0).toUpperCase() + texto.slice(1))));
+}
 
 export function alerta(tipo, titulo, texto = null) {
   return h('div', { class: `alert a-${tipo}`, role: tipo === 'error' ? 'alert' : 'status' }, h('b', {}, titulo), texto ? h('div', {}, texto) : null);

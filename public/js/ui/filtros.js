@@ -36,7 +36,7 @@ export function barraFiltros({ mostrarPeriodo = true } = {}) {
     mostrarPeriodo ? filtroExcel({ rotulo: 'De', itens: todosMeses, selecionados: de, multiplo: false, largura: 200, aoAplicar: (v) => estado.definirFiltro({ de: v }) }) : null,
     mostrarPeriodo ? filtroExcel({ rotulo: 'Até', itens: todosMeses, selecionados: ate, multiplo: false, largura: 200, aoAplicar: (v) => estado.definirFiltro({ ate: v }) }) : null,
     filtroExcel({
-      rotulo: 'Mês de referência', itens: todosMeses, selecionados: referencia, multiplo: false, testeId: 'mes-referencia', largura: 220,
+      rotulo: 'Mês de referência', itens: todosMeses, selecionados: referencia, multiplo: false, testeId: 'mes-referencia', largura: 220, destaque: true,
       aoAplicar: (v) => estado.definirFiltro({ referencia: v }),
     }),
     h('div', { class: 'info' },

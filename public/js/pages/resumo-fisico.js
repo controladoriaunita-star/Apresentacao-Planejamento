@@ -5,12 +5,19 @@ import { h, montar } from '../core/dom.js';
 import { classeSinal, fmtMes, fmtMoeda, fmtNumero, fmtPercentual, fmtVariacao, VAZIO } from '../core/formato.js';
 import { estado } from '../core/estado.js';
 import { calcularResumoFisico, itemPai } from '../domain/resumo-fisico.js';
-import { abrirModal, alerta, card, cardTitulo, carregando, marcadorComentario, status, vazio } from '../ui/componentes.js';
+import { podeRetirar, simularSemItens } from '../domain/simulacao-fisico.js';
+import {
+  abrirModal, alerta, card, cardTitulo, carregando, marcadorComentario, seloCompetencia, status, vazio,
+} from '../ui/componentes.js';
 import { obraUnica } from '../ui/filtros.js';
 import { icone } from '../ui/icones.js';
+import { painelSimulacao, rotuloLinhaSimulada } from '../ui/simulacao-fisico.js';
 
 /** Itens pai expandidos, por obra (lembrados ao trocar de mês). Começa tudo recolhido, como a matriz do Power BI. */
 const expandidos = new Map();
+
+/** Simulação "sem atividades", por obra: ligada/desligada e itens retirados (lembrados ao trocar de mês). */
+const simulacoes = new Map();
 
 export async function renderResumoFisico(alvo, ctx) {
   const { base, filtro, visao } = ctx;
@@ -33,8 +40,35 @@ export async function renderResumoFisico(alvo, ctx) {
   if (!expandidos.has(obra.chave)) expandidos.set(obra.chave, new Set());
   const abertos = expandidos.get(obra.chave);
   const pais = new Set(r.linhas.filter((l) => l.nivel === 2).map((l) => itemPai(l.item)));
-  const tab = tabela(r, { abertos, pais });
-  const planilha = h('div', { class: `sheet resumo-tabela ${lerExtras() ? '' : 'sem-extras'}` }, tab.elemento);
+  if (!simulacoes.has(obra.chave)) simulacoes.set(obra.chave, { ativa: false, retirados: new Set() });
+  const sim = simulacoes.get(obra.chave);
+  const painel = h('div', { class: 'simulacao-area' });
+  const atualizarSimulacao = () => {
+    const simulacao = simularSemItens(r, sim.retirados);
+    tab.mostrarSimulacao(simulacao);
+    montar(painel, sim.ativa ? painelSimulacao(r.total, simulacao, limparSimulacao) : null);
+  };
+  const limparSimulacao = () => {
+    sim.retirados.clear();
+    tab.sincronizarRetirados();
+    atualizarSimulacao();
+  };
+  const tab = tabela(r, { abertos, pais, retirados: sim.retirados, aoRetirar: atualizarSimulacao });
+  const planilha = h('div', { class: `sheet resumo-tabela ${lerExtras() ? '' : 'sem-extras'} ${sim.ativa ? 'simulando' : ''}` }, tab.elemento);
+  const textoSimular = () => (sim.ativa ? 'Encerrar simulação' : 'Simular sem atividades');
+  const botaoSimular = h('button', {
+    class: `btn sm ${sim.ativa ? 'primary' : 'secondary'}`, type: 'button', 'aria-pressed': String(sim.ativa), 'data-teste': 'simular',
+    onclick: () => {
+      sim.ativa = !sim.ativa;
+      planilha.classList.toggle('simulando', sim.ativa);
+      botaoSimular.classList.toggle('primary', sim.ativa);
+      botaoSimular.classList.toggle('secondary', !sim.ativa);
+      botaoSimular.setAttribute('aria-pressed', String(sim.ativa));
+      montar(botaoSimular, icone('funil', { tamanho: 16 }), textoSimular());
+      atualizarSimulacao();
+    },
+  }, icone('funil', { tamanho: 16 }), textoSimular());
+  atualizarSimulacao();
   const textoExtras = () => (planilha.classList.contains('sem-extras') ? 'Exibir projeção econômica e pesos' : 'Ocultar projeção econômica e pesos');
   const botaoExtras = h('button', {
     class: 'btn secondary sm', type: 'button', 'aria-pressed': String(!planilha.classList.contains('sem-extras')),
@@ -48,10 +82,12 @@ export async function renderResumoFisico(alvo, ctx) {
   }, icone(lerExtras() ? 'recolher' : 'expandir', { tamanho: 16 }), textoExtras());
   montar(alvo,
     cabecalho(obra, filtro.referencia, seletor, h('div', { class: 'row' },
+      botaoSimular,
       botaoExtras,
       h('button', { class: 'btn ghost sm', type: 'button', onclick: () => tab.alternarTudo(true) }, icone('expandir', { tamanho: 16 }), 'Expandir tudo'),
       h('button', { class: 'btn ghost sm', type: 'button', onclick: () => tab.alternarTudo(false) }, icone('recolher', { tamanho: 16 }), 'Recolher tudo'))),
     comentariosGerais(r.total),
+    painel,
     planilha);
 }
 
@@ -66,7 +102,9 @@ function guardarExtras(mostrar) {
 
 function cabecalho(obra, referencia, seletor, acoes = null) {
   return h('div', { class: 'titulo-pagina' },
-    h('div', {}, h('div', { class: 'eyebrow' }, `Resumo físico · ${fmtMes(referencia)}`), h('h1', {}, obra.nome)),
+    h('div', { class: 'titulo-com-competencia' },
+      h('div', {}, h('div', { class: 'eyebrow' }, 'Resumo físico'), h('h1', {}, obra.nome)),
+      seloCompetencia(referencia)),
     h('div', { class: 'row' }, acoes, seletor));
 }
 
@@ -80,9 +118,10 @@ const pct = (v) => fmtPercentual(v, 1);
 
 /**
  * Matriz com itens pai recolhíveis. Recolher/expandir só mostra/esconde as linhas filhas (sem redesenhar,
- * para não perder a rolagem).
+ * para não perder a rolagem). Na simulação, cada item ganha uma caixa "retirar" e a linha simulada fica
+ * logo abaixo da linha da obra (as duas só aparecem com a classe `simulando` na planilha).
  */
-function tabela(r, { abertos, pais }) {
+function tabela(r, { abertos, pais, retirados, aoRetirar }) {
   const cols = [
     ['Orçamento', (l) => fmtMoeda(l.orcamento), 'extra'],
     ['Orç. projetado', (l) => fmtMoeda(l.economico?.orcamentoProjetado), 'extra'],
@@ -112,10 +151,31 @@ function tabela(r, { abertos, pais }) {
     }, icone('direita', { tamanho: 14 }));
     return botao;
   };
-  const linha = (l, classe) => h('tr', { class: classe, dataset: l.nivel === 2 ? { filhoDe: itemPai(l.item) } : {} },
-    h('td', { class: 'first' }, seta(l), h('span', { class: 'cod' }, l.item === 'Geral' ? '' : l.item), l.descricao ?? VAZIO,
-      l.comentario && l.item !== 'Geral' ? marcadorComentario(() => verComentario(l)) : null),
-    cols.map(([, fn, classeCol]) => h('td', { class: classeCol ?? '' }, fn(l))));
+  const caixaRetirar = (l) => {
+    if (l.nivel === 0) return null;
+    const permitido = podeRetirar(l);
+    return h('input', {
+      type: 'checkbox', class: 'retirar', checked: retirados.has(l.item), disabled: !permitido, dataset: { item: l.item },
+      title: permitido ? 'Retirar da simulação' : 'Sem orçamento: não tem peso para retirar',
+      'aria-label': `Retirar ${l.descricao ?? l.item} da simulação`,
+      onchange: (e) => {
+        e.target.checked ? retirados.add(l.item) : retirados.delete(l.item);
+        e.target.closest('tr').classList.toggle('retirada', e.target.checked);
+        aoRetirar();
+      },
+    });
+  };
+  const celulas = (l) => cols.map(([, fn, classeCol]) => h('td', { class: classeCol ?? '' }, l ? fn(l) : VAZIO));
+  const linha = (l, classe) => {
+    const atributos = { class: `${classe} ${retirados.has(l.item) ? 'retirada' : ''}`, dataset: l.nivel === 2 ? { filhoDe: itemPai(l.item) } : {} };
+    return h('tr', atributos,
+      h('td', { class: 'first' }, caixaRetirar(l), seta(l), h('span', { class: 'cod' }, l.item === 'Geral' ? '' : l.item), l.descricao ?? VAZIO,
+        l.comentario && l.item !== 'Geral' ? marcadorComentario(() => verComentario(l)) : null),
+      celulas(l));
+  };
+  const linhaSimulada = (simulacao) => h('tr', { class: 'simulada' },
+    h('td', { class: 'first' }, rotuloLinhaSimulada(simulacao)),
+    celulas(simulacao?.linha ?? null));
 
   const alternar = (pai, abrir) => {
     abrir ? abertos.add(pai) : abertos.delete(pai);
@@ -124,8 +184,10 @@ function tabela(r, { abertos, pais }) {
     botao?.classList.toggle('aberta', abrir);
     botao?.setAttribute('aria-expanded', String(abrir));
   };
+  let trSimulada = r.total ? linhaSimulada(null) : null;
   const corpo = h('tbody', {},
     r.total ? linha(r.total, 'total') : null,
+    trSimulada,
     r.linhas.map((l) => linha(l, `nivel-${l.nivel} ${l.nivel === 2 && !abertos.has(itemPai(l.item)) ? 'oculto' : ''}`)));
 
   const elemento = h('table', {},
@@ -138,7 +200,22 @@ function tabela(r, { abertos, pais }) {
         h('th', { colspan: 2, class: 'extra' }, 'Pesos')),
       h('tr', {}, cols.map(([titulo, , classe]) => h('th', { class: classe ?? '' }, titulo)))),
     corpo);
-  return { elemento, alternarTudo: (abrir) => pais.forEach((p) => alternar(p, abrir)) };
+  return {
+    elemento,
+    alternarTudo: (abrir) => pais.forEach((p) => alternar(p, abrir)),
+    mostrarSimulacao: (simulacao) => {
+      if (!trSimulada) return;
+      const nova = linhaSimulada(simulacao);
+      trSimulada.replaceWith(nova);
+      trSimulada = nova;
+    },
+    sincronizarRetirados: () => {
+      for (const caixa of corpo.querySelectorAll('input.retirar')) {
+        caixa.checked = retirados.has(caixa.dataset.item);
+        caixa.closest('tr').classList.toggle('retirada', caixa.checked);
+      }
+    },
+  };
 }
 
 function adiantamento(v) {

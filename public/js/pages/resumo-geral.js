@@ -7,7 +7,7 @@ import {
   classeSinal, fmtData, fmtIndice, fmtMes, fmtMoeda, fmtMoedaCompacta, fmtNumero, fmtPercentual, fmtVariacao, VAZIO,
 } from '../core/formato.js';
 import { calcularResumoGeral } from '../domain/resumo-geral.js';
-import { card, cardTitulo, vazio } from '../ui/componentes.js';
+import { card, cardTitulo, seloCompetencia, vazio } from '../ui/componentes.js';
 import { grafico } from '../ui/graficos.js';
 import { velocimetro } from '../ui/velocimetro.js';
 import { abrirInfosObra } from './infos-obra.js';
@@ -25,9 +25,10 @@ export function renderResumoGeral(alvo, { base, filtro }) {
   const pagina = h('div', { class: 'rg' },
     h('div', { class: 'rg-titulo' },
       h('h1', {}, nomes.length === 1 ? nomes[0] : `${nomes.length} obras`,
-        h('span', { class: 'eyebrow' }, `Fechamento ${fmtMes(r.referencia)}`),
         nomes.length > 1 ? h('small', {}, 'percentuais ponderados pelo orçamento; R$ somados') : null),
-      nomes.length === 1 ? h('button', { class: 'btn secondary sm', type: 'button', onclick: () => abrirInfosObra(base, filtro.obras[0]) }, '+ Infos da obra') : null),
+      h('div', { class: 'row' },
+        seloCompetencia(r.referencia, { compacto: true }),
+        nomes.length === 1 ? h('button', { class: 'btn secondary sm', type: 'button', onclick: () => abrirInfosObra(base, filtro.obras[0]) }, '+ Infos da obra') : null)),
     h('div', { class: 'rg-corpo' },
       h('div', { class: 'rg-esquerda' },
         card({ class: 'rg-cartao' }, quadroCefFisico(r.painelFisico)),

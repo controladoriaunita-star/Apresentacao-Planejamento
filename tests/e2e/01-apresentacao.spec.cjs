@@ -140,7 +140,25 @@ test('mudar o mês de referência recalcula o Resumo Geral', async ({ page }) =>
   await page.goto('/#/obra/resumo-geral');
   await page.locator('[data-teste="mes-referencia"]').click();
   await page.getByRole('option', { name: 'JUN/25' }).click();
-  await expect(page.getByText('Fechamento JUN/25')).toBeVisible();
+  await expect(page.locator('[data-teste="competencia"]')).toContainText('Junho de 2025');
+});
+
+test('Resumo Físico: simular o resumo da obra sem atividades', async ({ page }) => {
+  await entrar(page, DEV);
+  await page.goto('/#/obra/resumo-fisico');
+  await expect(page.locator('[data-teste="competencia"]')).toBeVisible();
+  const linhaSimulada = page.locator('tr.simulada');
+  await expect(linhaSimulada).toBeHidden(); // só aparece com a simulação ligada
+  await page.locator('[data-teste="simular"]').click();
+  await expect(page.getByText('Marque na tabela as atividades')).toBeVisible();
+  await page.getByRole('checkbox', { name: 'Retirar Estrutura da simulação' }).check();
+  await expect(linhaSimulada).toContainText('sem 02 Estrutura');
+  await expect(page.locator('.simulacao-painel')).toContainText('Desvio da meta');
+  await page.getByRole('button', { name: 'Limpar' }).click();
+  await expect(page.getByRole('checkbox', { name: 'Retirar Estrutura da simulação' })).not.toBeChecked();
+  await page.getByRole('button', { name: 'Encerrar simulação' }).click();
+  await expect(page.locator('.simulacao-painel')).toHaveCount(0);
+  await expect(linhaSimulada).toBeHidden();
 });
 
 test('capa do Cliente não mostra indicadores da empresa', async ({ page }) => {

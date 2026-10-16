@@ -117,6 +117,10 @@ main.conteudo:has(.rg-tela) { padding-bottom: 16px; }
 
 /* ── Resumo Físico / Econômico ─────────────────────────────────────── */
 .resumo-tabela { max-height: calc(100dvh - 250px); }
+/* Títulos das colunas maiores que nas outras planilhas (leitura na apresentação) */
+.resumo-tabela thead th { font-size: 14px; }
+.resumo-tabela thead tr.grupo th { font-size: 14px; }
+.resumo-tabela thead tr + tr th { top: 41px; }
 .rodape-fixo {
   position: sticky; bottom: 0; z-index: 5; margin: 0 -24px -40px; padding: 10px 24px 12px;
   background: var(--bg); border-top: 1px solid var(--border-soft); box-shadow: var(--shadow-rodape);
@@ -131,6 +135,30 @@ main.conteudo:has(.rodape-fixo) > div:last-child { flex: 1; display: flex; flex-
 .btn-comentario { display: inline-flex; align-items: center; gap: 4px; border: 0; background: var(--color-primary-soft); color: var(--color-primary); border-radius: 999px; font-size: 11px; font-weight: 600; padding: 2px 10px; cursor: pointer; margin-left: 8px; vertical-align: middle; }
 .btn-comentario:hover { background: var(--color-primary); color: var(--color-primary-foreground); }
 .sheet.sem-extras .extra { display: none; }
+
+/* Simulação "sem atividades" no Resumo Físico: caixas e linha simulada só aparecem com `.simulando` */
+.sheet .retirar, .sheet tr.simulada { display: none; }
+.sheet.simulando .retirar { display: inline-block; margin-right: 8px; vertical-align: middle; }
+.sheet.simulando tr.simulada { display: table-row; }
+.sheet tr.simulada td { background: var(--info-soft); color: var(--info); font-weight: 700; border-bottom: 1px dashed var(--info); }
+.sheet tr.simulada td.first { background: var(--info-soft); }
+.sheet tr.simulada td.first b { display: block; }
+.sheet tr.simulada td.first small { display: block; font-weight: 500; color: var(--ink-600); }
+.sheet tbody tr.simulada:hover td { background: var(--info-soft); }
+.sheet.simulando tr.retirada td { opacity: 0.45; }
+.sheet.simulando tr.retirada td.first { text-decoration: line-through; }
+.simulacao-painel { margin-bottom: 16px; }
+.simulacao-dica { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.simulacao-retiradas { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 12px; }
+.simulacao-indicadores { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+.simulacao-indicador { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border-radius: 12px; background: var(--info-soft); min-width: 0; }
+.simulacao-indicador .l { font-size: 12px; color: var(--ink-600); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.simulacao-indicador .v { font-size: 20px; font-weight: 700; color: var(--ink-900); font-variant-numeric: tabular-nums; }
+.simulacao-indicador .v.positivo { color: var(--success); }
+.simulacao-indicador .v.negativo { color: var(--error); }
+.simulacao-indicador .h { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+@media (max-width: 1000px) { .simulacao-indicadores { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .simulacao-indicadores { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* Detalhe do item no Resumo Econômico: 3 linhas × 4 caixas + comentários */
 .detalhe-grade { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(260px, 1fr); gap: 20px; align-items: start; }

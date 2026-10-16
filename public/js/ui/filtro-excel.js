@@ -10,6 +10,7 @@
  *   })
  *
  * Com `multiplo: false` funciona como lista de escolha única com pesquisa (aplica ao clicar).
+ * `destaque: true` pinta o botão na cor da marca (usado no mês de competência).
  */
 import { h, montar } from '../core/dom.js';
 import { semAcento } from '../domain/normalizar.js';
@@ -17,14 +18,14 @@ import { icone } from './icones.js';
 
 let abertoAgora = null; // só um painel aberto por vez
 
-export function filtroExcel({ rotulo, itens, selecionados, multiplo = true, aoAplicar, resumo = null, testeId = null, largura = 300 }) {
+export function filtroExcel({ rotulo, itens, selecionados, multiplo = true, aoAplicar, resumo = null, testeId = null, largura = 300, destaque = false }) {
   const valoresIniciais = new Set(multiplo ? selecionados : [selecionados]);
   const todos = itens.map((i) => i.valor);
   const filtrando = multiplo && valoresIniciais.size < todos.length;
 
   const textoBotao = resumo ?? textoResumo(itens, valoresIniciais, multiplo);
   const botao = h('button', {
-    type: 'button', class: `filtro-botao ${filtrando ? 'filtrando' : ''}`, 'aria-haspopup': 'dialog', 'aria-expanded': 'false', 'data-teste': testeId,
+    type: 'button', class: `filtro-botao ${filtrando ? 'filtrando' : ''} ${destaque ? 'destaque' : ''}`, 'aria-haspopup': 'dialog', 'aria-expanded': 'false', 'data-teste': testeId,
   }, h('span', { class: 'filtro-textos' }, h('span', { class: 'filtro-rotulo' }, rotulo), h('span', { class: 'filtro-valor' }, textoBotao)), icone(filtrando ? 'funil' : 'seta', { tamanho: 16 }));
 
   const raiz = h('div', { class: 'filtro-excel' }, botao);

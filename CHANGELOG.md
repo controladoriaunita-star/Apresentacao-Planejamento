@@ -5,7 +5,20 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v08 |
+| Dev (local) | v09 |
+
+## v09 — 16/10/2026 — competência em destaque e simulação sem atividades
+
+- **Mês de competência em destaque**: selo laranja "Competência · Março de 2026" no título do Resumo Físico, do
+  Resumo Econômico e do Resumo Geral; o filtro "Mês de referência" ganha destaque na barra de filtros.
+- **Resumo Físico — simular sem atividades**: botão "Simular sem atividades" liga uma caixa "retirar" em cada item
+  e uma linha **Simulação** logo abaixo da linha da obra, com todas as colunas recalculadas sem os itens marcados.
+  Um painel compara oficial × simulado (realizado acm, planejado acm, desvio da meta, cronograma, adiantamento e
+  % acerto). O peso de cada item é o orçamento dele ÷ soma dos orçamentos dos itens pai (conferido com as
+  planilhas reais): `simulado = (total − Σ peso × valor) ÷ (1 − Σ peso)`. Cálculo em
+  `domain/simulacao-fisico.js`; nenhum cálculo existente foi alterado. Item sem orçamento não pode ser retirado.
+- Títulos das colunas do Resumo Físico e do Resumo Econômico maiores (12 → 14 px).
+- Testes: 61 (6 novos da simulação) + 16 de tela.
 
 ## v08 — 15/10/2026 — Supabase + Vercel
 

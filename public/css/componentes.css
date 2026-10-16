@@ -186,6 +186,21 @@
 .filtro-valor { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .filtro-botao .ico { color: var(--muted); flex-shrink: 0; }
 .filtro-botao.filtrando .ico { color: var(--color-primary); }
+.filtro-botao.destaque { border-color: var(--color-primary); background: var(--color-primary-soft); }
+.filtro-botao.destaque .filtro-rotulo, .filtro-botao.destaque .ico { color: var(--color-primary); font-weight: 600; }
+.filtro-botao.destaque .filtro-valor { font-size: 16px; }
+
+/* ── Selo do mês de competência ── */
+.selo-competencia {
+  display: inline-flex; align-items: center; gap: 10px; padding: 8px 16px 8px 12px; flex-shrink: 0;
+  border: 1px solid var(--color-primary); border-radius: 14px; background: var(--color-primary-soft); color: var(--color-primary);
+}
+.selo-competencia-textos { display: flex; flex-direction: column; line-height: 1.15; }
+.selo-competencia small { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+.selo-competencia b { display: block; font-family: var(--font-display); font-size: 20px; font-weight: 600; color: var(--ink-900); white-space: nowrap; }
+.selo-competencia.compacto { gap: 8px; padding: 4px 12px 4px 10px; border-radius: 10px; }
+.selo-competencia.compacto small { font-size: 10px; }
+.selo-competencia.compacto b { font-size: 15px; }
 .filtro-painel {
   position: absolute; top: calc(100% + 8px); left: 0; z-index: 45; max-width: calc(100vw - 32px);
   background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--r-card); box-shadow: var(--shadow-overlay);

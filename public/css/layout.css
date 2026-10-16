@@ -22,6 +22,7 @@ main.conteudo.cheio { padding: 0; }
 .titulo-pagina { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
 .titulo-pagina h1 { font-size: 24px; letter-spacing: -0.01em; }
 .titulo-pagina p { color: var(--muted); margin-top: 2px; }
+.titulo-com-competencia { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 24px; }
 
 /* Administração: sidebar de 240px que vira abas abaixo de 1024px */
 .admin { display: flex; gap: 24px; }
