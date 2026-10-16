@@ -5,7 +5,15 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v10 |
+| Dev (local) | v11 |
+
+## v11 — 16/10/2026 — bateria de testes da API
+
+- `npm run bateria -- <endereço>` testa um servidor no ar (dev ou Vercel) **só com leituras**: funcional (cada rota
+  com o status e o formato do contrato, com os dados reais do SharePoint e do Supabase), estabilidade (rodadas em
+  sequência) e carga (requisições simultâneas), com mediana/p95/máx. `--relatorio arquivo.md` salva a tabela.
+- Primeira rodada (16/10): dev e Vercel sem falhas; na Vercel, 50 simultâneas no resumo das planilhas com p95 de
+  4,1 s e nenhum erro.
 
 ## v10 — 16/10/2026 — login desativado para testes (temporário)
 

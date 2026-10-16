@@ -50,7 +50,8 @@ data/                   (fora do git) usuários, cadastros, arquivos enviados, c
 Toda alteração fecha uma versão (`v01`, `v02`…) registrada no `CHANGELOG.md` e só é liberada se passar:
 
 ```bash
-npm run verificar    # checagens (sintaxe, cores fora dos tokens, segredos) + 55 testes + 15 testes de tela
+npm run verificar    # checagens (sintaxe, cores fora dos tokens, segredos) + 62 testes + 16 testes de tela
+npm run bateria -- https://apresentacao-planejamento.vercel.app   # bateria só de leitura contra um servidor no ar
 ```
 
 Bug corrigido ganha um teste que o reproduz. Os testes de tela ficam em `.cjs` porque o carregador ESM do

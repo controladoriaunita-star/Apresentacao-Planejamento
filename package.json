@@ -16,6 +16,7 @@
     "test": "node --test \"tests/domain/*.test.mjs\" \"tests/api/*.test.mjs\"",
     "test:e2e": "playwright test --config playwright.config.cjs",
     "check": "node tests/tools/checar-projeto.mjs",
+    "bateria": "node tests/tools/bateria-api.mjs",
     "verificar": "npm run check && npm test && npm run test:e2e",
     "verificar:vercel": "npm run check && npm test",
     "migrar:supabase": "node server/tools/migrar-para-supabase.mjs"
