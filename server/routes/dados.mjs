@@ -89,7 +89,9 @@ export function registrarDados(rotas, { planilhas, incc, cadastro, config }) {
   });
 
   rotas.adicionar('GET', '/api/saude', { permissao: null }, async ({ req, res }) => {
-    enviarJson(req, res, 200, { ok: true, fonte: config.fonteDados, armazenamento: config.store });
+    enviarJson(req, res, 200, {
+      ok: true, fonte: config.fonteDados, armazenamento: config.store, login: config.semLogin ? 'desligado' : 'obrigatorio',
+    });
   });
 }
 

@@ -15,6 +15,7 @@ export function carregarConfig(sobrescrever = {}) {
   const env = { ...process.env, ...sobrescrever.env };
   // Na Vercel só /tmp aceita escrita (e não é persistente): lá os dados ficam no Supabase.
   const dataDir = env.DATA_DIR || (env.VERCEL ? '/tmp/apresentacao' : './data');
+  const papelSemLogin = String(env.PAPEL_SEM_LOGIN ?? '').trim().toLowerCase();
   const supabase = {
     url: env.SUPABASE_URL || '',
     anonKey: env.SUPABASE_ANON_KEY || '',
@@ -32,8 +33,8 @@ export function carregarConfig(sobrescrever = {}) {
     cacheMinutos: Number(env.CACHE_MINUTOS || 30),
     segredoSessao: env.SESSION_SECRET || null,
     // LOGIN=desligado: o app abre direto, sem tela de login, com o papel PAPEL_SEM_LOGIN (padrão: planejamento).
-    semLogin: env.LOGIN === 'desligado',
-    papelSemLogin: papelValido(env.PAPEL_SEM_LOGIN) ? env.PAPEL_SEM_LOGIN : 'planejamento',
+    semLogin: loginDesligado(env.LOGIN),
+    papelSemLogin: papelValido(papelSemLogin) ? papelSemLogin : 'planejamento',
     cookieSeguro: env.COOKIE_SECURE === 'true' || Boolean(env.VERCEL),
     graph: {
       tenantId: env.MS_GRAPH_TENANT_ID || '',
@@ -49,6 +50,12 @@ export function carregarConfig(sobrescrever = {}) {
     limiteUploadMB: Number(env.UPLOAD_LIMITE_MB || 25),
   };
   return { ...config, ...sobrescrever.config };
+}
+
+/** Aceita "desligado" (e off/false/nao), sem diferenciar maiúsculas, espaços ou aspas coladas no valor. */
+export function loginDesligado(valor) {
+  const v = String(valor ?? '').trim().replace(/^["']|["']$/g, '').trim().toLowerCase();
+  return ['desligado', 'off', 'false', 'nao', 'não', '0'].includes(v);
 }
 
 export function supabaseConfigurado(config) {

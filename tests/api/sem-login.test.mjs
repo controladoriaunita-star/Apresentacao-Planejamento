@@ -1,6 +1,7 @@
 /** LOGIN=desligado: o app abre sem login, com o papel de PAPEL_SEM_LOGIN. */
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { loginDesligado } from '../../server/config.mjs';
 import { cliente, subirServidor } from './servidor.mjs';
 
 let srv;
@@ -25,6 +26,12 @@ test('sem login as rotas de leitura e de conteúdo respondem sem cookie', async 
 
 test('sem login a administração continua fechada para o papel padrão', async () => {
   assert.equal((await anonimo('GET', '/api/usuarios')).status, 403);
+});
+
+test('LOGIN aceita variações de escrita e a saúde informa o modo', async () => {
+  for (const valor of ['desligado', ' Desligado ', '"desligado"', 'OFF', 'false']) assert.equal(loginDesligado(valor), true, valor);
+  for (const valor of [undefined, '', 'ligado', 'obrigatorio']) assert.equal(loginDesligado(valor), false, String(valor));
+  assert.equal((await anonimo('GET', '/api/saude')).dados.login, 'desligado');
 });
 
 test('PAPEL_SEM_LOGIN inválido cai no papel padrão', async () => {
