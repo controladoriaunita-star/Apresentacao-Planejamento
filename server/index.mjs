@@ -9,9 +9,6 @@ const config = carregarConfig();
 if (config.fonteDados === 'graph' && !graphConfigurado(config)) {
   console.warn('[aviso] Credenciais do Microsoft Graph ausentes em .env.local — use DATA_SOURCE=exemplo para demonstração.');
 }
-if (config.semLogin) {
-  console.warn(`[aviso] LOGIN=desligado — o app abre sem login, com o papel "${config.papelSemLogin}".`);
-}
 
 const app = criarApp(config);
 createServer(app).listen(config.porta, () => {

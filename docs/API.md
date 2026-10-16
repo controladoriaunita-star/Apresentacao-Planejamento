@@ -46,7 +46,7 @@ precisa reproduzir. Os cenários obrigatórios estão em `tests/api/contrato.mjs
 | GET | `/dados/resumo` | ver | `{ fonte, aviso, atualizadoEm, abas: { "BD_Infos Gerais", "BD_Orc", "BD_Econômico" }, cadastro[], incc[] }` |
 | GET | `/dados/fisico?obra=<nome>` | ver | `{ colunas, linhas }` do BD_Físico por atividade só da obra (nome comparado sem acento/caixa) |
 | POST | `/dados/atualizar` | editarConteudo | relê as 4 abas no SharePoint → `{ ok, aviso }` |
-| GET | `/saude` | pública | `{ ok, fonte, armazenamento, login }` (`login`: `desligado` ou `obrigatorio`) |
+| GET | `/saude` | pública | `{ ok, fonte }` |
 
 Cada aba é a matriz crua do Graph: `{ colunas: string[], linhas: unknown[][] }` (datas como serial do Excel).
 **O servidor não calcula medidas** — os cálculos estão em `public/js/domain` e rodam no navegador.

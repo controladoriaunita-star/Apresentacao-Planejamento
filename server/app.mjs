@@ -10,7 +10,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pode } from '../public/js/domain/permissoes.js';
-import { AutenticacaoLocal, AutenticacaoSupabase, usuarioSemLogin } from './auth/autenticacao.mjs';
+import { AutenticacaoLocal, AutenticacaoSupabase } from './auth/autenticacao.mjs';
 import { servirEstatico } from './http/estaticos.mjs';
 import { enviarJson, ErroHttp } from './http/respostas.mjs';
 import { Roteador } from './http/roteador.mjs';
@@ -26,6 +26,14 @@ import { RepositorioArquivosLocal, RepositorioArquivosSupabase } from './store/a
 import { ColecaoJson } from './store/json-store.mjs';
 import { ColecaoSupabase, linhaCadastro } from './store/supabase-store.mjs';
 import { ClienteSupabase } from './supabase/cliente.mjs';
+
+/**
+ * TEMPORÁRIO — login desativado para testes na plataforma: toda requisição entra como USUARIO_TESTES.
+ * Para reativar o login, troque LOGIN_DESATIVADO para false. Os testes automáticos rodam sempre com login
+ * (EXIGIR_LOGIN=true).
+ */
+const LOGIN_DESATIVADO = true;
+const USUARIO_TESTES = Object.freeze({ id: 'testes', nome: 'Testes', email: 'testes@unita.com.br', papel: 'dev', ativo: true });
 
 export function criarApp(config, { fetchImpl } = {}) {
   mkdirSync(config.dataDir, { recursive: true });
@@ -53,7 +61,7 @@ export function criarApp(config, { fetchImpl } = {}) {
         return enviarJson(req, res, 403, { erro: 'Requisição recusada.' });
       }
 
-      const sessao = config.semLogin ? { usuario: usuarioSemLogin(config.papelSemLogin) } : await deps.autenticacao.identificar(req);
+      const sessao = LOGIN_DESATIVADO && !config.exigirLogin ? { usuario: USUARIO_TESTES } : await deps.autenticacao.identificar(req);
       const usuario = sessao?.usuario ?? null;
       if (sessao?.cookie) res.setHeader('set-cookie', sessao.cookie); // token renovado (Supabase)
       if (rota.permissao) {

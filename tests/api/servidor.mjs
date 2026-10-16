@@ -10,15 +10,14 @@ import { criarApp } from '../../server/app.mjs';
 import { carregarConfig } from '../../server/config.mjs';
 import { CHAVES, criarSupabaseFalso } from './supabase-falso.mjs';
 
-export async function subirServidor({ store = 'local', env = {} } = {}) {
+export async function subirServidor({ store = 'local' } = {}) {
   const dataDir = mkdtempSync(join(tmpdir(), 'apresentacao-teste-'));
   const supabase = store === 'supabase' ? criarSupabaseFalso() : null;
   const config = carregarConfig({
     ignorarEnvLocal: true,
     env: {
-      DATA_SOURCE: 'exemplo', INCC_ONLINE: 'false', SESSION_SECRET: 'segredo-de-teste', STORE: store,
+      DATA_SOURCE: 'exemplo', INCC_ONLINE: 'false', SESSION_SECRET: 'segredo-de-teste', STORE: store, EXIGIR_LOGIN: 'true',
       SUPABASE_URL: supabase?.url ?? '', SUPABASE_ANON_KEY: CHAVES.anon, SUPABASE_SERVICE_ROLE_KEY: CHAVES.servico,
-      ...env,
     },
     config: { dataDir },
   });
