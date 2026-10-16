@@ -149,6 +149,7 @@ main.conteudo:has(.rodape-fixo) > div:last-child { flex: 1; display: flex; flex-
 .sheet.simulando tr.retirada td.first { text-decoration: line-through; }
 .simulacao-painel { margin-bottom: 16px; }
 .simulacao-dica { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.simulacao-aviso { margin-top: 10px; font-size: 13px; color: var(--warning); }
 .simulacao-retiradas { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 12px; }
 .simulacao-indicadores { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
 .simulacao-indicador { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border-radius: 12px; background: var(--info-soft); min-width: 0; }

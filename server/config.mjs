@@ -5,6 +5,7 @@
 import { existsSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { papelValido } from '../public/js/domain/permissoes.js';
 
 export const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -30,6 +31,9 @@ export function carregarConfig(sobrescrever = {}) {
     publicDir: join(RAIZ, 'public'),
     cacheMinutos: Number(env.CACHE_MINUTOS || 30),
     segredoSessao: env.SESSION_SECRET || null,
+    // LOGIN=desligado: o app abre direto, sem tela de login, com o papel PAPEL_SEM_LOGIN (padrão: planejamento).
+    semLogin: env.LOGIN === 'desligado',
+    papelSemLogin: papelValido(env.PAPEL_SEM_LOGIN) ? env.PAPEL_SEM_LOGIN : 'planejamento',
     cookieSeguro: env.COOKIE_SECURE === 'true' || Boolean(env.VERCEL),
     graph: {
       tenantId: env.MS_GRAPH_TENANT_ID || '',

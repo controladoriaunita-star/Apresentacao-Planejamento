@@ -5,7 +5,18 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v09 |
+| Dev (local) | v10 |
+
+## v10 — 16/10/2026 — app sem tela de login (temporário)
+
+- `LOGIN=desligado` no `.env.local` (ou nas variáveis da Vercel) abre o app direto, sem tela de login: toda
+  requisição usa o usuário "Acesso livre" com o papel `PAPEL_SEM_LOGIN` (`dev`, `planejamento` ou `viewer`;
+  padrão `planejamento`, que não vê a gestão de usuários). Sem a variável o login continua obrigatório.
+- No modo sem login o cabeçalho não mostra o usuário nem o botão Sair. O código de login segue intacto.
+- Correção da simulação sem atividades: cada coluna só é simulada se os itens pai fecham com o total da obra
+  (tolerância de 1 p.p.). Em obras cuja planilha traz o acumulado na coluna do mês das atividades (ex.: Flow Vila
+  Matilde), "Realizado mês", "Planejado mês" e "% acerto" ficam "—" com um aviso, em vez de valores sem sentido.
+- Testes: 66 (4 do modo sem login, 1 da simulação) + 16 de tela.
 
 ## v09 — 16/10/2026 — competência em destaque e simulação sem atividades
 

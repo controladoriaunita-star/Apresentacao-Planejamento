@@ -18,6 +18,13 @@ const INDICADORES = [
   ['% acerto do mês', (l) => l.acerto, false],
 ];
 
+/** Nomes das colunas (como na tabela) para o aviso de colunas que não fecham com o total. */
+const NOMES_CAMPOS = {
+  realizadoAcm: 'Realizado acm', realizadoMes: 'Realizado mês', planejadoInicial: 'Planejado inicial', planejadoAcm: 'Planejado acm',
+  planejadoMes: 'Planejado mês', cronograma: 'Cronograma', 'proximo.planejadoMes': 'Planejado mês seguinte',
+  'proximo.planejadoAcm': 'Planejado acm seguinte', 'proximo.previsto': 'Previsto',
+};
+
 const pct = (v, desvio) => (desvio ? fmtVariacao(v, 1) : fmtPercentual(v, 1));
 const nomeItem = (l) => `${l.item} ${l.descricao ?? ''}`.trim();
 
@@ -34,7 +41,7 @@ export function painelSimulacao(total, simulacao, aoLimpar) {
     return card({ class: 'card-pad simulacao-painel' }, titulo,
       h('p', { class: 'simulacao-dica' }, icone('check', { tamanho: 16 }), 'Marque na tabela as atividades que deseja retirar do resumo da obra.'));
   }
-  const { itens, pesoRetirado, linha } = simulacao;
+  const { itens, pesoRetirado, linha, semConciliar } = simulacao;
   return card({ class: 'card-pad simulacao-painel' }, titulo,
     h('p', { class: 'simulacao-retiradas' },
       h('span', { class: 'muted' }, `Sem ${itens.length === 1 ? 'a atividade' : `${itens.length} atividades`} (${fmtPercentual(pesoRetirado, 1)} do orçamento):`),
@@ -48,7 +55,12 @@ export function painelSimulacao(total, simulacao, aoLimpar) {
           h('span', { class: `v ${desvio ? classeSinal(simulado) : ''}` }, pct(simulado, desvio)),
           h('span', { class: 'h' }, `oficial ${pct(oficial, desvio)}`));
       }))
-      : h('p', { class: 'simulacao-dica' }, 'Todas as atividades com orçamento foram retiradas: não sobra nada para calcular.'));
+      : h('p', { class: 'simulacao-dica' }, 'Todas as atividades com orçamento foram retiradas: não sobra nada para calcular.'),
+    semConciliar.length
+      ? h('p', { class: 'simulacao-aviso' },
+        `Sem simulação (—): ${semConciliar.map((c) => NOMES_CAMPOS[c] ?? c).join(', ')}. `
+        + 'Nessas colunas os valores das atividades na planilha não fecham com o total da obra.')
+      : null);
 }
 
 /** Primeira célula da linha simulada na tabela. */

@@ -83,8 +83,10 @@ function cabecalho(visao, abaAtual) {
         h('a', { href: `#/cliente/${ABAS.some((a) => a.id === abaAtual) ? abaAtual : 'inicio'}`, 'aria-current': String(visao === 'cliente') }, 'Cliente')),
       h('button', { class: 'btn inverse sm', type: 'button', title: 'Tela cheia', onclick: alternarApresentacao }, icone('telaCheia', { tamanho: 16 }), 'Apresentar'),
       pode(u.papel, 'editarConteudo') ? h('a', { class: 'btn inverse sm so-edicao', href: '#/admin/cadastro-obras' }, icone('engrenagem', { tamanho: 16 }), 'Administração') : null,
-      h('a', { class: 'usuario', href: '#/conta', style: { textDecoration: 'none' } }, h('b', {}, u.nome), h('span', {}, PAPEIS[u.papel]?.nome)),
-      h('button', { class: 'btn inverse sm', type: 'button', onclick: sair, 'aria-label': 'Sair' }, icone('sair', { tamanho: 16 })))));
+      // Sem login (LOGIN=desligado) não há conta nem "Sair".
+      u.semLogin ? null : [
+        h('a', { class: 'usuario', href: '#/conta', style: { textDecoration: 'none' } }, h('b', {}, u.nome), h('span', {}, PAPEIS[u.papel]?.nome)),
+        h('button', { class: 'btn inverse sm', type: 'button', onclick: sair, 'aria-label': 'Sair' }, icone('sair', { tamanho: 16 }))])));
 }
 
 function alternarApresentacao() {

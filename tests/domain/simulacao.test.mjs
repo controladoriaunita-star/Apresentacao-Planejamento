@@ -60,6 +60,16 @@ test('Simulação — retirar tudo não gera linha', () => {
   assert.equal(s.linha, null);
 });
 
+test('Simulação — coluna em que os itens não fecham com o total fica sem simulação', () => {
+  // Planilha com o acumulado repetido na coluna do mês das atividades: 0,25 × 1 + 0,75 × 0,4 ≠ 0,02
+  const resumo = { ...RESUMO, total: { ...RESUMO.total, realizadoMes: 0.02 } };
+  const s = simularSemItens(resumo, new Set(['01']));
+  assert.deepEqual(s.semConciliar, ['realizadoMes']);
+  assert.equal(s.linha.realizadoMes, null);
+  assert.equal(s.linha.acerto, null, '% acerto depende do realizado mês');
+  perto(assert, s.linha.realizadoAcm, 0.4, 'as demais colunas continuam simuladas');
+});
+
 test('desvio da meta = realizado acumulado − planejado acumulado', () => {
   perto(assert, desvioDaMeta({ realizadoAcm: 0.6, planejadoAcm: 0.65 }), -0.05, 'desvio');
   assert.equal(desvioDaMeta({ realizadoAcm: null, planejadoAcm: 0.65 }), null);

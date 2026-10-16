@@ -10,7 +10,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pode } from '../public/js/domain/permissoes.js';
-import { AutenticacaoLocal, AutenticacaoSupabase } from './auth/autenticacao.mjs';
+import { AutenticacaoLocal, AutenticacaoSupabase, usuarioSemLogin } from './auth/autenticacao.mjs';
 import { servirEstatico } from './http/estaticos.mjs';
 import { enviarJson, ErroHttp } from './http/respostas.mjs';
 import { Roteador } from './http/roteador.mjs';
@@ -53,7 +53,7 @@ export function criarApp(config, { fetchImpl } = {}) {
         return enviarJson(req, res, 403, { erro: 'Requisição recusada.' });
       }
 
-      const sessao = await deps.autenticacao.identificar(req);
+      const sessao = config.semLogin ? { usuario: usuarioSemLogin(config.papelSemLogin) } : await deps.autenticacao.identificar(req);
       const usuario = sessao?.usuario ?? null;
       if (sessao?.cookie) res.setHeader('set-cookie', sessao.cookie); // token renovado (Supabase)
       if (rota.permissao) {

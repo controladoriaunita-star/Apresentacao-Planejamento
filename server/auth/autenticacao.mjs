@@ -13,6 +13,8 @@
  *   precisaConfigurar() · configurar({nome,email,senha}) · entrar(email, senha)
  *   identificar(req) → { usuario, cookie? } · sair(req) → cookie
  *   listar() · criar(dados) · atualizar(id, campos) · remover(id) · trocarSenha(usuario, atual, nova)
+ *
+ * Com LOGIN=desligado o app não pede login: toda requisição usa usuarioSemLogin() (ver app.mjs).
  */
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { erro } from '../http/respostas.mjs';
@@ -30,6 +32,11 @@ export function validarEmail(email) {
 /** Nunca devolver o hash da senha. */
 export function usuarioPublico({ senhaHash, ...resto }) {
   return resto;
+}
+
+/** Usuário fixo do modo sem login (LOGIN=desligado). */
+export function usuarioSemLogin(papel) {
+  return { id: 'sem-login', nome: 'Acesso livre', email: 'sem-login', papel, ativo: true, semLogin: true };
 }
 
 const normalizarEmail = (email) => String(email ?? '').trim().toLowerCase();
