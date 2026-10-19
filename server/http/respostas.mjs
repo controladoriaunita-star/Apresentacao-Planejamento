@@ -13,10 +13,10 @@ export class ErroHttp extends Error {
 
 export const erro = (status, mensagem) => new ErroHttp(status, mensagem);
 
+// Sem X-Frame-Options: o app abre dentro do Portal Unità (iframe), como o Quadro de Concorrência.
 const CABECALHOS_SEGURANCA = {
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'same-origin',
-  'x-frame-options': 'SAMEORIGIN',
 };
 
 export function enviarJson(req, res, status, corpo, extras = {}) {
