@@ -1,18 +1,21 @@
 /**
  * Aba "Início" — capa do app: marca, mês de fechamento, os quatro indicadores da empresa
- * (obras ativas, assertividade média, unidades construídas no mês, maior assertividade) e atalhos
- * para as demais abas.
+ * (obras ativas, assertividade média, unidades construídas no mês, maior assertividade) e o Painel de
+ * obras (visão Obra) ou os atalhos para as demais abas (visão Cliente).
  */
 import { h, montar } from '../core/dom.js';
+import { ir } from '../core/roteador.js';
 import { fmtMesLongo, fmtNumero, fmtPercentual, fmtVariacao } from '../core/formato.js';
 import { estado } from '../core/estado.js';
 import { mesesDasObras } from '../domain/base.js';
-import { calcularInicio } from '../domain/inicio.js';
+import { calcularInicio, obraAtiva } from '../domain/inicio.js';
+import { calcularPainelObras } from '../domain/painel-obras.js';
 import { intervaloMeses } from '../domain/normalizar.js';
 import { abrirModal, vazio } from '../ui/componentes.js';
 import { filtroExcel } from '../ui/filtro-excel.js';
 import { itensDeMes } from '../ui/filtros.js';
 import { icone } from '../ui/icones.js';
+import { painelObras } from '../ui/painel-obras.js';
 
 export function renderInicio(alvo, { base, filtro, visao, abas, telas }) {
   const r = visao === 'cliente' ? null : calcularInicio(base, filtro.referencia);
@@ -52,10 +55,23 @@ export function renderInicio(alvo, { base, filtro, visao, abas, telas }) {
             r.obrasSemCadastroUH.length ? `${r.obrasSemCadastroUH.length} obra(s) sem Nº de UH no cadastro` : 'Nº de UH × avanço físico do mês'),
           indicador('Maior assertividade no mês', r.melhor?.nome ?? '—', r.melhor ? `${fmtPercentual(r.melhor.assertividade, 1)} · ${r.melhor.cliente ?? ''}` : null, null, true)),
       ],
-      h('nav', { class: 'capa-atalhos', 'aria-label': 'Atalhos' }, atalhos.map((a) => h('a', { class: 'capa-atalho', href: a.href },
-        h('span', { class: 'capa-atalho-icone' }, icone(a.icone, { tamanho: 22 })),
-        h('span', { class: 'capa-atalho-texto' }, h('b', {}, a.nome), h('small', {}, a.descricao ?? '')),
-        icone('direita', { tamanho: 18, classe: 'ico capa-atalho-seta' })))))));
+      visao === 'cliente'
+        ? h('nav', { class: 'capa-atalhos', 'aria-label': 'Atalhos' }, atalhos.map((a) => h('a', { class: 'capa-atalho', href: a.href },
+          h('span', { class: 'capa-atalho-icone' }, icone(a.icone, { tamanho: 22 })),
+          h('span', { class: 'capa-atalho-texto' }, h('b', {}, a.nome), h('small', {}, a.descricao ?? '')),
+          icone('direita', { tamanho: 18, classe: 'ico capa-atalho-seta' }))))
+        : h('section', { class: 'capa-painel' }, painelDeObras(base, filtro.referencia)))));
+}
+
+/** Painel de obras: nome da obra funciona como filtro e abre o Resumo Geral dela. */
+function painelDeObras(base, referencia) {
+  return painelObras(calcularPainelObras(base, estado.base('cliente'), referencia), {
+    ehAtiva: (chave) => obraAtiva(base, chave, referencia),
+    aoAbrirObra: (chave) => {
+      estado.definirFiltro({ obras: [chave] });
+      ir('/obra/resumo-geral');
+    },
+  });
 }
 
 /**

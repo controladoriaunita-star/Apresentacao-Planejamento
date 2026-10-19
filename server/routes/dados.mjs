@@ -4,7 +4,8 @@
  * o que mantém este backend fino e fácil de reescrever em PHP.
  */
 import { ABAS } from '../../public/js/domain/colunas.js';
-import { cadastrosDePlanilha, normalizarCadastro } from '../../public/js/domain/cadastro-obra.js';
+import { associarObrasConhecidas, cadastrosDePlanilha, normalizarCadastro } from '../../public/js/domain/cadastro-obra.js';
+import { chaveObra } from '../../public/js/domain/normalizar.js';
 import { enviarJson, erro, lerJson } from '../http/respostas.mjs';
 
 export function registrarDados(rotas, { planilhas, incc, cadastro, config }) {
@@ -78,7 +79,11 @@ export function registrarDados(rotas, { planilhas, incc, cadastro, config }) {
   rotas.adicionar('POST', '/api/obras/cadastro/importar', { permissao: 'editarConteudo' }, async ({ req, res, usuario }) => {
     const { linhas } = await lerJson(req, 10 * 1024 * 1024);
     if (!Array.isArray(linhas)) throw erro(400, 'Envie as linhas da planilha.');
-    const registros = cadastrosDePlanilha(linhas);
+    const infos = await planilhas.aba(ABAS.infosGerais).catch(() => ({ colunas: [], linhas: [] }));
+    const iNome = infos.colunas.findIndex((c) => chaveObra(c) === 'nome da obra');
+    const nomesPlanilha = new Map(iNome < 0 ? [] : infos.linhas.filter((l) => l[iNome]).map((l) => [chaveObra(l[iNome]), String(l[iNome]).trim()]));
+    const nomesCadastro = new Map((await cadastro.listar()).map((c) => [c.chave, c.obra]));
+    const registros = associarObrasConhecidas(cadastrosDePlanilha(linhas), [nomesPlanilha, nomesCadastro]);
     for (const r of registros) await cadastro.upsertPor('chave', { ...r, atualizadoPor: usuario.email });
     enviarJson(req, res, 200, { importados: registros.length, obras: registros.map((r) => r.obra) });
   });

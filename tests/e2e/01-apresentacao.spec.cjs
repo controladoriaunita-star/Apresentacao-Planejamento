@@ -15,9 +15,29 @@ test('primeiro acesso cria o Dev e abre o Início', async ({ page }) => {
   await page.getByRole('button', { name: 'Criar acesso Dev' }).click();
   await expect(page.getByRole('heading', { name: 'Apresentação de obras' })).toBeVisible();
   await expect(page.getByText('Obras ativas', { exact: true })).toBeVisible();
-  // a capa não tem barra de filtros e tem atalhos para as abas
+  // a capa não tem barra de filtros e, na visão Obra, mostra o Painel de obras no lugar dos atalhos
   await expect(page.locator('.filtros')).toHaveCount(0);
-  await expect(page.getByRole('navigation', { name: 'Atalhos' }).getByRole('link')).toHaveCount(5);
+  await expect(page.getByRole('heading', { name: 'Painel de obras' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Atalhos' })).toHaveCount(0);
+});
+
+test('Painel de obras: segmentador recolhe o grupo e o nome da obra abre o Resumo Geral dela', async ({ page }) => {
+  await entrar(page, DEV);
+  await page.evaluate(() => fetch('/api/obras/cadastro', {
+    method: 'PUT', headers: { 'content-type': 'application/json', 'x-requested-with': 'fetch' },
+    body: JSON.stringify({ obra: 'Torre Gama', cliente: 'Cliente Gama', numeroUH: 120 }),
+  }));
+  await page.goto('/#/obra/inicio');
+  await page.reload();
+  const painel = page.locator('.painel-obras');
+  await page.getByRole('button', { name: 'Todas do cadastro' }).click();
+  await expect(painel.locator('th', { hasText: 'Avanço acumulado' })).toBeVisible();
+  await painel.getByRole('button', { name: 'Recolher Realizado' }).click();
+  await expect(painel.locator('th', { hasText: 'Avanço acumulado' })).toHaveCount(0);
+  await painel.getByRole('button', { name: 'Expandir Realizado' }).click();
+  await painel.getByRole('link', { name: 'Torre Gama' }).click();
+  await expect(page).toHaveURL(/#\/obra\/resumo-geral$/);
+  await expect(page.getByRole('heading', { name: /^Torre Gama/ })).toBeVisible();
 });
 
 test('todas as abas da apresentação Obra abrem sem erro', async ({ page }) => {
