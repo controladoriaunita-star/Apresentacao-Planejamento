@@ -5,7 +5,14 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v13 |
+| Dev (local) | v14 |
+
+## v14 — 19/10/2026 — app dentro do Portal Unità (iframe)
+
+- Retirado o cabeçalho `X-Frame-Options: SAMEORIGIN` (vercel.json e respostas da API), que fazia o navegador
+  recusar o app dentro do iframe do Portal Unità. Fica igual ao Quadro de Concorrência, que o portal já incorpora.
+- Quando o login for reativado, o cookie de sessão (`SameSite=Strict`) precisará de `SameSite=None; Secure` para
+  funcionar dentro do iframe.
 
 ## v13 — 19/10/2026 — Painel de obras na capa
 
