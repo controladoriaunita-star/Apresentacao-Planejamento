@@ -44,10 +44,19 @@
 .capa-atalho-texto small { color: var(--muted); font-size: 12px; }
 .capa-atalho-seta { color: var(--ink-300); }
 
-/* Painel de obras (capa, visão Obra) — largura total da tela; grupos de colunas com rótulo vertical que
-   recolhe/expande. Visual leve: fundo branco, linhas suaves, laranja só como destaque. */
+/* Capa da visão Obra: largura total; logo à esquerda e mês à direita; título e indicadores na mesma faixa */
+.capa-obras .capa-conteudo { width: 100%; padding: 20px 16px 24px; gap: 20px; }
+.capa-cabecalho { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: end; gap: 20px 40px; }
+.capa-obras .capa-titulo h1 { font-size: clamp(30px, 4.4vh, 46px); margin-top: 6px; white-space: nowrap; }
+.capa-obras .capa-titulo p { margin-top: 6px; }
+.capa-obras .capa-kpi { padding: 14px 18px; gap: 4px; }
+.capa-obras .capa-kpi-valor { font-size: clamp(22px, 3.4vh, 32px); }
+.capa-obras .capa-kpi-valor.nome { font-size: clamp(17px, 2.4vh, 22px); }
+
+/* Painel de obras (capa, visão Obra) — grupos de colunas com rótulo vertical que recolhe/expande.
+   Visual leve: cinza da paleta (ink), linhas suaves, laranja só como destaque. */
 .capa-painel {
-  width: calc(100vw - 32px); align-self: center; background: var(--surface); color: var(--text);
+  background: var(--ink-100); color: var(--text);
   border-radius: var(--r-card); box-shadow: var(--shadow-card); padding: 20px 24px 16px;
 }
 .po-topo { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px 24px; flex-wrap: wrap; margin-bottom: 16px; }
@@ -55,7 +64,9 @@
 .po-topo p { color: var(--muted); font-size: 13px; margin-top: 4px; }
 .po-contagem { font: 600 12px var(--font-sans); color: var(--color-primary); background: var(--color-primary-soft); border-radius: 999px; padding: 3px 10px; }
 
-.sheet.painel-obras { max-height: 66vh; box-shadow: none; border-color: var(--border); }
+.sheet.painel-obras { max-height: 66vh; box-shadow: none; border-color: var(--border); background: var(--ink-50); }
+.painel-obras th, .painel-obras td, .painel-obras .first { background: var(--ink-50); }
+.painel-obras .po-resto { width: 100%; min-width: 0; max-width: none; padding: 0; }
 .painel-obras table { width: auto; min-width: 100%; font-size: 13px; }
 .painel-obras th, .painel-obras td { padding: 9px 12px; vertical-align: middle; }
 .painel-obras tbody td { border-bottom-color: var(--border-soft); }
@@ -64,7 +75,7 @@
 .painel-obras thead th {
   vertical-align: bottom; white-space: normal; min-width: 92px; max-width: 150px; line-height: 1.3;
   font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-600);
-  background: var(--surface); border-bottom: 2px solid var(--color-primary);
+  background: var(--ink-50); border-bottom: 2px solid var(--color-primary);
 }
 .painel-obras thead th small { display: block; font-size: 11px; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--ink-400); margin-top: 2px; }
 
@@ -76,7 +87,7 @@
 .painel-obras .po-texto .po-valor { font-weight: 500; color: var(--ink-700); }
 .painel-obras .po-inicio { border-left: 1px solid var(--border-soft); }
 .painel-obras tr.po-sem-fechamento td:not(.first) { color: var(--ink-400); }
-.painel-obras tbody tr:hover td { background: var(--ink-50); }
+.painel-obras tbody tr:hover td { background: var(--ink-100); }
 
 /* coluna fixa da obra: cliente em laranja (eyebrow), nome como link */
 .painel-obras .first.po-obra { min-width: 230px; max-width: 270px; box-shadow: 6px 0 12px -10px var(--overlay); }
@@ -96,7 +107,7 @@
 .po-barra i { display: block; height: 100%; border-radius: inherit; background: var(--color-primary); }
 
 /* segmentadores: rótulo vertical por grupo; aberto = laranja suave, recolhido = neutro */
-.painel-obras .po-segmentador { min-width: 0; width: 30px; max-width: 30px; padding: 0; background: var(--ink-50); border-left: 1px solid var(--border-soft); text-align: center; }
+.painel-obras .po-segmentador { min-width: 0; width: 30px; max-width: 30px; padding: 0; background: var(--ink-100); border-left: 1px solid var(--border-soft); text-align: center; }
 .painel-obras thead th.po-segmentador { padding: 6px 0; background: var(--color-primary-soft); }
 .painel-obras .po-segmentador button {
   display: inline-flex; align-items: center; gap: 6px; writing-mode: vertical-rl; transform: rotate(180deg);
@@ -104,7 +115,7 @@
   font: 600 10.5px var(--font-sans); text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-primary); white-space: nowrap;
 }
 .painel-obras .po-segmentador button .ico { transform: rotate(90deg); }
-.painel-obras thead th.po-segmentador.recolhido { background: var(--ink-50); }
+.painel-obras thead th.po-segmentador.recolhido { background: var(--ink-100); }
 .painel-obras thead th.po-segmentador.recolhido button { color: var(--ink-500); }
 .painel-obras .po-segmentador button:hover { color: var(--color-primary-hover); }
 .painel-obras thead th.po-segmentador.recolhido button:hover { color: var(--color-primary); }
@@ -382,6 +393,8 @@ body.sem-rolagem { overflow: hidden; }
 
 @media (max-width: 1200px) {
   .capa-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .capa-cabecalho { grid-template-columns: 1fr; }
+  .capa-obras .capa-titulo h1 { white-space: normal; }
   .galeria { grid-template-columns: 1fr; }
   .galeria-lateral { position: static; }
   .rg-corpo { grid-template-columns: 1fr; }

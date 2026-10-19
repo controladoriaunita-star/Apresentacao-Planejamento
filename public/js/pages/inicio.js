@@ -36,14 +36,15 @@ export function renderInicio(alvo, { base, filtro, visao, abas, telas }) {
     ...telas.map((t) => ({ href: `#/cliente/tela/${t.id}`, nome: t.titulo, descricao: t.subtitulo ?? 'Tela do cliente', icone: 'planilha' })),
   ];
 
-  montar(alvo, h('section', { class: 'capa' },
+  montar(alvo, h('section', { class: `capa ${visao === 'cliente' ? '' : 'capa-obras'}` },
     h('img', { class: 'capa-padrao', src: 'assets/brand/pattern-un.png', alt: '', 'aria-hidden': 'true' }),
     h('div', { class: 'capa-conteudo' },
       h('div', { class: 'capa-topo' },
         h('img', { class: 'capa-logo', src: 'assets/brand/logo-unita-white.png', alt: 'Unità Engenharia' }),
         seletorMes),
       // Visão Cliente: a capa é da obra apresentada — sem indicadores da empresa (outras obras, assertividade…).
-      visao === 'cliente' ? capaCliente(base, filtro, indicador) : [
+      // Visão Obra: título e indicadores na mesma faixa, para o Painel de obras subir e ganhar espaço.
+      visao === 'cliente' ? capaCliente(base, filtro, indicador) : h('div', { class: 'capa-cabecalho' },
         h('div', { class: 'capa-titulo' },
           h('div', { class: 'eyebrow' }, 'Planejamento e Controle'),
           h('h1', {}, 'Apresentação de obras'),
@@ -53,8 +54,7 @@ export function renderInicio(alvo, { base, filtro, visao, abas, telas }) {
           indicador('Assertividade média', fmtPercentual(r.assertividadeMedia, 1), 'entre as obras que fecharam o mês'),
           indicador('Unidades construídas no mês', fmtNumero(r.unidadesMes, 1),
             r.obrasSemCadastroUH.length ? `${r.obrasSemCadastroUH.length} obra(s) sem Nº de UH no cadastro` : 'Nº de UH × avanço físico do mês'),
-          indicador('Maior assertividade no mês', r.melhor?.nome ?? '—', r.melhor ? `${fmtPercentual(r.melhor.assertividade, 1)} · ${r.melhor.cliente ?? ''}` : null, null, true)),
-      ],
+          indicador('Maior assertividade no mês', r.melhor?.nome ?? '—', r.melhor ? `${fmtPercentual(r.melhor.assertividade, 1)} · ${r.melhor.cliente ?? ''}` : null, null, true))),
       visao === 'cliente'
         ? h('nav', { class: 'capa-atalhos', 'aria-label': 'Atalhos' }, atalhos.map((a) => h('a', { class: 'capa-atalho', href: a.href },
           h('span', { class: 'capa-atalho-icone' }, icone(a.icone, { tamanho: 22 })),
