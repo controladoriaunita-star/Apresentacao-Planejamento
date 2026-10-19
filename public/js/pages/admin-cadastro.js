@@ -21,7 +21,7 @@ export function renderAdminCadastro(alvo) {
   const importarPlanilha = async ([arquivo]) => {
     if (!arquivo) return;
     try {
-      const linhas = await linhasComoObjetos(arquivo, 'Painel de Obras');
+      const linhas = await linhasComoObjetos(arquivo, ['Painel de Obras', 'BD_Fixo']);
       const r = await api.post('/obras/cadastro/importar', { linhas });
       toast('success', `${r.importados} obra(s) importada(s)`, r.obras.slice(0, 6).join(', '));
       await recarregar();
@@ -30,7 +30,7 @@ export function renderAdminCadastro(alvo) {
     }
   };
   const abrirImportacao = () => {
-    const sel = seletorArquivos({ aceita: '.xlsx,.xlsm,.xls,.csv', titulo: 'Arraste a planilha "Painel de Obras" ou clique para escolher', dica: 'XLSX, XLSM, XLS ou CSV — aba "Painel de Obras" ou a primeira aba' });
+    const sel = seletorArquivos({ aceita: '.xlsx,.xlsm,.xls,.csv', titulo: 'Arraste a planilha "Painel de Obras" ou clique para escolher', dica: 'XLSX, XLSM, XLS ou CSV — aba "Painel de Obras", "BD_Fixo" ou a primeira aba' });
     const m = abrirModal({
       titulo: 'Importar cadastro de obras',
       conteudo: h('div', { class: 'stack' },

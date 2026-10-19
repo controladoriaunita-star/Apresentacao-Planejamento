@@ -5,7 +5,25 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v12 |
+| Dev (local) | v13 |
+
+## v13 — 19/10/2026 — Painel de obras na capa
+
+- Na capa (visão Obra), os atalhos para as abas deram lugar ao **Painel de obras**, réplica da aba "Painel" da
+  planilha `Painel de Obras.xlsm`: uma linha por obra do cadastro (manual ou importado), nome da obra como link que
+  filtra a obra e abre o Resumo Geral. A capa do Cliente continua com os atalhos.
+- Colunas agrupadas como na planilha (Informações Gerais, Gestão de Obra, Datas, Realizado, Meta, Físico Cliente,
+  Físico Obra, Projeções/Tendência, Econômico, Áreas e Taxa Adm). O rótulo vertical de cada
+  grupo recolhe/expande as colunas (lembrado no navegador); filtro Ativas / Todas do cadastro.
+- Fontes: BD_Fixo → cadastro de obras; BD_Físico Geral → BD_Infos Gerais (colunas Obra e "- Cliente"); BD_Econômico
+  (item Geral) e INCC no mês de referência; orçamento raso → BD_Orc Geral. Cálculos em `domain/painel-obras.js`
+  (DATEDIF, status Atrasada/Adiantada, custo por área corrigido pelo INCC). O bloco mensal "Acumulada no Ano" da planilha ficou de fora.
+- Ocultas até termos a origem: Persona sem emissão, Taxa emitida/recebida/mês, Regime e Taxa projetada (na
+  planilha dependem de linhas mensais com #REF! ou são valores digitados). Término projetado planejamento usa o "Fim Projetado de obra"
+  do BD_Infos Gerais (na planilha é digitado).
+- Cadastro de obras: novos campos Orçamento com taxa, impostos e adicionais, Taxa adm inicial (R$), Taxa (%) e Fim
+  projetado (real). A importação aceita a aba BD_Fixo (cabeçalho na linha 2) e só grava os campos presentes na
+  planilha (não apaga os demais).
 
 ## v12 — 16/10/2026 — Resumo Físico sem comentários no cabeçalho
 

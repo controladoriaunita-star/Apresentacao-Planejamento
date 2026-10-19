@@ -26,12 +26,20 @@ export async function lerPastaDeTrabalho(dados) {
   return XLSX.read(buffer, { type: 'array', cellDates: true });
 }
 
-/** Linhas de uma aba como objetos {cabeçalho: valor} — usado na importação do cadastro de obras. */
-export async function linhasComoObjetos(arquivo, nomeAba = null) {
+/**
+ * Linhas de uma aba como objetos {cabeçalho: valor} — usado na importação do cadastro de obras.
+ * `nomesAba`: abas preferidas, na ordem (senão, a primeira). O cabeçalho é a primeira linha com ao menos
+ * três células preenchidas (o BD_Fixo começa na linha 2).
+ */
+export async function linhasComoObjetos(arquivo, nomesAba = []) {
   const XLSX = await carregarSheetJs();
   const wb = await lerPastaDeTrabalho(arquivo);
-  const aba = wb.Sheets[nomeAba && wb.SheetNames.includes(nomeAba) ? nomeAba : wb.SheetNames[0]];
-  return XLSX.utils.sheet_to_json(aba, { defval: null, raw: true });
+  const nome = [nomesAba].flat().find((n) => wb.SheetNames.includes(n)) ?? wb.SheetNames[0];
+  const aba = wb.Sheets[nome];
+  const matriz = XLSX.utils.sheet_to_json(aba, { header: 1, defval: null, raw: true, blankrows: true });
+  const linhaCabecalho = Math.max(0, matriz.findIndex((l) => l.filter((v) => v !== null && v !== '').length >= 3));
+  const inicio = XLSX.utils.decode_range(aba['!ref']).s.r + linhaCabecalho;
+  return XLSX.utils.sheet_to_json(aba, { defval: null, raw: true, range: inicio });
 }
 
 /**
