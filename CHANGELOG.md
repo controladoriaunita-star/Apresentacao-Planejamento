@@ -5,7 +5,15 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v14 |
+| Dev (local) | v15 |
+
+## v15 — 19/10/2026 — capa da visão Obra mais compacta
+
+- Capa da visão Obra em largura total: logo no canto esquerdo e mês de referência no direito; título e os quatro
+  indicadores na mesma faixa, para o Painel de obras subir e ganhar espaço na tela. A capa do Cliente não muda.
+- Painel de obras em cinza da paleta (ink-100 no quadro, ink-50 na tabela) no lugar do branco.
+- Com os grupos recolhidos, as colunas ficam juntas à esquerda (antes a coluna da obra esticava e a tabela parecia
+  vazia).
 
 ## v14 — 19/10/2026 — app dentro do Portal Unità (iframe)
 

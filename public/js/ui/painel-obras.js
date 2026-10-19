@@ -150,7 +150,8 @@ export function painelObras(painel, { ehAtiva, aoAbrirObra }) {
               h('span', {}, g.titulo), icone(aberto ? 'recolher' : 'expandir', { tamanho: 13 }))),
           aberto ? g.colunas.map((c, i) => h('th', { class: `${c.texto ? 'esq' : ''} ${i === 0 ? 'po-inicio' : ''}` }, c.titulo, c.sub ? h('small', {}, c.sub) : null)) : null,
         ];
-      }));
+      }),
+      h('th', { class: 'po-resto', 'aria-hidden': 'true' })); // ocupa a sobra quando os grupos estão recolhidos
 
     const corpo = linhas.map((l) => h('tr', { class: l.temFechamento ? '' : 'po-sem-fechamento' },
       h('td', { class: 'first po-obra' },
@@ -166,7 +167,8 @@ export function painelObras(painel, { ehAtiva, aoAbrirObra }) {
               h('span', { class: 'po-valor' }, principal), secundario !== null ? h('small', {}, secundario) : null, c.barra ? barra(c.barra(l)) : null);
           }) : null,
         ];
-      })));
+      }),
+      h('td', { class: 'po-resto', 'aria-hidden': 'true' })));
 
     montar(alvo,
       h('div', { class: 'po-topo' },
