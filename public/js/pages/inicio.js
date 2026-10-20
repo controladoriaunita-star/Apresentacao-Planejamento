@@ -1,5 +1,5 @@
 /**
- * Aba "Início" — capa do app: marca, mês de fechamento, os quatro indicadores da empresa
+ * Aba "Início" — capa do app: mês de fechamento, os quatro indicadores da empresa
  * (obras ativas, assertividade média, unidades construídas no mês, maior assertividade) e o Painel de
  * obras (visão Obra) ou os atalhos para as demais abas (visão Cliente).
  */
@@ -39,11 +39,12 @@ export function renderInicio(alvo, { base, filtro, visao, abas, telas }) {
   montar(alvo, h('section', { class: `capa ${visao === 'cliente' ? '' : 'capa-obras'}` },
     h('img', { class: 'capa-padrao', src: 'assets/brand/pattern-un.png', alt: '', 'aria-hidden': 'true' }),
     h('div', { class: 'capa-conteudo' },
-      h('div', { class: 'capa-topo' },
+      // Visão Cliente: logo e mês no topo; a capa é da obra apresentada — sem indicadores da empresa.
+      // Visão Obra: sem o logo grande (já está no menu); título, indicadores e mês numa faixa só, para o
+      // Painel de obras ocupar o resto da altura da tela.
+      visao === 'cliente' ? h('div', { class: 'capa-topo' },
         h('img', { class: 'capa-logo', src: 'assets/brand/logo-unita-white.png', alt: 'Unità Engenharia' }),
-        seletorMes),
-      // Visão Cliente: a capa é da obra apresentada — sem indicadores da empresa (outras obras, assertividade…).
-      // Visão Obra: título e indicadores na mesma faixa, para o Painel de obras subir e ganhar espaço.
+        seletorMes) : null,
       visao === 'cliente' ? capaCliente(base, filtro, indicador) : h('div', { class: 'capa-cabecalho' },
         h('div', { class: 'capa-titulo' },
           h('div', { class: 'eyebrow' }, 'Planejamento e Controle'),
@@ -54,7 +55,8 @@ export function renderInicio(alvo, { base, filtro, visao, abas, telas }) {
           indicador('Assertividade média', fmtPercentual(r.assertividadeMedia, 1), 'entre as obras que fecharam o mês'),
           indicador('Unidades construídas no mês', fmtNumero(r.unidadesMes, 1),
             r.obrasSemCadastroUH.length ? `${r.obrasSemCadastroUH.length} obra(s) sem Nº de UH no cadastro` : 'Nº de UH × avanço físico do mês'),
-          indicador('Maior assertividade no mês', r.melhor?.nome ?? '—', r.melhor ? `${fmtPercentual(r.melhor.assertividade, 1)} · ${r.melhor.cliente ?? ''}` : null, null, true))),
+          indicador('Maior assertividade no mês', r.melhor?.nome ?? '—', r.melhor ? `${fmtPercentual(r.melhor.assertividade, 1)} · ${r.melhor.cliente ?? ''}` : null, null, true)),
+        h('div', { class: 'capa-mes' }, seletorMes)),
       visao === 'cliente'
         ? h('nav', { class: 'capa-atalhos', 'aria-label': 'Atalhos' }, atalhos.map((a) => h('a', { class: 'capa-atalho', href: a.href },
           h('span', { class: 'capa-atalho-icone' }, icone(a.icone, { tamanho: 22 })),

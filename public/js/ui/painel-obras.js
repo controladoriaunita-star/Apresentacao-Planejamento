@@ -124,7 +124,7 @@ export function painelObras(painel, { ehAtiva, aoAbrirObra }) {
   const recolhidos = lerRecolhidos();
   let somenteAtivas = true;
   const defs = grupos();
-  const alvo = h('div');
+  const alvo = h('div', { class: 'po' });
 
   const desenhar = () => {
     const linhas = somenteAtivas ? painel.linhas.filter((l) => ehAtiva(l.chave)) : painel.linhas;

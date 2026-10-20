@@ -28,7 +28,7 @@ const ALTURA = 900;
  */
 const TELAS = [
   { nome: 'login', hash: '', sair: true, marcas: [[1, 'form .field:nth-of-type(1)'], [2, 'form button[type="submit"]']] },
-  { nome: 'capa-obra', hash: '#/obra/inicio', marcas: [[1, '.capa-topo .filtro-excel'], [2, '.capa-kpi', 0], [3, '.capa-kpi', 1], [4, '.capa-kpi', 2], [5, '.capa-kpi', 3], [6, '.capa-atalhos']] },
+  { nome: 'capa-obra', hash: '#/obra/inicio', marcas: [[1, '.capa-mes .filtro-excel'], [2, '.capa-kpi', 0], [3, '.capa-kpi', 1], [4, '.capa-kpi', 2], [5, '.capa-kpi', 3], [6, '.capa-painel']] },
   { nome: 'capa-cliente', hash: '#/cliente/inicio', marcas: [[1, '.capa-seletor-obra'], [2, '.capa-kpi', 0], [3, '.capa-kpi', 1], [4, '.capa-kpi', 2], [5, '.app-header .visao']] },
   {
     nome: 'filtro-obras', hash: '#/obra/resumo-geral',

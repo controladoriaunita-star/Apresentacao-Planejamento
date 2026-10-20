@@ -5,7 +5,15 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v15 |
+| Dev (local) | v16 |
+
+## v16 — 20/10/2026 — capa da visão Obra sem o logo grande
+
+- Retirado o logo grande da capa (visão Obra); o título sobe para o topo e divide a faixa com os quatro indicadores e
+  o mês de referência.
+- Indicadores mais compactos (menos espaço interno e números menores).
+- A capa passa a ter a altura da tela e o Painel de obras ocupa toda a altura que sobra (a tabela rola por dentro);
+  em 1440 × 900 a faixa do topo caiu de ~170 px para ~100 px. A capa do Cliente não muda.
 
 ## v15 — 19/10/2026 — capa da visão Obra mais compacta
 
