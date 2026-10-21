@@ -87,7 +87,10 @@ test('permissões: viewer só lê; planejamento edita conteúdo; só dev adminis
   assert.equal((await viewer('PUT', '/api/obras/cadastro', { obra: 'X' })).status, 403);
   assert.equal((await viewer('GET', '/api/usuarios')).status, 403);
   assert.equal((await planejamento('GET', '/api/usuarios')).status, 403);
-  assert.equal((await planejamento('POST', '/api/dados/atualizar')).status, 200);
+  const atualizado = await planejamento('POST', '/api/dados/atualizar');
+  assert.equal(atualizado.status, 200);
+  assert.ok(atualizado.dados.abas['BD_Infos Gerais'].linhas.length, 'devolve o resumo já relido');
+  assert.ok(atualizado.dados.atualizadoEm);
   assert.equal((await dev('GET', '/api/usuarios')).status, 200);
 });
 

@@ -5,7 +5,7 @@
  */
 import { h, montar } from '../core/dom.js';
 import { ir } from '../core/roteador.js';
-import { fmtMesLongo, fmtNumero, fmtPercentual, fmtVariacao } from '../core/formato.js';
+import { fmtDataHora, fmtMesLongo, fmtNumero, fmtPercentual, fmtVariacao } from '../core/formato.js';
 import { estado } from '../core/estado.js';
 import { mesesDasObras } from '../domain/base.js';
 import { calcularInicio, obraAtiva } from '../domain/inicio.js';
@@ -13,7 +13,7 @@ import { calcularPainelObras } from '../domain/painel-obras.js';
 import { intervaloMeses } from '../domain/normalizar.js';
 import { abrirModal, vazio } from '../ui/componentes.js';
 import { filtroExcel } from '../ui/filtro-excel.js';
-import { itensDeMes } from '../ui/filtros.js';
+import { botaoAtualizarDados, itensDeMes } from '../ui/filtros.js';
 import { icone } from '../ui/icones.js';
 import { painelObras } from '../ui/painel-obras.js';
 
@@ -44,7 +44,7 @@ export function renderInicio(alvo, { base, filtro, visao, abas, telas }) {
       // Painel de obras ocupar o resto da altura da tela.
       visao === 'cliente' ? h('div', { class: 'capa-topo' },
         h('img', { class: 'capa-logo', src: 'assets/brand/logo-unita-white.png', alt: 'Unità Engenharia' }),
-        seletorMes) : null,
+        h('div', { class: 'capa-mes' }, seletorMes, leituraDosDados())) : null,
       visao === 'cliente' ? capaCliente(base, filtro, indicador) : h('div', { class: 'capa-cabecalho' },
         h('div', { class: 'capa-titulo' },
           h('div', { class: 'eyebrow' }, 'Planejamento e Controle'),
@@ -56,13 +56,20 @@ export function renderInicio(alvo, { base, filtro, visao, abas, telas }) {
           indicador('Unidades construídas no mês', fmtNumero(r.unidadesMes, 1),
             r.obrasSemCadastroUH.length ? `${r.obrasSemCadastroUH.length} obra(s) sem Nº de UH no cadastro` : 'Nº de UH × avanço físico do mês'),
           indicador('Maior assertividade no mês', r.melhor?.nome ?? '—', r.melhor ? `${fmtPercentual(r.melhor.assertividade, 1)} · ${r.melhor.cliente ?? ''}` : null, null, true)),
-        h('div', { class: 'capa-mes' }, seletorMes)),
+        h('div', { class: 'capa-mes' }, seletorMes, leituraDosDados())),
       visao === 'cliente'
         ? h('nav', { class: 'capa-atalhos', 'aria-label': 'Atalhos' }, atalhos.map((a) => h('a', { class: 'capa-atalho', href: a.href },
           h('span', { class: 'capa-atalho-icone' }, icone(a.icone, { tamanho: 22 })),
           h('span', { class: 'capa-atalho-texto' }, h('b', {}, a.nome), h('small', {}, a.descricao ?? '')),
           icone('direita', { tamanho: 18, classe: 'ico capa-atalho-seta' }))))
         : h('section', { class: 'capa-painel' }, painelDeObras(base, filtro.referencia)))));
+}
+
+/** Quando as planilhas foram lidas do SharePoint e o botão para reler agora. */
+function leituraDosDados() {
+  return h('div', { class: 'capa-leitura' },
+    h('span', { title: estado.bruto?.fonte ?? '' }, `Dados lidos em ${fmtDataHora(estado.bruto?.atualizadoEm)}`),
+    botaoAtualizarDados('btn inverse sm'));
 }
 
 /** Painel de obras: nome da obra funciona como filtro e abre o Resumo Geral dela. */
