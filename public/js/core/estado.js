@@ -41,8 +41,7 @@ export const estado = {
     this.erro = null;
     this.avisar();
     try {
-      if (forcarServidor) await api.post('/dados/atualizar');
-      this.bruto = await api.get('/dados/resumo');
+      this.bruto = forcarServidor ? await api.post('/dados/atualizar') : await api.get('/dados/resumo');
       bases.clear();
       fisicos.clear();
       ajustarFiltro(this);

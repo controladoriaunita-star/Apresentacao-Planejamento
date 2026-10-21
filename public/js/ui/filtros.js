@@ -41,12 +41,16 @@ export function barraFiltros({ mostrarPeriodo = true } = {}) {
     }),
     h('div', { class: 'info' },
       h('span', { class: 'muted small' }, `${estado.bruto?.fonte ?? ''} · lido em ${fmtDataHora(estado.bruto?.atualizadoEm)}`),
-      pode(estado.usuario?.papel, 'editarConteudo')
-        ? botaoAcao([icone('atualizar', { tamanho: 16 }), 'Atualizar dados'], async () => {
-          await estado.carregarDados({ forcarServidor: true });
-          if (!estado.erro) toast('success', 'Dados atualizados do SharePoint');
-        }, 'btn ghost sm so-edicao')
-        : null));
+      botaoAtualizarDados()));
+}
+
+/** Relê as planilhas no SharePoint agora (só para quem edita conteúdo; some no modo apresentação). */
+export function botaoAtualizarDados(classe = 'btn ghost sm') {
+  if (!pode(estado.usuario?.papel, 'editarConteudo')) return null;
+  return botaoAcao([icone('atualizar', { tamanho: 16 }), 'Atualizar dados'], async () => {
+    await estado.carregarDados({ forcarServidor: true });
+    if (!estado.erro) toast('success', `Dados atualizados do SharePoint · lido em ${fmtDataHora(estado.bruto?.atualizadoEm)}`);
+  }, `${classe} so-edicao`);
 }
 
 /** Nas abas de uma obra só (Físico, Econômico, TxC, Fotos): escolhe entre as obras filtradas. */

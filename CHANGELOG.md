@@ -5,7 +5,16 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v16 |
+| Dev (local) | v17 |
+
+## v17 — 21/10/2026 — botão "Atualizar dados" na capa
+
+- Capa (visão Obra e Cliente): botão **Atualizar dados** e a data/hora da última leitura do SharePoint, ao lado do
+  mês de referência. Some no modo apresentação, como os demais controles de edição.
+- `POST /api/dados/atualizar` passa a devolver o resumo já relido (mesmo corpo de `/dados/resumo`). Antes o
+  navegador relia num GET separado que, na Vercel, podia cair em outra instância com o cache em memória ainda
+  antigo (até 30 min) — por isso às vezes os dados não pareciam atualizar.
+- O aviso de sucesso mostra a hora da leitura.
 
 ## v16 — 20/10/2026 — capa da visão Obra sem o logo grande
 

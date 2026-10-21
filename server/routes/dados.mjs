@@ -9,12 +9,13 @@ import { chaveObra } from '../../public/js/domain/normalizar.js';
 import { enviarJson, erro, lerJson } from '../http/respostas.mjs';
 
 export function registrarDados(rotas, { planilhas, incc, cadastro, config }) {
-  rotas.adicionar('GET', '/api/dados/resumo', { permissao: 'ver' }, async ({ req, res }) => {
+  /** Abas do resumo + cadastro + INCC (o que a apresentação carrega ao abrir). */
+  async function resumo() {
     incc.atualizar().catch(() => {}); // segundo plano, no máximo 1× por dia
     const [infos, orc, econ] = await Promise.all([
       planilhas.aba(ABAS.infosGerais), planilhas.aba(ABAS.orcamento), planilhas.aba(ABAS.economico),
     ]);
-    enviarJson(req, res, 200, {
+    return {
       fonte: planilhas.descricao,
       aviso: planilhas.aviso,
       atualizadoEm: [infos.lidoEm, orc.lidoEm, econ.lidoEm].sort()[0],
@@ -25,7 +26,11 @@ export function registrarDados(rotas, { planilhas, incc, cadastro, config }) {
       },
       cadastro: await cadastro.listar(),
       incc: (await incc.listar()).itens.map(({ mes, indice }) => ({ mes, indice })),
-    });
+    };
+  }
+
+  rotas.adicionar('GET', '/api/dados/resumo', { permissao: 'ver' }, async ({ req, res }) => {
+    enviarJson(req, res, 200, await resumo());
   });
 
   rotas.adicionar('GET', '/api/dados/fisico', { permissao: 'ver' }, async ({ req, res, url }) => {
@@ -35,8 +40,10 @@ export function registrarDados(rotas, { planilhas, incc, cadastro, config }) {
   });
 
   rotas.adicionar('POST', '/api/dados/atualizar', { permissao: 'editarConteudo' }, async ({ req, res }) => {
+    // Devolve o resumo já relido nesta mesma instância: na Vercel um GET seguinte pode cair em outra
+    // instância, com o cache em memória ainda antigo.
     await planilhas.atualizarTudo();
-    enviarJson(req, res, 200, { ok: true, aviso: planilhas.aviso });
+    enviarJson(req, res, 200, { ok: true, ...(await resumo()) });
   });
 
   rotas.adicionar('GET', '/api/incc', { permissao: 'ver' }, async ({ req, res }) => {
