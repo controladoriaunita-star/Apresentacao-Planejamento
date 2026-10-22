@@ -5,7 +5,19 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v17 |
+| Dev (local) | v18 |
+
+## v18 — 22/10/2026 — Painel de obras com colunas fixadas e grupos compactos
+
+- Saem do painel os grupos **Projeções/Tendência** e **Taxa Adm** (os cálculos continuam em
+  `domain/painel-obras.js`, só não são exibidos).
+- **Colunas fixadas**: o alfinete no título de cada coluna a fixa na tela inicial — ela continua visível com o grupo
+  recolhido. O painel sempre abre com os grupos recolhidos, mostrando só as fixadas (lembradas no navegador; padrão:
+  Avanço acumulado, Assertividade, Meta projetada acumulada, Realizado × curva atual do Cliente, Término meta obra,
+  Realizado × curva plat. atual e IEC contrato — `FIXADAS_PADRAO` em `ui/painel-obras.js`).
+- **Segmentadores**: os rótulos verticais deram lugar a uma barra de pílulas acima da tabela (com o nº de colunas
+  fixadas no grupo recolhido) e a uma faixa fina com o nome do grupo sobre as colunas dele — o cabeçalho da tabela
+  ficou bem mais baixo.
 
 ## v17 — 21/10/2026 — botão "Atualizar dados" na capa
 

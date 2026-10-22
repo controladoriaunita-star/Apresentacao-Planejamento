@@ -17,6 +17,7 @@ const CAMINHOS = {
   check: ['M5 12l5 5l9-10'],
   expandir: ['M7 10l5 5l5-5', 'M7 5l5 5l5-5'],
   recolher: ['M7 14l5-5l5 5', 'M7 19l5-5l5 5'],
+  fixar: ['M9 4h6', 'M10 4v5l-3 4h10l-3-4V4', 'M12 13v7'],
   telaCheia: ['M4 9V4h5', 'M20 9V4h-5', 'M4 15v5h5', 'M20 15v5h-5'],
   sair: ['M15 12H4', 'M8 8l-4 4l4 4', 'M13 4h6v16h-6'],
   engrenagem: ['M12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6z', 'M12 2v3', 'M12 19v3', 'M2 12h3', 'M19 12h3', 'M4.9 4.9l2.1 2.1', 'M17 17l2.1 2.1', 'M4.9 19.1L7 17', 'M17 7l2.1-2.1'],
