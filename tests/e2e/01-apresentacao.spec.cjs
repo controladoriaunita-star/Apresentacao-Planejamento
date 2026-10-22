@@ -21,7 +21,7 @@ test('primeiro acesso cria o Dev e abre o Início', async ({ page }) => {
   await expect(page.getByRole('navigation', { name: 'Atalhos' })).toHaveCount(0);
 });
 
-test('Painel de obras: segmentador recolhe o grupo e o nome da obra abre o Resumo Geral dela', async ({ page }) => {
+test('Painel de obras: grupos expandem, colunas fixadas ficam na tela inicial e a obra abre o Resumo Geral', async ({ page }) => {
   await entrar(page, DEV);
   await page.evaluate(() => fetch('/api/obras/cadastro', {
     method: 'PUT', headers: { 'content-type': 'application/json', 'x-requested-with': 'fetch' },
@@ -30,11 +30,25 @@ test('Painel de obras: segmentador recolhe o grupo e o nome da obra abre o Resum
   await page.goto('/#/obra/inicio');
   await page.reload();
   const painel = page.locator('.painel-obras');
+  const grupos = page.getByRole('group', { name: 'Grupos de colunas' });
+  const coluna = (titulo) => painel.locator('thead th', { hasText: titulo });
   await page.getByRole('button', { name: 'Todas do cadastro' }).click();
-  await expect(painel.locator('th', { hasText: 'Avanço acumulado' })).toBeVisible();
-  await painel.getByRole('button', { name: 'Recolher Realizado' }).click();
-  await expect(painel.locator('th', { hasText: 'Avanço acumulado' })).toHaveCount(0);
-  await painel.getByRole('button', { name: 'Expandir Realizado' }).click();
+  // abre com os grupos recolhidos: só as colunas fixadas; Projeções/Tendência e Taxa Adm ficam fora do painel
+  await expect(coluna('Avanço acumulado')).toBeVisible();
+  await expect(coluna('Orçamento raso')).toHaveCount(0);
+  await expect(grupos.getByRole('button', { name: /Taxa Adm|Projeções/ })).toHaveCount(0);
+  await expect(coluna('Término projetado planejamento')).toHaveCount(0);
+  // expandir o grupo mostra as demais colunas; o alfinete fixa a coluna, que fica ao recolher e após recarregar
+  await grupos.getByRole('button', { name: 'Expandir Informações Gerais' }).click();
+  await expect(coluna('Cidade')).toBeVisible();
+  await painel.getByRole('button', { name: 'Fixar Orçamento raso na tela inicial' }).click();
+  await grupos.getByRole('button', { name: 'Recolher Informações Gerais' }).click();
+  await expect(coluna('Cidade')).toHaveCount(0);
+  await page.reload();
+  await expect(coluna('Orçamento raso')).toBeVisible();
+  await painel.getByRole('button', { name: 'Desafixar Orçamento raso na tela inicial' }).click();
+  await expect(coluna('Orçamento raso')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Todas do cadastro' }).click();
   await painel.getByRole('link', { name: 'Torre Gama' }).click();
   await expect(page).toHaveURL(/#\/obra\/resumo-geral$/);
   await expect(page.getByRole('heading', { name: /^Torre Gama/ })).toBeVisible();

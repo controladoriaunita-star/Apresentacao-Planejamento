@@ -65,7 +65,7 @@
 .capa-obras .po-topo { margin-bottom: 10px; }
 .capa-obras .sheet.painel-obras { flex: 1; min-height: 0; max-height: none; }
 
-/* Painel de obras (capa, visão Obra) — grupos de colunas com rótulo vertical que recolhe/expande.
+/* Painel de obras (capa, visão Obra) — grupos de colunas que recolhem/expandem e colunas fixadas na tela inicial.
    Visual leve: cinza da paleta (ink), linhas suaves, laranja só como destaque. */
 .capa-painel {
   background: var(--ink-100); color: var(--text);
@@ -118,19 +118,34 @@
 .po-barra { display: block; height: 3px; margin: 6px 0 0 auto; width: 64px; border-radius: 999px; background: var(--ink-100); overflow: hidden; }
 .po-barra i { display: block; height: 100%; border-radius: inherit; background: var(--color-primary); }
 
-/* segmentadores: rótulo vertical por grupo; aberto = laranja suave, recolhido = neutro */
-.painel-obras .po-segmentador { min-width: 0; width: 30px; max-width: 30px; padding: 0; background: var(--ink-100); border-left: 1px solid var(--border-soft); text-align: center; }
-.painel-obras thead th.po-segmentador { padding: 6px 0; background: var(--color-primary-soft); }
-.painel-obras .po-segmentador button {
-  display: inline-flex; align-items: center; gap: 6px; writing-mode: vertical-rl; transform: rotate(180deg);
-  border: 0; background: transparent; cursor: pointer; padding: 6px 3px; border-radius: 8px;
-  font: 600 10.5px var(--font-sans); text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-primary); white-space: nowrap;
+/* segmentadores: uma pílula por grupo acima da tabela; aberto = laranja suave, recolhido = neutro */
+.po-segmentadores { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; }
+.po-grupo {
+  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 12px; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--ink-50);
+  font: 600 12px var(--font-sans); color: var(--ink-600); white-space: nowrap;
 }
-.painel-obras .po-segmentador button .ico { transform: rotate(90deg); }
-.painel-obras thead th.po-segmentador.recolhido { background: var(--ink-100); }
-.painel-obras thead th.po-segmentador.recolhido button { color: var(--ink-500); }
-.painel-obras .po-segmentador button:hover { color: var(--color-primary-hover); }
-.painel-obras thead th.po-segmentador.recolhido button:hover { color: var(--color-primary); }
+.po-grupo:hover { color: var(--color-primary); border-color: var(--color-primary); }
+.po-grupo[aria-expanded='true'] { background: var(--color-primary-soft); border-color: transparent; color: var(--color-primary); }
+.po-grupo small { min-width: 18px; padding: 0 5px; border-radius: 999px; background: var(--ink-100); font-size: 11px; line-height: 18px; text-align: center; }
+
+/* cabeçalho em duas linhas: faixa fina com o nome do grupo sobre as colunas visíveis dele */
+.painel-obras { --po-grupo-h: 26px; }
+.painel-obras thead th.po-faixa {
+  box-sizing: border-box; height: var(--po-grupo-h); padding: 0 12px; text-align: center; white-space: nowrap; border-bottom: 0;
+  font-size: 10.5px; letter-spacing: 0.08em; color: var(--color-primary); background: var(--color-primary-soft);
+}
+.painel-obras thead tr + tr th { top: var(--po-grupo-h); }
+
+/* alfinete: fixa a coluna na tela inicial; no canto inferior esquerdo (o título é alinhado à direita),
+   discreto até passar o mouse e laranja quando fixada */
+.po-fixar {
+  position: absolute; left: 4px; bottom: 6px; display: grid; place-items: center; width: 18px; height: 18px; padding: 0;
+  border: 0; border-radius: 4px; background: transparent; color: var(--ink-400); cursor: pointer; opacity: 0.45;
+}
+.painel-obras thead th:hover .po-fixar, .po-fixar:focus-visible { opacity: 1; }
+.po-fixar:hover { color: var(--color-primary); background: var(--color-primary-soft); }
+.po-fixar[aria-pressed='true'] { color: var(--color-primary); opacity: 1; }
 
 /* ── Resumo Geral: tela única ──────────────────────────────────────── */
 .rg { display: flex; flex-direction: column; gap: 12px; }
