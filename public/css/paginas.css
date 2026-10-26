@@ -196,7 +196,10 @@ main.conteudo:has(.rg-tela) { padding-bottom: 16px; }
 .rg.rg-tela .lista-valores dt { white-space: nowrap; padding-right: 8px; }
 .rg.rg-tela .custo-item { padding: 0.15em 0.2em; }
 .rg.rg-tela .rg-numero b { font-size: 1.9em; }
-.rg.rg-tela .velocimetro svg { max-height: 80px; }
+/* Velocímetro ocupa todo o quadro (largura e altura da linha do rodapé) em qualquer tamanho de tela;
+   a altura mínima acompanha a tela para ele nunca ficar pequeno */
+.rg.rg-tela .velocimetro { position: relative; flex: 1 1 0; min-height: clamp(84px, 12vh, 150px); }
+.rg.rg-tela .velocimetro svg { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; }
 
 .cef-fisico { width: 100%; border-collapse: separate; border-spacing: 0 2px; font-variant-numeric: tabular-nums; }
 .cef-fisico th { text-align: center; padding: 0 0 4px; }
@@ -217,7 +220,6 @@ main.conteudo:has(.rg-tela) { padding-bottom: 16px; }
 @media (max-height: 820px) {
   .rg.rg-tela .custo-item small, .rg.rg-tela .rg-numero small, .rg.rg-tela .rg-custos .card-titulo span { display: none; }
   .rg.rg-tela .rg-cartao { padding: 10px 14px; }
-  .rg.rg-tela .velocimetro svg { max-height: 86px; }
   .rg.rg-tela .economia-grade div { padding: 0.15em 0; }
   .rg.rg-tela .rg-cartao .card-titulo { margin-bottom: 4px; }
 }

@@ -17,6 +17,8 @@ Cada versão só é fechada com `npm run verificar` passando.
   de ~820 × 64 px para ~1000 × 108 px).
 - Resumo Geral: as linhas do quadro CEF × Físico e da Análise econômica se distribuem pela altura disponível
   (sem sobra vazia no pé em telas altas; continuam enxutas em notebooks).
+- Resumo Geral: o velocímetro "Andamento geral" ocupa todo o quadro e acompanha o tamanho da tela
+  (~154 px de largura em 1366 × 768, ~180 px em 1440 × 900 e ~216 px em 1920 × 1080).
 - **Resumo Econômico**: farol ao lado da competência (`domain/validador-economico.js`). Verde = econômico do próprio
   mês e último da obra; amarelo = a planilha só repetiu um fechamento anterior e o farol mostra a competência real
   (ex.: SET/26 igual a MAI/26); azul = existe um econômico mais recente.
