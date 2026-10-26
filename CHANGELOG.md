@@ -15,6 +15,8 @@ Cada versão só é fechada com `npm run verificar` passando.
 - Resumo Geral: todos os meses aparecem no eixo dos gráficos (inclinados quando não cabem) e os quadros da
   esquerda e do rodapé ficaram com espaçamento enxuto, para os gráficos ganharem tamanho (em 1440 × 900 passam
   de ~820 × 64 px para ~1000 × 108 px).
+- Resumo Geral: as linhas do quadro CEF × Físico e da Análise econômica se distribuem pela altura disponível
+  (sem sobra vazia no pé em telas altas; continuam enxutas em notebooks).
 - **Resumo Econômico**: farol ao lado da competência (`domain/validador-economico.js`). Verde = econômico do próprio
   mês e último da obra; amarelo = a planilha só repetiu um fechamento anterior e o farol mostra a competência real
   (ex.: SET/26 igual a MAI/26); azul = existe um econômico mais recente.

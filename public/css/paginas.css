@@ -183,10 +183,14 @@ main.conteudo:has(.rg-tela) { padding-bottom: 16px; }
 .rg.rg-tela .rg-esquerda .rg-cartao, .rg.rg-tela .rg-rodape .rg-cartao { padding: 8px 12px; }
 .rg.rg-tela .rg-grafico { padding: 8px 14px 6px; }
 .rg.rg-tela .rg-cartao .card-titulo { margin-bottom: 4px; }
-.rg.rg-tela .cef-fisico { border-spacing: 0 1px; }
-.rg.rg-tela .cef-fisico td { padding: 0.1em 0.6em; }
+/* Espaçamento vertical acompanha a altura da tela: enxuto em notebooks, mais arejado em telas altas */
+.rg.rg-tela .cef-fisico { border-spacing: 0 clamp(1px, 0.6vh - 4px, 5px); }
+.rg.rg-tela .cef-fisico td { padding: clamp(1px, 0.6vh - 4px, 5px) 0.6em; }
 .rg.rg-tela .cef-fisico th { padding-bottom: 2px; }
 .rg.rg-tela .economia-grade div { padding: 0.12em 0; }
+/* Linhas da análise econômica dividem toda a altura do quadro (sem sobra vazia no pé) */
+.rg.rg-tela .rg-economica .economia-grade { flex: 1 0 auto; grid-auto-rows: minmax(min-content, 1fr); }
+.rg.rg-tela .rg-economica .economia-grade div { display: flex; flex-direction: column; justify-content: center; }
 .rg.rg-tela .economia-grade dt, .rg.rg-tela .economia-grade dd { line-height: 1.25; }
 .rg.rg-tela .lista-valores dt, .rg.rg-tela .lista-valores dd { padding: 0.14em 0; }
 .rg.rg-tela .lista-valores dt { white-space: nowrap; padding-right: 8px; }
