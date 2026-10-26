@@ -5,7 +5,28 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v18 |
+| Dev (local) | v19 |
+
+## v19 — 26/10/2026 — ajustes do Resumo Geral, farol do econômico e simulação de volta
+
+- **Resumo Geral**: os três gráficos vão só até o último mês do replanejado atual (o mês em que ele chega ao valor
+  final), nunca antes do mês de referência. Os gráficos de barras ganharam rótulo de dados (na vertical quando a
+  barra é estreita) e o eixo da Assertividade vai ao menos a 100%.
+- **Resumo Econômico**: farol ao lado da competência (`domain/validador-economico.js`). Verde = econômico do próprio
+  mês e último da obra; amarelo = a planilha só repetiu um fechamento anterior e o farol mostra a competência real
+  (ex.: SET/26 igual a MAI/26); azul = existe um econômico mais recente.
+- "IEC" (IEC Obra) e "IEC s/ correção" em vermelho quando acima de 1 (tabela e indicadores do Econômico).
+- Indicador "Variação de custo (mês)" passa a se chamar "Variação de Resultado (Sem correção)".
+- **Valores monetários sem casas decimais e sem símbolo**; o "(R$)" foi para o título da coluna/caixa (Resumo
+  Geral, Físico, Econômico, Painel de obras e ficha da obra). Os valores abreviados (R$ 13,5 mi) saíram.
+- **Cards crescem com os valores**: indicadores, análise econômica, custos por, detalhes do item e simulação não
+  cortam mais o valor com reticências; quando não cabem, quebram para a linha de baixo ou alargam a coluna.
+- **Simulação sem atividades voltou a funcionar**: desde a v10 cada coluna só era simulada se as atividades
+  "fechassem" com o total (±1 p.p.); na planilha atual quase nenhuma obra fecha (colunas do mês com o acumulado e
+  realizado das atividades diferente do BD_Infos Gerais), e tudo ficava "—". Agora as colunas acumuladas são
+  simuladas aplicando ao total oficial só o efeito da retirada (avisadas como "ajustado pela diferença"); só as
+  colunas do mês que não fecham continuam "—".
+- Correção: a tabela acessível dos gráficos podia esticar a página do Resumo Geral (barra de rolagem em 1366×768).
 
 ## v18 — 22/10/2026 — Painel de obras com colunas fixadas e grupos compactos
 

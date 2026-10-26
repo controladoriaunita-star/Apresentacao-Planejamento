@@ -17,8 +17,11 @@
 .capa .filtro-botao .filtro-rotulo, .capa .filtro-botao .ico { color: var(--vidro-texto); }
 .capa .filtro-painel { color: var(--text); right: 0; left: auto; }
 
-.capa-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
-.capa-kpis.tres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* Cards crescem com o valor; rótulo e detalhe não alargam o card (width 0 + min-width 100%) */
+.capa-kpis { display: grid; grid-template-columns: repeat(4, minmax(min-content, 1fr)); gap: 14px; }
+.capa-kpis.tres { grid-template-columns: repeat(3, minmax(min-content, 1fr)); }
+.capa-kpi-valor { white-space: nowrap; }
+.capa-kpi-rotulo, .capa-kpi-detalhe { width: 0; min-width: 100%; }
 .capa-seletor-obra { margin-top: 18px; }
 .capa-seletor-obra .filtro-painel { left: 0; right: auto; }
 .capa-kpi {
@@ -48,14 +51,14 @@
    Painel de obras ocupa toda a altura que sobra (a tabela rola por dentro). */
 .capa-obras { height: calc(100dvh - var(--header-h) - 2px); min-height: 560px; }
 .capa-obras .capa-conteudo { width: 100%; height: 100%; padding: 14px 16px 16px; gap: 14px; }
-.capa-cabecalho { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px 28px; }
+.capa-cabecalho { display: grid; grid-template-columns: auto minmax(min-content, 1fr) auto; align-items: center; gap: 12px 28px; }
 .capa-mes { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .capa-leitura { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--vidro-texto); white-space: nowrap; }
 .capa-obras .capa-titulo h1 { font-size: clamp(24px, 3.4vh, 34px); margin-top: 4px; white-space: nowrap; }
 .capa-obras .capa-titulo p { margin-top: 2px; font-size: 14px; }
 .capa-obras .capa-kpis { gap: 10px; }
 .capa-obras .capa-kpi { padding: 10px 14px; gap: 2px; border-radius: 12px; }
-.capa-obras .capa-kpi-rotulo { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.capa-obras .capa-kpi-rotulo, .capa-obras .capa-kpi-detalhe { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .capa-obras .capa-kpi-rotulo { font-size: 12px; }
 .capa-obras .capa-kpi-valor { font-size: clamp(20px, 2.8vh, 26px); }
 .capa-obras .capa-kpi-valor.nome { font-size: 16px; line-height: 1.25; }
@@ -152,14 +155,15 @@
 .rg-titulo { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
 .rg-titulo h1 { font-size: 22px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .rg-titulo h1 small { font-family: var(--font-sans); font-size: 13px; font-weight: 400; color: var(--muted); }
-.rg-corpo { display: grid; grid-template-columns: minmax(340px, 28%) minmax(0, 1fr); gap: 12px; }
+.rg-corpo { display: grid; grid-template-columns: minmax(max-content, 28%) minmax(0, 1fr); gap: 12px; }
 .rg-esquerda, .rg-direita { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+.rg-esquerda { min-width: 340px; }
 .rg-cartao { padding: 12px 18px; display: flex; flex-direction: column; min-height: 0; }
 .rg-cartao .card-titulo h3 { display: flex; align-items: center; gap: 8px; }
 .rg-cartao .card-titulo h3::before { content: ''; width: 4px; height: 1em; border-radius: 4px; background: var(--color-primary); }
 .rg-cartao .card-titulo { margin-bottom: 6px; }
-.rg-rodape { display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr)); gap: 12px; }
-.grafico-area { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.rg-rodape { display: grid; grid-template-columns: minmax(min-content, 1.6fr) repeat(3, minmax(min-content, 1fr)); gap: 12px; }
+.grafico-area { position: relative; display: flex; flex-direction: column; gap: 6px; min-height: 0; } /* relative: a tabela acessível (sr-only) não estica a página */
 .grafico { position: relative; height: 260px; }
 
 /* Ocupando exatamente a altura livre da janela (classe colocada pelo JS quando a tela comporta) */
@@ -191,10 +195,6 @@ main.conteudo:has(.rg-tela) { padding-bottom: 16px; }
 .selo-desvio.neutro { background: var(--ink-100); color: var(--ink-600); }
 .selo-desvio.info { min-width: 0; background: var(--info-soft); color: var(--info); }
 
-.v-curto { display: none; }
-.compacto .v-cheio { display: none; }
-.compacto .v-curto { display: inline; }
-.compacto .economia-grade { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 10px; }
 /* Telas baixas (notebooks 768 px): sem textos auxiliares no rodapé, mais altura para os gráficos */
 @media (max-height: 820px) {
   .rg.rg-tela .custo-item small, .rg.rg-tela .rg-numero small, .rg.rg-tela .rg-custos .card-titulo span { display: none; }
@@ -203,17 +203,19 @@ main.conteudo:has(.rg-tela) { padding-bottom: 16px; }
   .rg.rg-tela .economia-grade div { padding: 0.15em 0; }
   .rg.rg-tela .rg-cartao .card-titulo { margin-bottom: 4px; }
 }
-.economia-grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; margin: 0; }
-.economia-grade div { padding: 0.25em 0; border-bottom: 1px solid var(--border-soft); min-width: 0; }
-.economia-grade dt { font-size: 0.86em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.economia-grade { display: grid; grid-template-columns: repeat(2, minmax(max-content, 1fr)); gap: 0 14px; margin: 0; }
+.compacto .economia-grade { grid-template-columns: repeat(3, minmax(max-content, 1fr)); gap: 0 10px; }
+.economia-grade div { padding: 0.25em 0; border-bottom: 1px solid var(--border-soft); }
+.economia-grade dt { font-size: 0.86em; color: var(--muted); white-space: nowrap; }
 .economia-grade dd { margin: 1px 0 0; font-weight: 700; font-size: 1.04em; color: var(--ink-900); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.custos-por { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
+.custos-por { display: grid; grid-template-columns: repeat(4, minmax(min-content, 1fr)); gap: 8px; text-align: center; }
 .custo-item { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 0.3em 0.2em; border-radius: 10px; background: var(--ink-50); }
 .custo-item .sigla { font-family: var(--font-display); font-weight: 700; font-size: 0.85em; color: var(--color-primary); }
-.custo-item b { font-size: 1.12em; font-weight: 700; }
+.custo-item b { font-size: 1.12em; font-weight: 700; white-space: nowrap; }
 .custo-item small { font-size: 0.78em; color: var(--muted); }
 .rg-numero { display: flex; flex-direction: column; gap: 4px; }
-.rg-numero b { font-family: var(--font-display); font-size: 2.3em; color: var(--color-secondary); font-weight: 600; line-height: 1.1; }
+.rg-numero b { font-family: var(--font-display); font-size: 2.3em; color: var(--color-secondary); font-weight: 600; line-height: 1.1; white-space: nowrap; }
+.rg .lista-valores dd { white-space: nowrap; }
 .rg-numero small { font-size: 11px; }
 .velocimetro { display: flex; justify-content: center; }
 .velocimetro svg { width: 100%; max-width: 220px; max-height: 120px; }
@@ -252,34 +254,31 @@ main.conteudo:has(.rodape-fixo) > div:last-child { flex: 1; display: flex; flex-
 .simulacao-dica { display: flex; align-items: center; gap: 8px; color: var(--muted); }
 .simulacao-aviso { margin-top: 10px; font-size: 13px; color: var(--warning); }
 .simulacao-retiradas { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 12px; }
-.simulacao-indicadores { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
-.simulacao-indicador { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border-radius: 12px; background: var(--info-soft); min-width: 0; }
-.simulacao-indicador .l { font-size: 12px; color: var(--ink-600); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.simulacao-indicadores { display: flex; flex-wrap: wrap; gap: 10px; }
+.simulacao-indicador { display: flex; flex: 1 1 140px; min-width: max-content; flex-direction: column; gap: 2px; padding: 10px 14px; border-radius: 12px; background: var(--info-soft); }
+.simulacao-indicador .l { font-size: 12px; color: var(--ink-600); white-space: nowrap; }
 .simulacao-indicador .v { font-size: 20px; font-weight: 700; color: var(--ink-900); font-variant-numeric: tabular-nums; }
 .simulacao-indicador .v.positivo { color: var(--success); }
 .simulacao-indicador .v.negativo { color: var(--error); }
 .simulacao-indicador .h { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-@media (max-width: 1000px) { .simulacao-indicadores { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 600px) { .simulacao-indicadores { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* Detalhe do item no Resumo Econômico: 3 linhas × 4 caixas + comentários */
 .detalhe-grade { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(260px, 1fr); gap: 20px; align-items: start; }
 .detalhe-blocos { display: flex; flex-direction: column; gap: 12px; }
 .detalhe-linha .sub { margin-bottom: 6px; }
-.detalhe-valores { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0; }
-.detalhe-valores div { background: var(--surface); border: 1px solid var(--border-soft); border-radius: 12px; padding: 10px 12px; min-width: 0; }
-.detalhe-valores dt { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 400; }
-.detalhe-valores dd { margin: 2px 0 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.detalhe-valores { display: grid; grid-template-columns: repeat(4, minmax(max-content, 1fr)); gap: 10px; margin: 0; }
+.detalhe-valores div { background: var(--surface); border: 1px solid var(--border-soft); border-radius: 12px; padding: 10px 12px; }
+.detalhe-valores dt { font-size: 12px; color: var(--muted); white-space: nowrap; font-weight: 400; }
+.detalhe-valores dd { margin: 2px 0 0; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .detalhe-comentarios { display: flex; flex-direction: column; gap: 10px; }
 .comentario-caixa { background: var(--surface); border: 1px solid var(--border-soft); border-left: 3px solid var(--color-primary); border-radius: 12px; padding: 10px 14px; }
 .comentario-caixa b { display: block; font-size: 12px; color: var(--ink-700); margin-bottom: 4px; }
 .comentario-caixa p { white-space: pre-wrap; color: var(--ink-700); font-weight: 400; line-height: 1.55; }
 
-/* Indicadores do Resumo Econômico em linhas completas (simétricas) */
-.kpis.kpis-9 { grid-template-columns: repeat(9, minmax(0, 1fr)); }
-.kpis.kpis-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-@media (max-width: 1100px) { .kpis.kpis-9 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 900px) { .kpis.kpis-6 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* Indicadores do Resumo Econômico: numa linha só quando os valores cabem; senão quebram (flex de .kpis) */
+.kpis.kpis-9 .kpi, .kpis.kpis-6 .kpi { flex-basis: 0; }
+/* "IEC Obra" e "IEC s/ correção" acima de 1 */
+.iec-acima { color: var(--error); font-weight: 700; }
 .rodape-fixo .kpi { padding: 10px 14px; }
 
 /* ── Galeria (TxC e fotos) ─────────────────────────────────────────── */
@@ -370,7 +369,7 @@ body.sem-rolagem { overflow: hidden; }
 .ficha-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; background: var(--vidro); border: 1px solid var(--vidro-borda); color: var(--vidro-texto); font-size: 13px; }
 
 .ficha-corpo { position: relative; width: min(1240px, 100%); margin: -60px auto 0; padding: 0 32px 40px; display: flex; flex-direction: column; gap: 18px; }
-.ficha-destaques { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.ficha-destaques { display: grid; grid-template-columns: repeat(3, minmax(max-content, 1fr)); gap: 12px; }
 .ficha-destaque { display: flex; align-items: flex-start; gap: 12px; padding: 16px 18px; background: var(--surface); border-radius: var(--r-card); box-shadow: var(--shadow-hover); border-top: 3px solid var(--cor); }
 .ficha-destaque .rotulo { display: block; font-size: 12px; color: var(--muted); }
 .ficha-destaque b { display: block; font-family: var(--font-display); font-size: 22px; font-weight: 600; line-height: 1.2; margin-top: 2px; white-space: nowrap; }

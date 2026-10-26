@@ -93,10 +93,12 @@
 .card-titulo h3 { font-size: 15px; font-weight: 600; }
 
 /* ── KPIs ── */
-.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
-.kpi { padding: 14px 18px; }
-.kpi .l { font-size: 12px; font-weight: 500; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.kpi .v { font-size: clamp(15px, 1.1vw, 20px); font-weight: 600; margin-top: 4px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Indicadores crescem com o conteúdo (rótulo e valor nunca cortados): dividem a linha por igual e quebram
+   para a linha de baixo quando o valor não cabe. */
+.kpis { display: flex; flex-wrap: wrap; gap: 12px; }
+.kpi { flex: 1 1 150px; min-width: max-content; padding: 14px 18px; }
+.kpi .l { font-size: 12px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+.kpi .v { font-size: clamp(15px, 1.1vw, 20px); font-weight: 600; margin-top: 4px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; white-space: nowrap; }
 .kpi .h { font-size: 12px; color: var(--muted); margin-top: 2px; }
 
 /* ── Lista chave → valor ── */
@@ -201,6 +203,18 @@
 .selo-competencia.compacto { gap: 8px; padding: 4px 12px 4px 10px; border-radius: 10px; }
 .selo-competencia.compacto small { font-size: 10px; }
 .selo-competencia.compacto b { font-size: 15px; }
+
+/* ── Farol do econômico (competência real do relatório) ── */
+.farol-economico {
+  display: inline-flex; align-items: center; gap: 10px; padding: 8px 16px 8px 12px; flex-shrink: 0;
+  border: 1px solid currentColor; border-radius: 14px; line-height: 1.15;
+}
+.farol-economico .farol-luz { width: 14px; height: 14px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 4px var(--surface); flex-shrink: 0; }
+.farol-economico small { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+.farol-economico b { display: block; font-size: 15px; font-weight: 600; color: var(--ink-900); white-space: nowrap; }
+.farol-economico.ok { color: var(--success); background: var(--success-soft); }
+.farol-economico.alerta { color: var(--warning); background: var(--warning-soft); }
+.farol-economico.info { color: var(--info); background: var(--info-soft); }
 .filtro-painel {
   position: absolute; top: calc(100% + 8px); left: 0; z-index: 45; max-width: calc(100vw - 32px);
   background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--r-card); box-shadow: var(--shadow-overlay);

@@ -10,7 +10,7 @@ import { calcularResumoGeral, indiceIec } from '../../public/js/domain/resumo-ge
 import { calcularInicio, obraAtiva } from '../../public/js/domain/inicio.js';
 import { calcularResumoFisico, compararItens } from '../../public/js/domain/resumo-fisico.js';
 import { calcularResumoEconomico } from '../../public/js/domain/resumo-economico.js';
-import { semRepeticao, semRepeticaoNoFim } from '../../public/js/domain/series.js';
+import { indiceFimDaSerie, semRepeticao, semRepeticaoNoFim } from '../../public/js/domain/series.js';
 import { mediaPonderada } from '../../public/js/domain/agregar.js';
 
 const ALPHA = 'residencial alpha';
@@ -71,6 +71,17 @@ test('Resumo Geral — gráficos cortam o realizado no mês de referência', () 
   assert.equal(curvaAcumulada.realizado.filter((v) => v !== null).length, 15);
   assert.equal(realizadoPlanejadoMes.realizado[15], null, 'abr/26 em diante sem realizado');
   perto(assert, assertividade[0], 0.04 / (1 / 24), 'assertividade = realizado ÷ planejado do mês');
+});
+
+test('Resumo Geral — gráficos vão só até o último mês do replanejado', () => {
+  assert.equal(indiceFimDaSerie([0.5, 0.9, 1, 1, 1, null]), 2, 'primeiro mês do valor final');
+  assert.equal(indiceFimDaSerie([null, null]), -1);
+  const base = baseExemplo();
+  const beta = calcularResumoGeral(base, { obras: [BETA], de: '2025-01', ate: '2026-12', referencia: REF });
+  assert.equal(beta.graficos.meses.at(-1), '2026-08', 'Beta: replanejado chega a 100% em ago/26');
+  assert.equal(beta.graficos.curvaAcumulada.planejadoAtual.length, beta.graficos.meses.length);
+  const gama = calcularResumoGeral(base, { obras: [GAMA], de: '2025-01', ate: '2026-12', referencia: REF });
+  assert.equal(gama.graficos.meses.at(-1), REF, 'nunca corta antes do mês de referência');
 });
 
 test('Resumo Geral — análise econômica, custos por unidade, INCC e NH-NU', () => {

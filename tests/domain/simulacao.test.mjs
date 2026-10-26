@@ -70,6 +70,16 @@ test('Simulação — coluna em que os itens não fecham com o total fica sem si
   perto(assert, s.linha.realizadoAcm, 0.4, 'as demais colunas continuam simuladas');
 });
 
+test('Simulação — coluna acumulada que não fecha com o total é ajustada pela diferença', () => {
+  // Atividades somam 0,55 mas o total oficial é 0,60: a retirada move o total só pelo efeito do item.
+  const resumo = { ...RESUMO, total: { ...RESUMO.total, realizadoAcm: 0.6 } };
+  const s = simularSemItens(resumo, new Set(['01']));
+  assert.deepEqual(s.ajustadas, ['realizadoAcm']);
+  assert.deepEqual(s.semConciliar, []);
+  perto(assert, s.linha.realizadoAcm, 0.6 + (0.4 - 0.55), 'total + (média sem o item − média de todos)');
+  perto(assert, s.linha.planejadoAcm, 0.4, 'colunas que fecham continuam exatas');
+});
+
 test('desvio da meta = realizado acumulado − planejado acumulado', () => {
   perto(assert, desvioDaMeta({ realizadoAcm: 0.6, planejadoAcm: 0.65 }), -0.05, 'desvio');
   assert.equal(desvioDaMeta({ realizadoAcm: null, planejadoAcm: 0.65 }), null);
