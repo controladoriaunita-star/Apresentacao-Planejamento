@@ -12,6 +12,9 @@ Cada versão só é fechada com `npm run verificar` passando.
 - **Resumo Geral**: os três gráficos vão só até o último mês do replanejado atual (o mês em que ele chega ao valor
   final), nunca antes do mês de referência. Os gráficos de barras ganharam rótulo de dados (na vertical quando a
   barra é estreita) e o eixo da Assertividade vai ao menos a 100%.
+- Resumo Geral: todos os meses aparecem no eixo dos gráficos (inclinados quando não cabem) e os quadros da
+  esquerda e do rodapé ficaram com espaçamento enxuto, para os gráficos ganharem tamanho (em 1440 × 900 passam
+  de ~820 × 64 px para ~1000 × 108 px).
 - **Resumo Econômico**: farol ao lado da competência (`domain/validador-economico.js`). Verde = econômico do próprio
   mês e último da obra; amarelo = a planilha só repetiu um fechamento anterior e o farol mostra a competência real
   (ex.: SET/26 igual a MAI/26); azul = existe um econômico mais recente.

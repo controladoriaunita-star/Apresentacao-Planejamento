@@ -155,9 +155,9 @@
 .rg-titulo { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
 .rg-titulo h1 { font-size: 22px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .rg-titulo h1 small { font-family: var(--font-sans); font-size: 13px; font-weight: 400; color: var(--muted); }
-.rg-corpo { display: grid; grid-template-columns: minmax(max-content, 28%) minmax(0, 1fr); gap: 12px; }
+.rg-corpo { display: grid; grid-template-columns: minmax(max-content, 24%) minmax(0, 1fr); gap: 12px; }
 .rg-esquerda, .rg-direita { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
-.rg-esquerda { min-width: 340px; }
+.rg-esquerda { min-width: 320px; }
 .rg-cartao { padding: 12px 18px; display: flex; flex-direction: column; min-height: 0; }
 .rg-cartao .card-titulo h3 { display: flex; align-items: center; gap: 8px; }
 .rg-cartao .card-titulo h3::before { content: ''; width: 4px; height: 1em; border-radius: 4px; background: var(--color-primary); }
@@ -177,8 +177,22 @@ main.conteudo:has(.rg-tela) { padding-bottom: 16px; }
 .rg.rg-tela .grafico-area { flex: 1; }
 .rg.rg-tela .grafico { flex: 1; height: auto; min-height: 60px; }
 .rg.rg-tela .rg-rodape { flex: 0 0 auto; }
-.rg.rg-tela .lista-valores dt, .rg.rg-tela .lista-valores dd { padding: 0.32em 0; }
 .rg.rg-tela .card-titulo h3 { font-size: 1.08em; }
+/* Tela única: quadros da esquerda e do rodapé com espaçamento enxuto para sobrar altura aos gráficos */
+.rg.rg-tela, .rg.rg-tela .rg-corpo, .rg.rg-tela .rg-esquerda, .rg.rg-tela .rg-direita, .rg.rg-tela .rg-rodape { gap: 8px; }
+.rg.rg-tela .rg-esquerda .rg-cartao, .rg.rg-tela .rg-rodape .rg-cartao { padding: 8px 12px; }
+.rg.rg-tela .rg-grafico { padding: 8px 14px 6px; }
+.rg.rg-tela .rg-cartao .card-titulo { margin-bottom: 4px; }
+.rg.rg-tela .cef-fisico { border-spacing: 0 1px; }
+.rg.rg-tela .cef-fisico td { padding: 0.1em 0.6em; }
+.rg.rg-tela .cef-fisico th { padding-bottom: 2px; }
+.rg.rg-tela .economia-grade div { padding: 0.12em 0; }
+.rg.rg-tela .economia-grade dt, .rg.rg-tela .economia-grade dd { line-height: 1.25; }
+.rg.rg-tela .lista-valores dt, .rg.rg-tela .lista-valores dd { padding: 0.14em 0; }
+.rg.rg-tela .lista-valores dt { white-space: nowrap; padding-right: 8px; }
+.rg.rg-tela .custo-item { padding: 0.15em 0.2em; }
+.rg.rg-tela .rg-numero b { font-size: 1.9em; }
+.rg.rg-tela .velocimetro svg { max-height: 80px; }
 
 .cef-fisico { width: 100%; border-collapse: separate; border-spacing: 0 2px; font-variant-numeric: tabular-nums; }
 .cef-fisico th { text-align: center; padding: 0 0 4px; }

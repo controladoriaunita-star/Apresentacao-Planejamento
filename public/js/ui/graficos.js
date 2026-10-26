@@ -32,7 +32,7 @@ function opcoesBase({ percentual = true, max = null, minimoMax = null } = {}) {
       },
     },
     scales: {
-      x: { grid: { display: false }, border: { color: token('--chart-grid') }, ticks: { color: eixo, font: { family: 'Inter', size: fonteEixo(), weight: '500' }, maxRotation: 0, autoSkipPadding: 14 } },
+      x: { grid: { display: false }, border: { color: token('--chart-grid') }, ticks: { color: eixo, font: { family: 'Inter', size: fonteEixo() - 1, weight: '500' }, autoSkip: false, maxRotation: 90, minRotation: 0 } }, // todos os meses; inclinados quando não cabem
       y: {
         beginAtZero: true,
         max: max ?? undefined,
