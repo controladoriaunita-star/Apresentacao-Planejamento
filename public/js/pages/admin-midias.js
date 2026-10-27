@@ -5,9 +5,10 @@ import { api } from '../core/api.js';
 import { h, montar } from '../core/dom.js';
 import { fmtMes } from '../core/formato.js';
 import { estado } from '../core/estado.js';
-import { TIPOS_MIDIA } from '../domain/conteudo.js';
+import { DESTINOS, TIPOS_MIDIA, destinoDaMidia } from '../domain/conteudo.js';
 import { abrirModal, alerta, botaoAcao, campo, carregando, confirmar, toast, vazio } from '../ui/componentes.js';
 import { seletorArquivos } from '../ui/seletor-arquivos.js';
+import { seletorDestino } from '../ui/seletor-destino.js';
 
 const IMAGENS = 'image/png,image/jpeg,image/webp,image/gif';
 
@@ -25,7 +26,7 @@ export function abrirFormMidia(inicial, aoSalvar) {
   const grupo = h('input', { value: inicial.grupo ?? '', placeholder: inicial.tipo === 'txc' ? 'Ex.: Torre A' : 'Ex.: Fachada, Térreo' });
   const comentario = h('textarea', { placeholder: 'Aparece abaixo da imagem na apresentação' }, inicial.comentario ?? '');
   const ordem = h('input', { type: 'number', value: inicial.ordem ?? 0, style: { maxWidth: '120px' } });
-  const visivel = h('input', { type: 'checkbox', checked: inicial.visivelCliente !== false });
+  const destino = seletorDestino(destinoDaMidia(inicial));
   const arquivos = seletorArquivos({
     aceita: IMAGENS, multiplo: !editando,
     titulo: editando ? 'Arraste a nova imagem ou clique para trocar' : 'Arraste as imagens aqui ou clique para escolher',
@@ -35,7 +36,7 @@ export function abrirFormMidia(inicial, aoSalvar) {
   const salvar = async () => {
     montar(erro);
     try {
-      const comum = { tipo: inicial.tipo, obra: obra.value, mes: mes.value, grupo: grupo.value, comentario: comentario.value, ordem: Number(ordem.value), visivelCliente: visivel.checked };
+      const comum = { tipo: inicial.tipo, obra: obra.value, mes: mes.value, grupo: grupo.value, comentario: comentario.value, ordem: Number(ordem.value), destino: destino.valor() };
       const selecionados = arquivos.arquivos();
       if (editando) {
         const arquivoId = selecionados[0] ? (await api.enviarArquivo(selecionados[0])).id : inicial.arquivoId;
@@ -64,10 +65,10 @@ export function abrirFormMidia(inicial, aoSalvar) {
         campo('Obra', obra),
         campo('Mês', mes),
         campo(def.grupo, grupo, inicial.tipo === 'txc' ? 'Separa as imagens por torre na apresentação' : 'Separa as fotos por local'),
-        campo('Ordem', ordem)),
+        campo('Ordem', ordem),
+        destino.elemento),
       campo('Comentário', comentario),
-      h('div', { class: 'field' }, h('span', {}, editando ? 'Trocar imagem' : 'Imagens'), arquivos.elemento),
-      h('label', { class: 'check' }, visivel, 'Exibir na apresentação ao cliente')),
+      h('div', { class: 'field' }, h('span', {}, editando ? 'Trocar imagem' : 'Imagens'), arquivos.elemento)),
     acoes: [
       h('button', { class: 'btn ghost', type: 'button', onclick: () => m.fechar() }, 'Cancelar'),
       botaoAcao('Salvar', salvar, 'btn primary'),
@@ -95,14 +96,14 @@ export async function renderAdminMidias(alvo) {
           h('button', { class: 'btn primary', type: 'button', onclick: () => abrirFormMidia({ tipo, mes: estado.filtro.referencia, obra: estado.base('obra').obras.find((o) => o.chave === estado.filtro.obras[0])?.nome }, desenhar) }, 'Cadastrar imagens'))),
       lista.length
         ? h('div', { class: 'sheet' }, h('table', { class: 'lista-admin' },
-          h('thead', {}, h('tr', {}, h('th', { class: 'first' }, 'Obra'), h('th', {}, 'Imagem'), h('th', {}, 'Mês'), h('th', {}, TIPOS_MIDIA[tipo].grupo), h('th', {}, 'Comentário'), h('th', {}, 'Cliente'), h('th', {}))),
+          h('thead', {}, h('tr', {}, h('th', { class: 'first' }, 'Obra'), h('th', {}, 'Imagem'), h('th', {}, 'Mês'), h('th', {}, TIPOS_MIDIA[tipo].grupo), h('th', {}, 'Comentário'), h('th', {}, 'Apresentação'), h('th', {}))),
           h('tbody', {}, lista.map((m) => h('tr', {},
             h('td', { class: 'first' }, m.obra),
             h('td', {}, h('img', { class: 'miniatura-admin', src: api.urlArquivo(m.arquivoId), alt: '', loading: 'lazy' })),
             h('td', {}, fmtMes(m.mes)),
             h('td', { class: 'esq' }, m.grupo ?? '—'),
             h('td', { class: 'texto' }, m.comentario ?? '—'),
-            h('td', {}, m.visivelCliente ? 'Sim' : 'Não'),
+            h('td', { class: 'esq' }, DESTINOS[destinoDaMidia(m)]),
             h('td', { class: 'acoes' },
               h('button', { class: 'btn ghost sm', type: 'button', onclick: () => abrirFormMidia(m, desenhar) }, 'Editar'),
               h('button', { class: 'btn ghost sm', type: 'button', onclick: async () => {

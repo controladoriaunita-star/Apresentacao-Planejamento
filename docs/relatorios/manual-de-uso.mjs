@@ -10,7 +10,7 @@ const cap = (id, rotulo, titulo, html) => capitulos.push({ id, titulo, html: `<s
 cap('acesso', 'Começando', 'Acesso e perfis', `
   <div class="cartoes">
     <div class="cartao"><span class="papel">Dev</span><h4>Acesso total</h4><p>Vê as duas apresentações, cadastra conteúdo, gerencia usuários e acompanha as fontes de dados e o INCC.</p></div>
-    <div class="cartao"><span class="papel">Planejamento</span><h4>Cadastra o conteúdo</h4><p>Cadastro de obras, TxC, fotos, telas do cliente, INCC manual e o botão "Atualizar dados".</p></div>
+    <div class="cartao"><span class="papel">Planejamento</span><h4>Cadastra o conteúdo</h4><p>Cadastro de obras, TxC, fotos, novas telas, INCC manual e o botão "Atualizar dados".</p></div>
     <div class="cartao"><span class="papel">Viewer</span><h4>Só visualiza</h4><p>Abre as apresentações Obra e Cliente, sem administração.</p></div>
   </div>
   ${telaAnotada('login', 'Tela de entrada', [
@@ -112,19 +112,19 @@ cap('planejamento', 'Planejamento', 'Tarefas do Planejamento', `
     <li>Administração → <b>TxC e fotos</b>, escolha "Tempo x Caminho" ou "Acompanhamento fotográfico" e clique em <b>Cadastrar imagens</b> (ou use "Cadastrar" dentro da própria aba).</li>
     <li>Escolha a obra e o mês, informe a torre (TxC) ou o local (fotos) e escreva o comentário.</li>
     <li>Arraste as imagens. Cada imagem vira um registro com os mesmos dados; a ordem segue a seleção.</li>
-    <li>Desmarque "Exibir na apresentação ao cliente" para imagens internas.</li>
+    <li>Em "Apresentação", escolha onde a imagem aparece: Obra e Cliente, Somente Obra (imagens internas) ou Somente Cliente.</li>
   </ol>
   ${telaAnotada('admin-midia-form', 'Cadastro de imagens', [
-    { n: 1, titulo: 'Obra, mês, torre/local, ordem' }, { n: 2, titulo: 'Comentário' }, { n: 3, titulo: 'Arraste as imagens' }, { n: 4, titulo: 'Exibir ao cliente' },
+    { n: 1, titulo: 'Obra, mês, torre/local, ordem' }, { n: 2, titulo: 'Comentário' }, { n: 3, titulo: 'Arraste as imagens' }, { n: 4, titulo: 'Apresentação' },
   ])}
-  <h3>3. Montar uma tela para o cliente</h3>
+  <h3>3. Montar uma nova tela</h3>
   <ol class="passos">
-    <li>Administração → <b>Telas do cliente</b> → <b>Nova tela</b>.</li>
-    <li>Dê título e ordem. Marque as obras em que a tela aparece (nenhuma marcada = todas).</li>
+    <li>Administração → <b>Novas telas</b> → <b>Nova tela</b>.</li>
+    <li>Dê título e ordem e escolha a apresentação (Obra e Cliente, Somente Obra ou Somente Cliente). Marque as obras em que a tela aparece (nenhuma marcada = todas).</li>
     <li>Adicione blocos: <b>Planilha</b> (exibida só para leitura; informe a aba se não for a primeira), <b>Imagem</b> ou <b>Texto</b>, em largura inteira ou meia.</li>
-    <li>Salve e confira em "Ver". A tela aparece no menu da apresentação Cliente.</li>
+    <li>Salve e confira em "Ver". A tela aparece no menu da apresentação escolhida.</li>
   </ol>
-  ${telaAnotada('admin-tela-form', 'Editor de tela do cliente', [
+  ${telaAnotada('admin-tela-form', 'Editor de tela', [
     { n: 1, titulo: 'Título, subtítulo e ordem' }, { n: 2, titulo: 'Bloco' }, { n: 3, titulo: 'Adicionar bloco' },
   ])}
   <h3>4. Conferir as fontes e o INCC</h3>
@@ -146,7 +146,7 @@ cap('duvidas', 'Ajuda', 'Dúvidas comuns', tabela(['Situação', 'O que fazer'],
   ['INCC base aparece "—"', 'Preencha "INCC do orçamento base" ou a "Data-base INCC" no cadastro da obra.'],
   ['Obra não aparece no filtro', 'Ela precisa existir nas planilhas ou no cadastro de obras. Confira a grafia do nome.'],
   ['Resumo Físico demora a abrir', 'Só acontece na primeira leitura após ligar o servidor (a aba tem ~25 mil linhas).'],
-  ['Sem imagens no TxC/Fotos', 'Cadastre em Administração → TxC e fotos. Na visão Cliente, confira "Exibir na apresentação ao cliente".'],
+  ['Sem imagens no TxC/Fotos', 'Cadastre em Administração → TxC e fotos. Confira a caixa "Apresentação" da imagem (Obra, Cliente ou ambas).'],
   ['Esqueci a senha', 'Peça ao Dev para redefinir em Administração → Usuários.'],
 ]));
 
@@ -154,7 +154,7 @@ export function manualDeUso() {
   return pagina({
     titulo: 'Manual de uso da apresentação',
     eyebrow: 'Planejamento e Controle',
-    subtitulo: 'Como acessar, navegar pelas apresentações Obra e Cliente e manter o conteúdo (obras, TxC, fotos e telas do cliente).',
+    subtitulo: 'Como acessar, navegar pelas apresentações Obra e Cliente e manter o conteúdo (obras, TxC, fotos e novas telas).',
     sumario: capitulos.map((c) => [c.id, c.titulo]),
     corpo: capitulos.map((c) => c.html).join(''),
   });

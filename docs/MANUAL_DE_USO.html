@@ -87,14 +87,14 @@ footer { text-align: center; color: var(--apagado); font-size: 12.5px; padding-b
   <img class="logo" src="img/logo-unita-white.png" alt="Unità Engenharia" width="140" height="54">
   <div class="eyebrow" style="margin-top:18px">Planejamento e Controle</div>
   <h1>Manual de uso da apresentação</h1>
-  <p>Como acessar, navegar pelas apresentações Obra e Cliente e manter o conteúdo (obras, TxC, fotos e telas do cliente).</p>
+  <p>Como acessar, navegar pelas apresentações Obra e Cliente e manter o conteúdo (obras, TxC, fotos e novas telas).</p>
 </div></header>
 <div class="corpo">
   <nav class="sumario" aria-label="Sumário"><b>Sumário</b><a href="#acesso">Acesso e perfis</a><a href="#navegacao">Navegação e filtros</a><a href="#abas">As abas</a><a href="#planejamento">Tarefas do Planejamento</a><a href="#usuarios">Usuários</a><a href="#duvidas">Dúvidas comuns</a></nav>
   <main><section class="capitulo" id="acesso"><div class="rotulo">Começando</div><h2>Acesso e perfis</h2>
   <div class="cartoes">
     <div class="cartao"><span class="papel">Dev</span><h4>Acesso total</h4><p>Vê as duas apresentações, cadastra conteúdo, gerencia usuários e acompanha as fontes de dados e o INCC.</p></div>
-    <div class="cartao"><span class="papel">Planejamento</span><h4>Cadastra o conteúdo</h4><p>Cadastro de obras, TxC, fotos, telas do cliente, INCC manual e o botão "Atualizar dados".</p></div>
+    <div class="cartao"><span class="papel">Planejamento</span><h4>Cadastra o conteúdo</h4><p>Cadastro de obras, TxC, fotos, novas telas, INCC manual e o botão "Atualizar dados".</p></div>
     <div class="cartao"><span class="papel">Viewer</span><h4>Só visualiza</h4><p>Abre as apresentações Obra e Cliente, sem administração.</p></div>
   </div>
   
@@ -641,13 +641,13 @@ footer { text-align: center; color: var(--apagado); font-size: 12.5px; padding-b
     <li>Administração → <b>TxC e fotos</b>, escolha "Tempo x Caminho" ou "Acompanhamento fotográfico" e clique em <b>Cadastrar imagens</b> (ou use "Cadastrar" dentro da própria aba).</li>
     <li>Escolha a obra e o mês, informe a torre (TxC) ou o local (fotos) e escreva o comentário.</li>
     <li>Arraste as imagens. Cada imagem vira um registro com os mesmos dados; a ordem segue a seleção.</li>
-    <li>Desmarque "Exibir na apresentação ao cliente" para imagens internas.</li>
+    <li>Em "Apresentação", escolha onde a imagem aparece: Obra e Cliente, Somente Obra (imagens internas) ou Somente Cliente.</li>
   </ol>
   
   <figure class="tela" data-tela="admin-midia-form">
     <div class="tela-quadro">
       <img src="img/admin-midia-form.jpg" alt="Cadastro de imagens" loading="lazy" width="1600" height="900">
-      <a class="marca" href="#admin-midia-form-1" data-n="1" style="left:21.75%;top:23.19%;width:56.50%;height:19.22%" aria-label="Ponto 1: Obra, mês, torre/local, ordem"><b>1</b></a><a class="marca" href="#admin-midia-form-2" data-n="2" style="left:21.75%;top:47.03%;width:56.50%;height:10.67%" aria-label="Ponto 2: Comentário"><b>2</b></a><a class="marca" href="#admin-midia-form-3" data-n="3" style="left:21.75%;top:62.31%;width:56.50%;height:9.11%" aria-label="Ponto 3: Arraste as imagens"><b>3</b></a><a class="marca" href="#admin-midia-form-4" data-n="4" style="left:21.75%;top:73.19%;width:56.50%;height:2.44%" aria-label="Ponto 4: Exibir ao cliente"><b>4</b></a>
+      <a class="marca" href="#admin-midia-form-1" data-n="1" style="left:21.75%;top:23.19%;width:56.50%;height:19.22%" aria-label="Ponto 1: Obra, mês, torre/local, ordem"><b>1</b></a><a class="marca" href="#admin-midia-form-2" data-n="2" style="left:21.75%;top:47.03%;width:56.50%;height:10.67%" aria-label="Ponto 2: Comentário"><b>2</b></a><a class="marca" href="#admin-midia-form-3" data-n="3" style="left:21.75%;top:62.31%;width:56.50%;height:9.11%" aria-label="Ponto 3: Arraste as imagens"><b>3</b></a><a class="marca" href="#admin-midia-form-4" data-n="4" style="left:21.75%;top:73.19%;width:56.50%;height:2.44%" aria-label="Ponto 4: Apresentação"><b>4</b></a>
     </div>
     <figcaption>Cadastro de imagens <span>· captura com dados fictícios</span></figcaption>
   </figure>
@@ -682,26 +682,26 @@ footer { text-align: center; color: var(--apagado); font-size: 12.5px; padding-b
       <li id="admin-midia-form-4" data-n="4">
         <span class="num">4</span>
         <div>
-          <h4>Exibir ao cliente</h4>
+          <h4>Apresentação</h4>
           
           
           
         </div>
       </li></ol></section>
-  <h3>3. Montar uma tela para o cliente</h3>
+  <h3>3. Montar uma nova tela</h3>
   <ol class="passos">
-    <li>Administração → <b>Telas do cliente</b> → <b>Nova tela</b>.</li>
-    <li>Dê título e ordem. Marque as obras em que a tela aparece (nenhuma marcada = todas).</li>
+    <li>Administração → <b>Novas telas</b> → <b>Nova tela</b>.</li>
+    <li>Dê título e ordem e escolha a apresentação (Obra e Cliente, Somente Obra ou Somente Cliente). Marque as obras em que a tela aparece (nenhuma marcada = todas).</li>
     <li>Adicione blocos: <b>Planilha</b> (exibida só para leitura; informe a aba se não for a primeira), <b>Imagem</b> ou <b>Texto</b>, em largura inteira ou meia.</li>
-    <li>Salve e confira em "Ver". A tela aparece no menu da apresentação Cliente.</li>
+    <li>Salve e confira em "Ver". A tela aparece no menu da apresentação escolhida.</li>
   </ol>
   
   <figure class="tela" data-tela="admin-tela-form">
     <div class="tela-quadro">
-      <img src="img/admin-tela-form.jpg" alt="Editor de tela do cliente" loading="lazy" width="1600" height="900">
+      <img src="img/admin-tela-form.jpg" alt="Editor de tela" loading="lazy" width="1600" height="900">
       <a class="marca" href="#admin-tela-form-1" data-n="1" style="left:21.75%;top:10.94%;width:56.50%;height:7.50%" aria-label="Ponto 1: Título, subtítulo e ordem"><b>1</b></a><a class="marca" href="#admin-tela-form-2" data-n="2" style="left:21.75%;top:32.67%;width:56.50%;height:28.83%" aria-label="Ponto 2: Bloco"><b>2</b></a>
     </div>
-    <figcaption>Editor de tela do cliente <span>· captura com dados fictícios</span></figcaption>
+    <figcaption>Editor de tela <span>· captura com dados fictícios</span></figcaption>
   </figure>
   <section class="legenda" aria-label="Pontos da tela"><ol>
       <li id="admin-tela-form-1" data-n="1">
@@ -763,7 +763,7 @@ footer { text-align: center; color: var(--apagado); font-size: 12.5px; padding-b
           
         </div>
       </li></ol></section></section><section class="capitulo" id="duvidas"><div class="rotulo">Ajuda</div><h2>Dúvidas comuns</h2><div class="tabela"><table><thead><tr><th>Situação</th><th>O que fazer</th></tr></thead>
-    <tbody><tr><td>Os números não batem com a planilha</td><td>Clique em <b>Atualizar dados</b> (o cache é de 30 min). Confira o mês de referência no filtro.</td></tr><tr><td>Aparece &quot;Dados possivelmente desatualizados&quot;</td><td>O SharePoint não respondeu; a apresentação mostra a última leitura. Tente &quot;Atualizar dados&quot; mais tarde.</td></tr><tr><td>Custos por UH, NH-NU ou unidades do mês aparecem &quot;—&quot;</td><td>Falta Nº de UH ou áreas no cadastro da obra.</td></tr><tr><td>INCC base aparece &quot;—&quot;</td><td>Preencha &quot;INCC do orçamento base&quot; ou a &quot;Data-base INCC&quot; no cadastro da obra.</td></tr><tr><td>Obra não aparece no filtro</td><td>Ela precisa existir nas planilhas ou no cadastro de obras. Confira a grafia do nome.</td></tr><tr><td>Resumo Físico demora a abrir</td><td>Só acontece na primeira leitura após ligar o servidor (a aba tem ~25 mil linhas).</td></tr><tr><td>Sem imagens no TxC/Fotos</td><td>Cadastre em Administração → TxC e fotos. Na visão Cliente, confira &quot;Exibir na apresentação ao cliente&quot;.</td></tr><tr><td>Esqueci a senha</td><td>Peça ao Dev para redefinir em Administração → Usuários.</td></tr></tbody></table></div></section></main>
+    <tbody><tr><td>Os números não batem com a planilha</td><td>Clique em <b>Atualizar dados</b> (o cache é de 30 min). Confira o mês de referência no filtro.</td></tr><tr><td>Aparece &quot;Dados possivelmente desatualizados&quot;</td><td>O SharePoint não respondeu; a apresentação mostra a última leitura. Tente &quot;Atualizar dados&quot; mais tarde.</td></tr><tr><td>Custos por UH, NH-NU ou unidades do mês aparecem &quot;—&quot;</td><td>Falta Nº de UH ou áreas no cadastro da obra.</td></tr><tr><td>INCC base aparece &quot;—&quot;</td><td>Preencha &quot;INCC do orçamento base&quot; ou a &quot;Data-base INCC&quot; no cadastro da obra.</td></tr><tr><td>Obra não aparece no filtro</td><td>Ela precisa existir nas planilhas ou no cadastro de obras. Confira a grafia do nome.</td></tr><tr><td>Resumo Físico demora a abrir</td><td>Só acontece na primeira leitura após ligar o servidor (a aba tem ~25 mil linhas).</td></tr><tr><td>Sem imagens no TxC/Fotos</td><td>Cadastre em Administração → TxC e fotos. Confira a caixa &quot;Apresentação&quot; da imagem (Obra, Cliente ou ambas).</td></tr><tr><td>Esqueci a senha</td><td>Peça ao Dev para redefinir em Administração → Usuários.</td></tr></tbody></table></div></section></main>
 </div>
 <footer>Unità Engenharia · Planejamento e Controle · relatório gerado a partir da versão em desenvolvimento (capturas com dados fictícios)</footer>
 <script>

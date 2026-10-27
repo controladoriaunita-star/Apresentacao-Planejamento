@@ -5,7 +5,18 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v20 |
+| Dev (local) | v21 |
+
+## v21 — 27/10/2026 — novas telas e imagens na apresentação Obra, Cliente ou ambas
+
+- Administração → **Telas do cliente** passa a se chamar **Novas telas**. Cada tela tem a caixa **Apresentação**:
+  Obra e Cliente, Somente Obra ou Somente Cliente. Na Obra, as telas entram no menu de abas (rota
+  `#/obra/tela/<id>`), como já acontecia no Cliente.
+- **TxC e fotos**: a caixa **Apresentação** substitui "Exibir na apresentação ao cliente". "Somente Cliente" é novo:
+  a imagem não aparece na Obra.
+- Registros antigos continuam iguais: telas → Somente Cliente; imagens → Obra e Cliente (ou Somente Obra, se
+  estavam ocultas para o cliente). Regra em `domain/conteudo.js` (`DESTINOS`, `destinoDaTela`, `destinoDaMidia`).
+- Supabase: rodar `supabase/migrations/002_destino_telas_midias.sql` **antes** de publicar (coluna `destino`).
 
 ## v20 — 27/10/2026 — login ligado para os colaboradores da Unità
 
