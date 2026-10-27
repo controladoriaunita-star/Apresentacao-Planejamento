@@ -12,8 +12,8 @@ const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2
 test('migração leva usuários, cadastro, anexos, mídias e telas para o Supabase (e pode rodar de novo)', async () => {
   const srv = await subirServidor({ store: 'local' });
   const dev = cliente(srv.base);
-  await dev('POST', '/api/auth/configurar', { nome: 'Dev', email: 'dev@teste.test', senha: 'senha-forte-1' });
-  await dev('POST', '/api/usuarios', { nome: 'Plan', email: 'plan@teste.test', papel: 'planejamento', senha: 'senha-forte-2' });
+  await dev('POST', '/api/auth/configurar', { nome: 'Dev', email: 'dev@unita.com.br', senha: 'senha-forte-1' });
+  await dev('POST', '/api/usuarios', { nome: 'Plan', email: 'plan@unita.com.br', papel: 'planejamento', senha: 'senha-forte-2' });
   await dev('PUT', '/api/obras/cadastro', { obra: 'Residencial Alpha', numeroUH: 200 });
   const arquivo = (await dev('POST', '/api/arquivos', PNG, { 'content-type': 'image/png' })).dados;
   await dev('POST', '/api/midias', { tipo: 'foto', obra: 'Residencial Alpha', mes: '2026-03', arquivoId: arquivo.id });
@@ -51,5 +51,5 @@ test('migração leva usuários, cadastro, anexos, mídias e telas para o Supaba
   assert.equal(falso.tabelas.get('midias')[0].arquivo_id, arquivo.id);
   assert.equal(falso.tabelas.get('telas').length, 1);
   assert.ok(falso.objetos.has('apresentacao/sistema/incc.json'), 'INCC no Storage');
-  assert.ok(logs.some((l) => l.includes('usuário criado: plan@teste.test')));
+  assert.ok(logs.some((l) => l.includes('usuário criado: plan@unita.com.br')));
 });

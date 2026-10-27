@@ -1,7 +1,8 @@
 /**
- * Gestão de usuários (somente Dev). No modo Supabase os usuários são criados no Supabase Auth.
+ * Gestão de usuários (somente Dev). No modo Supabase os usuários são convidados por e-mail pelo Supabase Auth.
  */
 import { validarSenha } from '../auth/senha.mjs';
+import { enderecoDoApp } from './auth.mjs';
 import { enviarJson, erro, lerJson } from '../http/respostas.mjs';
 import { papelValido } from '../../public/js/domain/permissoes.js';
 
@@ -12,7 +13,13 @@ export function registrarUsuarios(rotas, { autenticacao }) {
 
   rotas.adicionar('POST', '/api/usuarios', { permissao: 'administrar' }, async ({ req, res }) => {
     const { nome, email, papel, senha } = await lerJson(req);
-    enviarJson(req, res, 201, await autenticacao.criar({ nome, email, papel, senha }));
+    enviarJson(req, res, 201, await autenticacao.criar({ nome, email, papel, senha }, enderecoDoApp(req)));
+  });
+
+  /** Reenvia o e-mail de acesso (convite ou link de nova senha). Só no Supabase. */
+  rotas.adicionar('POST', '/api/usuarios/:id/acesso', { permissao: 'administrar' }, async ({ req, res, params }) => {
+    await autenticacao.enviarAcesso(params.id, enderecoDoApp(req));
+    enviarJson(req, res, 200, { ok: true });
   });
 
   rotas.adicionar('PUT', '/api/usuarios/:id', { permissao: 'administrar' }, async ({ req, res, params, usuario }) => {
