@@ -7,7 +7,9 @@ import { dividir, mediaPonderada, somar, subtrair } from './agregar.js';
 import { ITEM_INDIRETO } from './colunas.js';
 import { intervaloMeses } from './normalizar.js';
 import { mesSeguinte } from './periodo.js';
-import { cortarApos, LIMITES_SEM_REPETICAO, semRepeticaoNoFim, serieInfos } from './series.js';
+import {
+  cortarApos, indiceFimDaSerie, LIMITES_SEM_REPETICAO, semRepeticaoNoFim, serieInfos,
+} from './series.js';
 
 /**
  * @param {ReturnType<import('./base.js').criarBase>} base
@@ -29,22 +31,29 @@ export function calcularResumoGeral(base, filtro) {
   };
 }
 
-/** Curva acumulada, Realizado × Planejado (mês) e Assertividade, mês a mês. */
+/**
+ * Curva acumulada, Realizado × Planejado (mês) e Assertividade, mês a mês — até o último mês do
+ * replanejado atual (o mês em que ele chega ao valor final), nunca antes do mês de referência.
+ */
 function graficos(base, obras, meses, referencia) {
   const serie = (campo) => serieInfos(base, obras, meses, campo);
   const realizado = (campo) => cortarApos(serie(campo), meses, referencia);
+  // As regras "sem repetição" rodam na série inteira; o corte no fim do replanejado vem depois.
+  const replanAcm = serie('replanAcm');
+  const fim = Math.max(indiceFimDaSerie(replanAcm), meses.indexOf(referencia));
+  const ate = (valores) => (fim >= 0 ? valores.slice(0, fim + 1) : valores);
   return {
-    meses,
+    meses: ate(meses),
     curvaAcumulada: {
-      previstoOriginal: semRepeticaoNoFim(serie('previstoOriginalAcm'), LIMITES_SEM_REPETICAO.previstoOriginalAcm),
-      realizado: realizado('realizadoAcm'),
-      planejadoAtual: semRepeticaoNoFim(serie('replanAcm'), LIMITES_SEM_REPETICAO.replanAcm),
+      previstoOriginal: ate(semRepeticaoNoFim(serie('previstoOriginalAcm'), LIMITES_SEM_REPETICAO.previstoOriginalAcm)),
+      realizado: ate(realizado('realizadoAcm')),
+      planejadoAtual: ate(semRepeticaoNoFim(replanAcm, LIMITES_SEM_REPETICAO.replanAcm)),
     },
     realizadoPlanejadoMes: {
-      realizado: realizado('realizadoMes'),
-      planejado: semRepeticaoNoFim(serie('replanMes'), LIMITES_SEM_REPETICAO.replanMes),
+      realizado: ate(realizado('realizadoMes')),
+      planejado: ate(semRepeticaoNoFim(serie('replanMes'), LIMITES_SEM_REPETICAO.replanMes)),
     },
-    assertividade: realizado('assertividade'),
+    assertividade: ate(realizado('assertividade')),
   };
 }
 

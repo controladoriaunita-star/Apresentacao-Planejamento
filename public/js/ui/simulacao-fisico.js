@@ -41,7 +41,7 @@ export function painelSimulacao(total, simulacao, aoLimpar) {
     return card({ class: 'card-pad simulacao-painel' }, titulo,
       h('p', { class: 'simulacao-dica' }, icone('check', { tamanho: 16 }), 'Marque na tabela as atividades que deseja retirar do resumo da obra.'));
   }
-  const { itens, pesoRetirado, linha, semConciliar } = simulacao;
+  const { itens, pesoRetirado, linha, semConciliar, ajustadas } = simulacao;
   return card({ class: 'card-pad simulacao-painel' }, titulo,
     h('p', { class: 'simulacao-retiradas' },
       h('span', { class: 'muted' }, `Sem ${itens.length === 1 ? 'a atividade' : `${itens.length} atividades`} (${fmtPercentual(pesoRetirado, 1)} do orçamento):`),
@@ -60,6 +60,11 @@ export function painelSimulacao(total, simulacao, aoLimpar) {
       ? h('p', { class: 'simulacao-aviso' },
         `Sem simulação (—): ${semConciliar.map((c) => NOMES_CAMPOS[c] ?? c).join(', ')}. `
         + 'Nessas colunas os valores das atividades na planilha não fecham com o total da obra.')
+      : null,
+    ajustadas.length
+      ? h('p', { class: 'simulacao-aviso' },
+        `Ajustado pela diferença: ${ajustadas.map((c) => NOMES_CAMPOS[c] ?? c).join(', ')}. `
+        + 'As atividades na planilha não somam o total oficial da obra; a simulação aplica ao total só o efeito da retirada.')
       : null);
 }
 

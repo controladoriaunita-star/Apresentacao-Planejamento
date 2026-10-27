@@ -106,7 +106,7 @@ function corpo(c, base, chave) {
         : nada()),
 
       secao('Orçamento e INCC', 'economico', 'grafite', h('dl', { class: 'ficha-pares' },
-        h('div', {}, h('dt', {}, 'Orçamento base'), h('dd', {}, tem(c.orcamentoBase) ? fmtMoeda(c.orcamentoBase) : VAZIO)),
+        h('div', {}, h('dt', {}, 'Orçamento base (R$)'), h('dd', {}, tem(c.orcamentoBase) ? fmtMoeda(c.orcamentoBase) : VAZIO)),
         h('div', {}, h('dt', {}, 'Mês do orçamento'), h('dd', {}, tem(c.mesOrcamento) ? fmtMesLongo(c.mesOrcamento.slice(0, 7)) : VAZIO)),
         h('div', {}, h('dt', {}, 'INCC do orçamento'), h('dd', {}, num(c.inccBase, 3))),
         h('div', {}, h('dt', {}, 'Data-base INCC'), h('dd', {}, fmtData(c.dataBaseIncc)))))),

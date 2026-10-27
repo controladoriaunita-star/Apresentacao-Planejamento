@@ -11,7 +11,7 @@ const instancias = new WeakMap();
 /** Tamanho das legendas dos eixos acompanha a altura da tela (mais legível em telões e Full HD). */
 const fonteEixo = () => (window.innerHeight >= 1000 ? 13 : 12);
 
-function opcoesBase({ percentual = true, max = null } = {}) {
+function opcoesBase({ percentual = true, max = null, minimoMax = null } = {}) {
   const eixo = token('--chart-axis');
   return {
     responsive: true,
@@ -32,10 +32,11 @@ function opcoesBase({ percentual = true, max = null } = {}) {
       },
     },
     scales: {
-      x: { grid: { display: false }, border: { color: token('--chart-grid') }, ticks: { color: eixo, font: { family: 'Inter', size: fonteEixo(), weight: '500' }, maxRotation: 0, autoSkipPadding: 14 } },
+      x: { grid: { display: false }, border: { color: token('--chart-grid') }, ticks: { color: eixo, font: { family: 'Inter', size: fonteEixo() - 1, weight: '500' }, autoSkip: false, maxRotation: 90, minRotation: 0 } }, // todos os meses; inclinados quando não cabem
       y: {
         beginAtZero: true,
         max: max ?? undefined,
+        suggestedMax: minimoMax ?? undefined,
         grid: { color: token('--chart-grid'), drawTicks: false },
         border: { display: false, dash: [4, 4] },
         ticks: { color: eixo, font: { family: 'Inter', size: fonteEixo(), weight: '500' }, padding: 8, maxTicksLimit: 6, callback: (v) => (percentual ? fmtPercentual(v, 0) : v) },
@@ -46,7 +47,8 @@ function opcoesBase({ percentual = true, max = null } = {}) {
 
 /**
  * Cria (ou recria) um gráfico dentro de `alvo`.
- * @param {{tipo: 'line'|'bar', meses: string[], series: Array<{rotulo, valores, cor, tracejada?, marcadores?}>, max?: number, referencia?: string}} def
+ * Gráficos de barras trazem o rótulo de dados (valor) em cada barra.
+ * @param {{tipo: 'line'|'bar', meses: string[], series: Array<{rotulo, valores, cor, tracejada?, marcadores?}>, max?: number, minimoMax?: number, referencia?: string}} def
  */
 export function grafico(alvo, def) {
   const Chart = window.Chart;
@@ -67,13 +69,17 @@ export function grafico(alvo, def) {
       };
   });
 
-  const opcoes = opcoesBase({ percentual: true, max: def.max });
+  const opcoes = opcoesBase({ percentual: true, max: def.max, minimoMax: def.minimoMax });
   if (def.referencia) opcoes.plugins.linhaReferencia = { indice: def.meses.indexOf(def.referencia) };
+  if (def.tipo === 'bar') { // espaço para o rótulo da barra mais alta (na vertical ele é mais comprido)
+    opcoes.layout = { padding: { top: 22 } };
+    opcoes.scales.y.grace = '12%';
+  }
   const chart = new Chart(tela, {
     type: def.tipo,
     data: { labels: def.meses.map(fmtMes), datasets },
     options: opcoes,
-    plugins: [pluginReferencia],
+    plugins: def.tipo === 'bar' ? [pluginReferencia, pluginRotulos] : [pluginReferencia],
   });
   instancias.set(alvo, chart);
   return chart;
@@ -96,6 +102,44 @@ const pluginReferencia = {
     ctx.moveTo(x, top);
     ctx.lineTo(x, bottom);
     ctx.stroke();
+    ctx.restore();
+  },
+};
+
+/**
+ * Rótulo de dados das barras: valor acima de cada barra; quando a barra é mais estreita que o texto
+ * (muitos meses na tela), o rótulo fica na vertical.
+ */
+const pluginRotulos = {
+  id: 'rotulosBarras',
+  afterDatasetsDraw(chart) {
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.font = `600 ${fonteEixo() - 2}px Inter, sans-serif`;
+    ctx.fillStyle = token('--ink-700');
+    chart.data.datasets.forEach((ds, i) => {
+      const meta = chart.getDatasetMeta(i);
+      if (meta.hidden) return;
+      meta.data.forEach((barra, j) => {
+        const v = ds.data[j];
+        if (typeof v !== 'number') return;
+        const texto = fmtPercentual(v, 1);
+        const largura = ctx.measureText(texto).width;
+        if (largura + 2 <= barra.width) {
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(texto, barra.x, barra.y - 3);
+        } else {
+          ctx.save();
+          ctx.translate(barra.x, barra.y - 3);
+          ctx.rotate(-Math.PI / 2);
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(texto, 0, 0);
+          ctx.restore();
+        }
+      });
+    });
     ctx.restore();
   },
 };

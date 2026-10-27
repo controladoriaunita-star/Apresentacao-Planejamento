@@ -6,7 +6,7 @@
  * Cálculos em domain/painel-obras.js; aqui só formatação e interação.
  */
 import { h, montar } from '../core/dom.js';
-import { fmtData, fmtMes, fmtMoeda, fmtMoedaCompacta, fmtNumero, fmtPercentual, fmtVariacao, VAZIO } from '../core/formato.js';
+import { fmtData, fmtMes, fmtMoeda, fmtNumero, fmtPercentual, fmtVariacao, VAZIO } from '../core/formato.js';
 import { icone } from './icones.js';
 
 const CHAVE_FIXADAS = 'apresentacao.painelObras.fixadas';
@@ -34,8 +34,8 @@ const barra = (v) => (typeof v === 'number' ? h('span', { class: 'po-barra', 'ar
  */
 const GRUPOS = [
   { id: 'geral', titulo: 'Informações Gerais', colunas: [
-    { id: 'orcamentoRaso', titulo: 'Orçamento raso', v: (l) => [fmtMoedaCompacta(l.geral.orcamentoRaso)] },
-    { id: 'orcamentoComTaxa', titulo: 'Orçamento com taxa e impostos', v: (l) => [fmtMoedaCompacta(l.geral.orcamentoComTaxa)] },
+    { id: 'orcamentoRaso', titulo: 'Orçamento raso (R$)', v: (l) => [fmtMoeda(l.geral.orcamentoRaso)] },
+    { id: 'orcamentoComTaxa', titulo: 'Orçamento com taxa e impostos (R$)', v: (l) => [fmtMoeda(l.geral.orcamentoComTaxa)] },
     { id: 'uh', titulo: 'UH', v: (l) => [fmtNumero(l.geral.uh)] },
     { id: 'sistemaEstrutural', titulo: 'Sistema estrutural', texto: true, v: (l) => [txt(l.geral.sistemaEstrutural)] },
     { id: 'tipologia', titulo: 'Tipologia', texto: true, v: (l) => [txt(l.geral.tipologia)] },
@@ -78,20 +78,20 @@ const GRUPOS = [
     { id: 'metaAtual', titulo: 'Meta × curva atual', v: (l) => status(l.fisicoObra.metaAtual) },
   ] },
   { id: 'economico', titulo: 'Econômico', colunas: [
-    { id: 'iec', titulo: 'IEC contrato', sub: 'resultado obra', v: (l) => [fmtNumero(l.economico.iec, 3), fmtMoedaCompacta(l.economico.resultado)] },
-    { id: 'iecSemCorrecao', titulo: 'IEC sem correção', sub: 'resultado sem correção', v: (l) => [fmtNumero(l.economico.iecSemCorrecao, 3), fmtMoedaCompacta(l.economico.resultadoSemCorrecao)] },
-    { id: 'custoCorrigido', titulo: 'Custo total corrigido I0', sub: 'sem correção', v: (l) => [fmtMoedaCompacta(l.economico.custoCorrigido), fmtMoedaCompacta(l.economico.custoSemCorrecao)] },
-    { id: 'totalAditivos', titulo: 'Total aditivos', sub: 'a aprovar', v: (l) => [fmtMoedaCompacta(l.economico.totalAditivos), fmtMoedaCompacta(l.economico.aditivosAAprovar)] },
-    { id: 'custosForaContrato', titulo: 'Custos fora contrato', v: (l) => [fmtMoedaCompacta(l.economico.custosForaContrato)] },
-    { id: 'contingencia', titulo: 'Contingência', v: (l) => [fmtMoedaCompacta(l.economico.contingencia)] },
+    { id: 'iec', titulo: 'IEC contrato', sub: 'resultado obra (R$)', v: (l) => [fmtNumero(l.economico.iec, 3), fmtMoeda(l.economico.resultado)] },
+    { id: 'iecSemCorrecao', titulo: 'IEC sem correção', sub: 'resultado sem correção (R$)', v: (l) => [fmtNumero(l.economico.iecSemCorrecao, 3), fmtMoeda(l.economico.resultadoSemCorrecao)] },
+    { id: 'custoCorrigido', titulo: 'Custo total corrigido I0 (R$)', sub: 'sem correção (R$)', v: (l) => [fmtMoeda(l.economico.custoCorrigido), fmtMoeda(l.economico.custoSemCorrecao)] },
+    { id: 'totalAditivos', titulo: 'Total aditivos (R$)', sub: 'a aprovar (R$)', v: (l) => [fmtMoeda(l.economico.totalAditivos), fmtMoeda(l.economico.aditivosAAprovar)] },
+    { id: 'custosForaContrato', titulo: 'Custos fora contrato (R$)', v: (l) => [fmtMoeda(l.economico.custosForaContrato)] },
+    { id: 'contingencia', titulo: 'Contingência (R$)', v: (l) => [fmtMoeda(l.economico.contingencia)] },
     { id: 'inccOrcamento', titulo: 'INCC orçamento', sub: 'correção INCC', v: (l) => [fmtNumero(l.economico.inccOrcamento, 3), pct(l.economico.correcaoIncc)] },
   ] },
   { id: 'areas', titulo: 'Áreas', colunas: [
-    { id: 'privativa', titulo: 'Área privativa', sub: 'custo por m²', v: (l) => [m2(l.areas.privativa), fmtMoeda(l.areas.custoPrivativa)] },
-    { id: 'custoUh', titulo: 'Custo por UH médio', v: (l) => [fmtMoeda(l.areas.custoUh)] },
+    { id: 'privativa', titulo: 'Área privativa', sub: 'custo por m² (R$)', v: (l) => [m2(l.areas.privativa), fmtMoeda(l.areas.custoPrivativa)] },
+    { id: 'custoUh', titulo: 'Custo por UH médio (R$)', v: (l) => [fmtMoeda(l.areas.custoUh)] },
     { id: 'privativaMedia', titulo: 'Área privativa média', v: (l) => [m2(l.areas.privativaMedia)] },
-    { id: 'construida', titulo: 'Área construída', sub: 'custo por m²', v: (l) => [m2(l.areas.construida), fmtMoeda(l.areas.custoConstruida)] },
-    { id: 'equivalente', titulo: 'Área equivalente', sub: 'custo por m²', v: (l) => [m2(l.areas.equivalente), fmtMoeda(l.areas.custoEquivalente)] },
+    { id: 'construida', titulo: 'Área construída', sub: 'custo por m² (R$)', v: (l) => [m2(l.areas.construida), fmtMoeda(l.areas.custoConstruida)] },
+    { id: 'equivalente', titulo: 'Área equivalente', sub: 'custo por m² (R$)', v: (l) => [m2(l.areas.equivalente), fmtMoeda(l.areas.custoEquivalente)] },
   ] },
 ].map((g) => ({ ...g, colunas: g.colunas.map((c) => ({ ...c, chave: `${g.id}.${c.id}` })) }));
 

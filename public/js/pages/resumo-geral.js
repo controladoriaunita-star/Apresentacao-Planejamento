@@ -4,7 +4,7 @@
  */
 import { h, montar } from '../core/dom.js';
 import {
-  classeSinal, fmtData, fmtIndice, fmtMes, fmtMoeda, fmtMoedaCompacta, fmtNumero, fmtPercentual, fmtVariacao, VAZIO,
+  classeSinal, fmtData, fmtIndice, fmtMes, fmtMoeda, fmtNumero, fmtPercentual, fmtVariacao, VAZIO,
 } from '../core/formato.js';
 import { calcularResumoGeral } from '../domain/resumo-geral.js';
 import { card, cardTitulo, seloCompetencia, vazio } from '../ui/componentes.js';
@@ -38,7 +38,7 @@ export function renderResumoGeral(alvo, { base, filtro }) {
         cartao('Realizado × planejado (mês)', barras, null, 'rg-grafico'),
         cartao('Assertividade', assertividade, null, 'rg-grafico'),
         h('div', { class: 'rg-rodape' },
-          cartao('Custos por', custosPor(r.custosPor), h('span', { class: 'muted small' }, 'sem correção'), 'rg-custos'),
+          cartao('Custos por (R$)', custosPor(r.custosPor), h('span', { class: 'muted small' }, 'sem correção'), 'rg-custos'),
           cartao('INCC', incc(r.incc)),
           cartao('NH-NU', h('div', { class: 'rg-numero' }, h('b', { class: 'tab' }, fmtNumero(r.nhnu, 1)), h('small', { class: 'muted' }, 'Homens/mês × UH × realizado mês ÷ 100'))),
           cartao('Andamento geral', velocimetro(r.andamento))))));
@@ -62,7 +62,7 @@ export function renderResumoGeral(alvo, { base, filtro }) {
     ],
   });
   grafico(assertividade, {
-    tipo: 'bar', meses, referencia: r.referencia, descricao: 'Assertividade mensal',
+    tipo: 'bar', meses, referencia: r.referencia, descricao: 'Assertividade mensal', minimoMax: 1, // eixo vai ao menos a 100%
     series: [{ rotulo: 'Assertividade', valores: r.graficos.assertividade, cor: '--series-1' }],
   });
 }
@@ -77,7 +77,7 @@ function ajustarAlturaATela(pagina) {
     const cabe = window.innerWidth >= 1100 && window.innerHeight >= 620;
     pagina.classList.toggle('rg-tela', cabe);
     pagina.style.height = cabe ? `${Math.floor(window.innerHeight - pagina.getBoundingClientRect().top - 16)}px` : '';
-    // Se a análise econômica não couber, troca os R$ por valores compactos (R$ 13,5 mi).
+    // Se a análise econômica não couber na altura, os valores passam para 3 colunas (sem abreviar os R$).
     const economica = pagina.querySelector('.rg-economica');
     economica?.classList.remove('compacto');
     if (cabe && economica && economica.scrollHeight > economica.clientHeight + 1) economica.classList.add('compacto');
@@ -129,31 +129,28 @@ function quadroCefFisico(p) {
     p.temCef ? null : h('p', { class: 'muted small', style: { marginTop: '6px' } }, 'Obra sem curva CEF: valores CEF zerados.'));
 }
 
-/** Valor em R$ completo e compacto; a versão compacta aparece só se o cartão não couber na tela. */
-const moeda = (v) => h('span', { title: fmtMoeda(v) }, h('span', { class: 'v-cheio' }, fmtMoeda(v)), h('span', { class: 'v-curto' }, fmtMoedaCompacta(v)));
-
 function analiseEconomica(e) {
   const itens = [
-    ['Orçado', moeda(e.orcado)],
-    ['Projetado', moeda(e.projetado)],
-    ['Desvio R$', moeda(e.desvio), classeSinal(e.desvio)],
+    ['Orçado (R$)', fmtMoeda(e.orcado)],
+    ['Projetado (R$)', fmtMoeda(e.projetado)],
+    ['Desvio (R$)', fmtMoeda(e.desvio), classeSinal(e.desvio)],
     ['IEC', e.iec === null ? VAZIO : fmtNumero(e.iec, 4)],
     ['% de indireto', fmtPercentual(e.percIndireto)],
-    ['Custo pago e a pagar', moeda(e.custoPagoAPagar)],
-    ['Saldos OCs e contratos', moeda(e.saldosOcContratos)],
-    ['Orç. de término', moeda(e.orcamentoTermino)],
-    ['R$ passível de reajuste', moeda(e.passivelReajuste)],
-    ['Total de aditivos', moeda(e.totalAditivos)],
-    ['Aditivos aprovados', moeda(e.aditivosAprovados)],
-    ['Aditivos à aprovar', moeda(e.aditivosAAprovar)],
-    ['Custos não incidentes', moeda(e.custosNaoIncidentes)],
+    ['Custo pago e a pagar (R$)', fmtMoeda(e.custoPagoAPagar)],
+    ['Saldos OCs e contratos (R$)', fmtMoeda(e.saldosOcContratos)],
+    ['Orç. de término (R$)', fmtMoeda(e.orcamentoTermino)],
+    ['Passível de reajuste (R$)', fmtMoeda(e.passivelReajuste)],
+    ['Total de aditivos (R$)', fmtMoeda(e.totalAditivos)],
+    ['Aditivos aprovados (R$)', fmtMoeda(e.aditivosAprovados)],
+    ['Aditivos à aprovar (R$)', fmtMoeda(e.aditivosAAprovar)],
+    ['Custos não incidentes (R$)', fmtMoeda(e.custosNaoIncidentes)],
   ];
   // Grade de 2 colunas (rótulo sobre o valor): cabe na altura da tela junto com o quadro CEF × Físico.
   return h('dl', { class: 'economia-grade' }, itens.map(([rotulo, valor, classe]) => h('div', {}, h('dt', { title: rotulo }, rotulo), h('dd', { class: classe ?? '' }, valor))));
 }
 
 function custosPor(c) {
-  const item = (sigla, nome, valor) => h('div', { class: 'custo-item', title: `${nome}: ${fmtMoeda(valor)}` }, h('span', { class: 'sigla' }, sigla), h('b', { class: 'tab' }, fmtMoedaCompacta(valor)), h('small', {}, nome));
+  const item = (sigla, nome, valor) => h('div', { class: 'custo-item', title: `${nome}: ${fmtMoeda(valor)}` }, h('span', { class: 'sigla' }, sigla), h('b', { class: 'tab' }, fmtMoeda(valor)), h('small', {}, nome));
   return h('div', {},
     h('div', { class: 'custos-por' },
       item('UH', 'por unidade', c.uh), item('AE', 'por m² equivalente', c.ae), item('AP', 'por m² privativo', c.ap), item('AC', 'por m² construído', c.ac)),

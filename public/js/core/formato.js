@@ -1,18 +1,20 @@
 /**
- * Formatos pt-BR do padrão Unità: moeda BRL, percentual com 2 casas (1 em grades densas),
+ * Formatos pt-BR do padrão Unità: moeda em reais inteiros (o "R$" vai no título da coluna/caixa), percentual com 2 casas (1 em grades densas),
  * variação com sinal, mês "MMM/AA" em caixa alta e travessão para vazio.
  */
 export const VAZIO = '—';
 
-const moeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-const moedaCompacta = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact', maximumFractionDigits: 1 });
+const moeda = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 });
 const MESES = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
 const MESES_LONGOS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 
 const ok = (v) => typeof v === 'number' && Number.isFinite(v);
 
-export const fmtMoeda = (v) => (ok(v) ? moeda.format(v) : VAZIO);
-export const fmtMoedaCompacta = (v) => (ok(v) ? moedaCompacta.format(v) : VAZIO);
+/** Valor monetário sem casas decimais e sem símbolo: 13.542.120 (o "+ 0" evita "-0"). */
+export const fmtMoeda = (v) => (ok(v) ? moeda.format(Math.round(v) + 0) : VAZIO);
+
+/** Título de coluna/caixa com a unidade: valores monetários levam "(R$)". */
+export const tituloComUnidade = (titulo, tipo) => (tipo === 'moeda' ? `${titulo} (R$)` : titulo);
 
 export function fmtPercentual(v, casas = 2) {
   return ok(v) ? `${(v * 100).toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas })}%` : VAZIO;

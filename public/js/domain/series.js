@@ -51,6 +51,19 @@ export function semRepeticaoNoFim(valores, limite) {
   return resultado;
 }
 
+/**
+ * Índice do mês em que a série chega ao valor final (início da repetição do fim, ex.: o primeiro 100%).
+ * Os gráficos do Resumo Geral vão só até esse mês do replanejado. -1 quando a série não tem valores.
+ */
+export function indiceFimDaSerie(valores) {
+  let fim = valores.length - 1;
+  while (fim >= 0 && typeof valores[fim] !== 'number') fim--;
+  if (fim < 0) return -1;
+  const ultimo = Math.round(valores[fim] * 1e9);
+  while (fim > 0 && typeof valores[fim - 1] === 'number' && Math.round(valores[fim - 1] * 1e9) === ultimo) fim--;
+  return fim;
+}
+
 /** Valores do realizado só existem até o mês de referência (o resto da planilha é projeção). */
 export function cortarApos(valores, meses, mesLimite) {
   return valores.map((v, i) => (meses[i] > mesLimite ? null : v));
