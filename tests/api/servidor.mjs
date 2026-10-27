@@ -16,7 +16,7 @@ export async function subirServidor({ store = 'local' } = {}) {
   const config = carregarConfig({
     ignorarEnvLocal: true,
     env: {
-      DATA_SOURCE: 'exemplo', INCC_ONLINE: 'false', SESSION_SECRET: 'segredo-de-teste', STORE: store, EXIGIR_LOGIN: 'true',
+      DATA_SOURCE: 'exemplo', INCC_ONLINE: 'false', SESSION_SECRET: 'segredo-de-teste', STORE: store, DOMINIO_EMAIL: 'unita.com.br',
       SUPABASE_URL: supabase?.url ?? '', SUPABASE_ANON_KEY: CHAVES.anon, SUPABASE_SERVICE_ROLE_KEY: CHAVES.servico,
     },
     config: { dataDir },

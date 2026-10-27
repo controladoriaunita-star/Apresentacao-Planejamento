@@ -27,14 +27,6 @@ import { ColecaoJson } from './store/json-store.mjs';
 import { ColecaoSupabase, linhaCadastro } from './store/supabase-store.mjs';
 import { ClienteSupabase } from './supabase/cliente.mjs';
 
-/**
- * TEMPORÁRIO — login desativado para testes na plataforma: toda requisição entra como USUARIO_TESTES.
- * Para reativar o login, troque LOGIN_DESATIVADO para false. Os testes automáticos rodam sempre com login
- * (EXIGIR_LOGIN=true).
- */
-const LOGIN_DESATIVADO = true;
-const USUARIO_TESTES = Object.freeze({ id: 'testes', nome: 'Testes', email: 'testes@unita.com.br', papel: 'dev', ativo: true });
-
 export function criarApp(config, { fetchImpl } = {}) {
   mkdirSync(config.dataDir, { recursive: true });
   const deps = config.store === 'supabase' ? dependenciasSupabase(config, fetchImpl) : dependenciasLocais(config, fetchImpl);
@@ -61,7 +53,7 @@ export function criarApp(config, { fetchImpl } = {}) {
         return enviarJson(req, res, 403, { erro: 'Requisição recusada.' });
       }
 
-      const sessao = LOGIN_DESATIVADO && !config.exigirLogin ? { usuario: USUARIO_TESTES } : await deps.autenticacao.identificar(req);
+      const sessao = await deps.autenticacao.identificar(req);
       const usuario = sessao?.usuario ?? null;
       if (sessao?.cookie) res.setHeader('set-cookie', sessao.cookie); // token renovado (Supabase)
       if (rota.permissao) {

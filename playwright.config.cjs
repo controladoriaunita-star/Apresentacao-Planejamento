@@ -16,6 +16,6 @@ module.exports = defineConfig({
     command: 'node tests/e2e/servidor-e2e.mjs',
     url: 'http://127.0.0.1:5299/api/saude',
     reuseExistingServer: false,
-    env: { STORE: 'local', DATA_SOURCE: 'exemplo', DATA_DIR: './data/e2e', PORT: '5299', INCC_ONLINE: 'false', SESSION_SECRET: 'e2e', EXIGIR_LOGIN: 'true' },
+    env: { STORE: 'local', DATA_SOURCE: 'exemplo', DATA_DIR: './data/e2e', PORT: '5299', INCC_ONLINE: 'false', SESSION_SECRET: 'e2e', DOMINIO_EMAIL: 'e2e.test' },
   },
 });

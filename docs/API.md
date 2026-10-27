@@ -10,7 +10,8 @@ precisa reproduzir. Os cenários obrigatórios estão em `tests/api/contrato.mjs
 
 | Regra | Detalhe |
 |---|---|
-| Sessão | Cookie `sessao` = `base64url(JSON {u, exp}) + "." + HMAC-SHA256(segredo)`. HttpOnly, SameSite=Strict, 12 h. |
+| Sessão | Cookie `sessao` = `base64url(JSON {u, exp}) + "." + HMAC-SHA256(segredo)`. HttpOnly, 12 h. Em HTTPS `SameSite=None; Secure; Partitioned` (o app abre no iframe do Portal Unità); em http, `SameSite=Lax`. |
+| Domínio | Só e-mails `@DOMINIO_EMAIL` (padrão `unitaengenharia.com.br`) no primeiro acesso e na criação de usuários; outro → 400. |
 | CSRF | Todo método ≠ GET exige o cabeçalho `X-Requested-With: fetch`; sem ele → 403. |
 | Permissão | 401 sem sessão; 403 se o papel não tem a capacidade. Papel relido do cadastro a cada requisição. |
 | Papéis | `dev` (ver, editarConteudo, administrar) · `planejamento` (ver, editarConteudo) · `viewer` (ver). |
@@ -22,11 +23,13 @@ precisa reproduzir. Os cenários obrigatórios estão em `tests/api/contrato.mjs
 
 | Método | Caminho | Permissão | Corpo → Resposta |
 |---|---|---|---|
-| GET | `/auth/sessao` | pública | → `{ usuario \| null, precisaConfigurar }` |
+| GET | `/auth/sessao` | pública | → `{ usuario \| null, precisaConfigurar, convite }` (`convite`: novos usuários entram por e-mail — Supabase) |
 | POST | `/auth/login` | pública | `{ email, senha }` → `{ usuario }` + cookie. 401 se errado; 429 após 8 tentativas/min por IP |
 | POST | `/auth/logout` | pública | → `{ ok }` e expira o cookie |
 | POST | `/auth/configurar` | pública, só sem usuários | `{ nome, email, senha }` → 201 `{ usuario }` (papel dev). 409 se já configurado |
 | PUT | `/auth/senha` | ver | `{ senhaAtual, novaSenha }` → `{ ok }` |
+| POST | `/auth/recuperar` | pública | `{ email }` → `{ ok }` (igual exista ou não o e-mail; envia o link de nova senha). Local: 400. Conta no limite de 8/min |
+| POST | `/auth/definir-senha` | pública | `{ token, senha }` → `{ usuario }` + cookie. `token` = `access_token` que o link do e-mail traz no endereço (`#access_token=…&type=invite\|recovery`). 400 token inválido/vencido; 403 usuário inativo. Local: 400 |
 
 `usuario` = `{ id, nome, email, papel, ativo, criadoEm, ultimoAcesso? }` (nunca o hash).
 
@@ -35,7 +38,8 @@ precisa reproduzir. Os cenários obrigatórios estão em `tests/api/contrato.mjs
 | Método | Caminho | Corpo → Resposta |
 |---|---|---|
 | GET | `/usuarios` | → `usuario[]` |
-| POST | `/usuarios` | `{ nome, email, papel, senha }` → 201 `usuario`. 409 e-mail repetido; 400 validação |
+| POST | `/usuarios` | `{ nome, email, papel, senha }` → 201 `usuario`. 409 e-mail repetido; 400 validação. Supabase: sem `senha` — envia o convite por e-mail |
+| POST | `/usuarios/:id/acesso` | → `{ ok }`. Reenvia o convite (ou o link de nova senha, se o e-mail já foi confirmado). Local: 400 |
 | PUT | `/usuarios/:id` | `{ nome?, papel?, ativo?, senha? }` → `usuario`. 400 se o Dev tentar se desativar/rebaixar |
 | DELETE | `/usuarios/:id` | → `{ ok }`. 400 para o próprio usuário |
 

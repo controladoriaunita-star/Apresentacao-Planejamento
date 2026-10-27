@@ -4,8 +4,8 @@
  * que a versão PHP repete com cURL.
  *
  * Chaves:
- * - anon: login com senha e troca da própria senha;
- * - service role: só no servidor — criar/editar usuários, ler/gravar tabelas (RLS fechado) e Storage.
+ * - anon: login com senha, troca da própria senha e "esqueci minha senha";
+ * - service role: só no servidor — criar/convidar/editar usuários, ler/gravar tabelas (RLS fechado) e Storage.
  */
 export class ErroSupabase extends Error {
   constructor(mensagem, status, corpo = null) {
@@ -66,6 +66,16 @@ export class ClienteSupabase {
 
   criarUsuarioAuth(email, senha) {
     return this.#chamar('/auth/v1/admin/users', { metodo: 'POST', corpo: { email, password: senha, email_confirm: true } });
+  }
+
+  /** Convite: cria o usuário no Auth e o Supabase envia o e-mail com o link (volta a `endereco` com o token). */
+  convidar(email, endereco) {
+    return this.#chamar(`/auth/v1/invite?${new URLSearchParams({ redirect_to: endereco })}`, { metodo: 'POST', corpo: { email } });
+  }
+
+  /** E-mail com link para definir uma nova senha (mesmo retorno do convite). */
+  recuperarSenha(email, endereco) {
+    return this.#chamar(`/auth/v1/recover?${new URLSearchParams({ redirect_to: endereco })}`, { metodo: 'POST', chave: this.anonKey, corpo: { email } });
   }
 
   atualizarUsuarioAuth(id, campos) {

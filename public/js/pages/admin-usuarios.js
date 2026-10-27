@@ -1,5 +1,6 @@
 /**
  * Administração → Usuários (somente Dev): criar, mudar papel, desativar e redefinir senha.
+ * Com o Supabase (`estado.convite`) o Dev não define senha: o usuário recebe um convite por e-mail e cria a sua.
  */
 import { api } from '../core/api.js';
 import { h, montar } from '../core/dom.js';
@@ -27,7 +28,7 @@ export async function renderAdminUsuarios(alvo) {
           h('td', { class: 'first' }, u.nome),
           h('td', { class: 'esq' }, u.email),
           h('td', { class: 'esq' }, PAPEIS[u.papel]?.nome ?? u.papel),
-          h('td', {}, u.ativo ? badge('Ativo', 'success') : badge('Inativo', 'neutral')),
+          h('td', {}, situacao(u)),
           h('td', { class: 'muted' }, fmtDataHora(u.ultimoAcesso)),
           h('td', { class: 'acoes' },
             h('button', { class: 'btn ghost sm', type: 'button', onclick: () => abrirForm(u, desenhar) }, 'Editar'),
@@ -41,6 +42,11 @@ export async function renderAdminUsuarios(alvo) {
   await desenhar();
 }
 
+function situacao(u) {
+  if (!u.ativo) return badge('Inativo', 'neutral');
+  return estado.convite && !u.ultimoAcesso ? badge('Convite enviado', 'warning') : badge('Ativo', 'success');
+}
+
 function abrirForm(inicial, aoSalvar) {
   const editando = Boolean(inicial.id);
   const erro = h('div');
@@ -49,11 +55,23 @@ function abrirForm(inicial, aoSalvar) {
   const papel = h('select', {}, Object.entries(PAPEIS).map(([k, p]) => h('option', { value: k, selected: k === (inicial.papel ?? 'viewer') }, p.nome)));
   const senha = h('input', { type: 'password', autocomplete: 'new-password', placeholder: editando ? 'Deixe vazio para manter' : 'Mínimo de 8 caracteres' });
   const ativo = h('input', { type: 'checkbox', checked: inicial.ativo !== false });
+  const acesso = estado.convite
+    ? (editando
+      ? botaoAcao('Reenviar e-mail de acesso', async () => {
+        montar(erro);
+        try {
+          await api.post(`/usuarios/${inicial.id}/acesso`);
+          toast('success', 'E-mail enviado', `Link para ${inicial.email} criar a senha.`);
+        } catch (e) {
+          montar(erro, alerta('error', 'Não foi possível enviar', e.message));
+        }
+      })
+      : alerta('info', 'Convite por e-mail', 'A pessoa recebe um e-mail com o link para criar a própria senha.'))
+    : campo(editando ? 'Nova senha' : 'Senha inicial', senha, 'Combine a senha com a pessoa por um canal seguro.');
   const m = abrirModal({
     titulo: editando ? `Editar ${inicial.nome}` : 'Novo usuário',
     conteudo: h('div', { class: 'stack' }, erro,
-      campo('Nome', nome), campo('E-mail', email), campo('Papel', papel),
-      campo(editando ? 'Nova senha' : 'Senha inicial', senha, 'Combine a senha com a pessoa por um canal seguro.'),
+      campo('Nome', nome), campo('E-mail', email), campo('Papel', papel), acesso,
       editando ? h('label', { class: 'check' }, ativo, 'Usuário ativo') : null),
     acoes: [
       h('button', { class: 'btn ghost', type: 'button', onclick: () => m.fechar() }, 'Cancelar'),
@@ -61,9 +79,9 @@ function abrirForm(inicial, aoSalvar) {
         montar(erro);
         try {
           if (editando) await api.put(`/usuarios/${inicial.id}`, { nome: nome.value, papel: papel.value, ativo: ativo.checked, ...(senha.value ? { senha: senha.value } : {}) });
-          else await api.post('/usuarios', { nome: nome.value, email: email.value, papel: papel.value, senha: senha.value });
+          else await api.post('/usuarios', { nome: nome.value, email: email.value, papel: papel.value, ...(estado.convite ? {} : { senha: senha.value }) });
           m.fechar();
-          toast('success', 'Usuário salvo');
+          toast('success', 'Usuário salvo', !editando && estado.convite ? `Convite enviado para ${email.value}.` : null);
           aoSalvar();
         } catch (e) {
           montar(erro, alerta('error', 'Não foi possível salvar', e.message));
