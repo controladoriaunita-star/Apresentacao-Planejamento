@@ -18,8 +18,16 @@ limite de 4,5 MB por requisição da Vercel.
 2. **SQL Editor** → cole e rode, em ordem, os arquivos de `supabase/migrations/` (`001_apresentacao.sql`,
    `002_destino_telas_midias.sql`…). Podem rodar de novo sem problema.
 3. **Authentication → Providers → Email**: deixe "Email" ligado. Desligue **"Allow new users to sign up"** — os
-   usuários são criados só pelo Dev, dentro do app.
+   usuários são convidados só pelo Dev, dentro do app.
 4. **Project Settings → API**: copie *Project URL*, a chave **anon/publishable** e a **service_role/secret**.
+5. **E-mails de convite e de nova senha** (ver [Login e convites](#login-e-convites)):
+   - **Authentication → Emails → SMTP Settings**: ligue o SMTP próprio (ex.: uma caixa do Microsoft 365 da Unità,
+     `smtp.office365.com`, porta 587). Sem isso o Supabase só envia para os membros do projeto, poucas mensagens
+     por hora.
+   - **Authentication → URL Configuration**: *Site URL* = endereço de produção do app. Em *Redirect URLs*, adicione
+     o de produção (`https://<app>.vercel.app/**`) e o das prévias da Vercel do time
+     (`https://*-<time>.vercel.app/**`). Não use `https://*.vercel.app/**`: qualquer pessoa publica nesse domínio.
+   - (Opcional) **Authentication → Emails → Templates**: textos em português para *Invite user* e *Reset password*.
 
 ## 2. Testar no computador antes de publicar
 
@@ -62,10 +70,25 @@ migrado ficam duplicados por e-mail — o script pula e-mails que já existem.
 | `STORE` | `supabase` |
 | `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | do passo 1 |
 | `SESSION_SECRET` | texto aleatório longo (trocar encerra todas as sessões) |
+| `DOMINIO_EMAIL` | opcional; padrão `unitaengenharia.com.br` (só esses e-mails entram) |
 | `MS_GRAPH_TENANT_ID`, `MS_GRAPH_CLIENT_ID`, `MS_GRAPH_CLIENT_SECRET` | mesmos do `.env.local` |
 | `MS_GRAPH_DRIVE_ID`, `MS_GRAPH_ITEM_ID` | os da planilha (ver `.env.example`) |
 
-4. **Deploy**. Cookies saem com `Secure` automaticamente na Vercel.
+4. **Deploy**. Na Vercel o cookie sai com `SameSite=None; Secure; Partitioned`, o que permite o login dentro do
+   iframe do Portal Unità.
+
+## Login e convites
+
+- **Novo colaborador**: o Dev abre *Administração → Usuários → Novo usuário* e informa nome, e-mail
+  `@unitaengenharia.com.br` e papel (padrão Viewer). O Supabase envia o convite; o link abre o app numa tela para a
+  pessoa criar a senha, e ela já entra. *Editar → Reenviar e-mail de acesso* manda o link de novo (ou o de nova
+  senha, para quem já entrou).
+- **Esqueci minha senha**: na tela de login; chega um link para criar uma nova senha.
+- **Dentro do Portal Unità (iframe)**: o login é separado do da aba aberta direto no app (cookie particionado por
+  site). O convite e o "esqueci minha senha" abrem numa aba própria; depois a pessoa entra no portal com e-mail e
+  senha. Safari bloqueia cookies dentro de iframes de outro site: lá, abrir o app numa aba.
+- **Papéis**: Dev (tudo, inclusive usuários), Planejamento (conteúdo) e Viewer (só vê). Mudar papel ou desativar
+  vale na hora.
 
 ## Como funciona por dentro
 

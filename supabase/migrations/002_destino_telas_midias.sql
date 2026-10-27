@@ -1,5 +1,5 @@
 -- ─────────────────────────────────────────────────────────────────────────────
--- v19 — Destino das telas extras e das imagens (TxC/fotos): apresentação Obra, Cliente ou ambas.
+-- v21 — Destino das telas extras e das imagens (TxC/fotos): apresentação Obra, Cliente ou ambas.
 -- Valores: 'ambas' | 'obra' | 'cliente' (public/js/domain/conteudo.js → DESTINOS).
 --
 -- Rodar uma vez no SQL Editor do Supabase, depois do 001 (é idempotente).

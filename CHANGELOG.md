@@ -5,9 +5,9 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v19 |
+| Dev (local) | v21 |
 
-## v19 — 27/10/2026 — novas telas e imagens na apresentação Obra, Cliente ou ambas
+## v21 — 27/10/2026 — novas telas e imagens na apresentação Obra, Cliente ou ambas
 
 - Administração → **Telas do cliente** passa a se chamar **Novas telas**. Cada tela tem a caixa **Apresentação**:
   Obra e Cliente, Somente Obra ou Somente Cliente. Na Obra, as telas entram no menu de abas (rota
@@ -17,6 +17,26 @@ Cada versão só é fechada com `npm run verificar` passando.
 - Registros antigos continuam iguais: telas → Somente Cliente; imagens → Obra e Cliente (ou Somente Obra, se
   estavam ocultas para o cliente). Regra em `domain/conteudo.js` (`DESTINOS`, `destinoDaTela`, `destinoDaMidia`).
 - Supabase: rodar `supabase/migrations/002_destino_telas_midias.sql` **antes** de publicar (coluna `destino`).
+
+## v20 — 27/10/2026 — login ligado para os colaboradores da Unità
+
+- **Fim do modo sem login** (usuário fixo "Testes", desde a v10): sai a constante `LOGIN_DESATIVADO` de
+  `server/app.mjs` e a variável de teste `EXIGIR_LOGIN`. Todo acesso exige login, no dev e na Vercel.
+- **Só e-mails @unitaengenharia.com.br**: o primeiro acesso e a criação de usuários recusam outro domínio
+  (`DOMINIO_EMAIL`, novo em `.env.example`; vazio = qualquer domínio). Quem já tem login continua entrando.
+- **Convite por e-mail** (Supabase): em *Administração → Usuários → Novo usuário* o Dev informa nome, e-mail e papel
+  (padrão Viewer), sem senha. O Supabase envia o convite; o link abre o app na tela "crie a sua senha" e a pessoa já
+  entra. A lista mostra "Convite enviado" até o primeiro acesso, e *Editar → Reenviar e-mail de acesso* manda o link
+  de novo. No modo local (dev/testes) continua a senha inicial definida pelo Dev.
+- **Esqueci minha senha** na tela de login (Supabase): envia o link de nova senha, sem revelar se o e-mail existe.
+- **Login dentro do iframe do Portal Unità**: em HTTPS o cookie de sessão sai com `SameSite=None; Secure;
+  Partitioned` (era `SameSite=Strict`, que o navegador não envia dentro do iframe de outro site); em http://localhost,
+  `SameSite=Lax`. As escritas seguem protegidas contra CSRF pelo cabeçalho `X-Requested-With`.
+- Novas rotas: `POST /api/auth/recuperar`, `POST /api/auth/definir-senha` e `POST /api/usuarios/:id/acesso`;
+  `GET /api/auth/sessao` informa `convite`. Configuração do SMTP e das Redirect URLs no Supabase em
+  `docs/SUPABASE_VERCEL.md` → "Login e convites".
+- Testes: contrato com o convite, o reenvio, o "esqueci minha senha", o domínio e os atributos do cookie (local e
+  Supabase simulado).
 
 ## v18 — 22/10/2026 — Painel de obras com colunas fixadas e grupos compactos
 

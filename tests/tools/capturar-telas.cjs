@@ -145,7 +145,7 @@ async function posicoes(page, marcas) {
   mkdirSync(PASTA_IMG, { recursive: true });
   const servidor = spawn(process.execPath, ['server/index.mjs'], {
     cwd: RAIZ, stdio: 'ignore',
-    env: { ...process.env, DATA_SOURCE: 'exemplo', DATA_DIR: './data/capturas', PORT: String(PORTA), INCC_ONLINE: 'false', SESSION_SECRET: 'capturas' },
+    env: { ...process.env, DATA_SOURCE: 'exemplo', DATA_DIR: './data/capturas', PORT: String(PORTA), INCC_ONLINE: 'false', SESSION_SECRET: 'capturas', DOMINIO_EMAIL: 'exemplo.test' },
   });
   try {
     for (let t = 0; t < 50; t++) { try { if ((await fetch(`${URL_BASE}/api/saude`)).ok) break; } catch { /* subindo */ } await new Promise((r) => setTimeout(r, 200)); }

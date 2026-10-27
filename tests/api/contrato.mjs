@@ -5,6 +5,7 @@
  */
 import { after, before, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { cookieExpirado, cookieSessao } from '../../server/auth/sessao.mjs';
 import { cliente, enviarArquivo, subirServidor } from './servidor.mjs';
 
 export function suiteContrato(store) {
@@ -29,7 +30,11 @@ after(() => srv.fechar());
 
 test('primeiro acesso cria o Dev e depois fica bloqueado', async () => {
   let r = await anonimo('GET', '/api/auth/sessao');
-  assert.deepEqual(r.dados, { usuario: null, precisaConfigurar: true });
+  assert.deepEqual(r.dados, { usuario: null, precisaConfigurar: true, convite: store === 'supabase' });
+
+  r = await anonimo('POST', '/api/auth/configurar', { nome: 'Fora', email: 'fora@gmail.com', senha: 'senha-forte-1' });
+  assert.equal(r.status, 400, 'só e-mails do DOMINIO_EMAIL');
+  assert.match(r.dados.erro, /@unita\.com\.br/);
 
   r = await dev('POST', '/api/auth/configurar', { nome: 'Lucas', email: 'Lucas@Unita.com.br', senha: 'senha-forte-1' });
   assert.equal(r.status, 201);
@@ -37,7 +42,7 @@ test('primeiro acesso cria o Dev e depois fica bloqueado', async () => {
   assert.equal(r.dados.usuario.email, 'lucas@unita.com.br');
   assert.equal(r.dados.usuario.senhaHash, undefined, 'hash nunca sai na API');
 
-  r = await anonimo('POST', '/api/auth/configurar', { nome: 'Outro', email: 'x@y.com', senha: 'senha-forte-1' });
+  r = await anonimo('POST', '/api/auth/configurar', { nome: 'Outro', email: 'outro@unita.com.br', senha: 'senha-forte-1' });
   assert.equal(r.status, 409);
   if (store === 'supabase') {
     assert.equal(srv.supabase.usuarios.size, 1, 'usuário criado no Supabase Auth');
@@ -45,18 +50,73 @@ test('primeiro acesso cria o Dev e depois fica bloqueado', async () => {
   }
 });
 
+/**
+ * Local: o Dev define a senha inicial. Supabase: o Dev só convida e a pessoa cria a senha pelo link do e-mail
+ * (o simulador guarda o token que o link levaria).
+ */
+async function cadastrar(nome, email, papel, senha) {
+  if (store === 'local') return dev('POST', '/api/usuarios', { nome, email, papel, senha });
+  const r = await dev('POST', '/api/usuarios', { nome, email, papel });
+  if (r.status !== 201) return r;
+  const convite = srv.supabase.emails.at(-1);
+  assert.deepEqual([convite.tipo, convite.email], ['invite', email]);
+  assert.match(convite.endereco, /^http:\/\/127\.0\.0\.1:\d+\/$/, 'link volta para o próprio app');
+  const definida = await cliente(srv.base, srv.fetchExterno)('POST', '/api/auth/definir-senha', { token: convite.token, senha });
+  assert.equal(definida.status, 200, JSON.stringify(definida.dados));
+  assert.equal(definida.dados.usuario.papel, papel);
+  return r;
+}
+
 test('dev cria usuários de Planejamento e Viewer; login e erros', async () => {
   for (const [email, papel] of [['plan@unita.com.br', 'planejamento'], ['ver@unita.com.br', 'viewer']]) {
-    const r = await dev('POST', '/api/usuarios', { nome: papel, email, papel, senha: 'senha-forte-2' });
+    const r = await cadastrar(papel, email, papel, 'senha-forte-2');
     assert.equal(r.status, 201, JSON.stringify(r.dados));
   }
   assert.equal((await dev('POST', '/api/usuarios', { nome: 'x', email: 'ver@unita.com.br', papel: 'viewer', senha: 'senha-forte-2' })).status, 409);
   assert.equal((await dev('POST', '/api/usuarios', { nome: 'x', email: 'z@unita.com.br', papel: 'chefe', senha: 'senha-forte-2' })).status, 400);
-  assert.equal((await dev('POST', '/api/usuarios', { nome: 'x', email: 'z@unita.com.br', papel: 'viewer', senha: 'curta' })).status, 400);
+  assert.equal((await dev('POST', '/api/usuarios', { nome: 'x', email: 'z@gmail.com', papel: 'viewer', senha: 'senha-forte-2' })).status, 400, 'fora do domínio');
+  if (store === 'local') assert.equal((await dev('POST', '/api/usuarios', { nome: 'x', email: 'z@unita.com.br', papel: 'viewer', senha: 'curta' })).status, 400);
 
   assert.equal((await viewer('POST', '/api/auth/login', { email: 'ver@unita.com.br', senha: 'errada-123' })).status, 401);
   assert.equal((await viewer('POST', '/api/auth/login', { email: 'ver@unita.com.br', senha: 'senha-forte-2' })).status, 200);
   assert.equal((await planejamento('POST', '/api/auth/login', { email: 'plan@unita.com.br', senha: 'senha-forte-2' })).status, 200);
+});
+
+test('e-mail de acesso: reenvio, esqueci minha senha e link inválido', async () => {
+  const usuarios = (await dev('GET', '/api/usuarios')).dados;
+  const ver = usuarios.find((u) => u.email === 'ver@unita.com.br');
+  if (store === 'local') {
+    assert.equal((await dev('POST', `/api/usuarios/${ver.id}/acesso`)).status, 400, 'sem e-mail no modo local');
+    assert.equal((await anonimo('POST', '/api/auth/recuperar', { email: ver.email })).status, 400);
+    return;
+  }
+  const emails = srv.supabase.emails;
+  assert.equal((await viewer('POST', `/api/usuarios/${ver.id}/acesso`)).status, 403, 'só o Dev reenvia');
+  assert.equal((await dev('POST', `/api/usuarios/${ver.id}/acesso`)).status, 200);
+  assert.equal(emails.at(-1).tipo, 'recovery', 'quem já confirmou recebe o link de nova senha');
+
+  const antes = emails.length;
+  assert.equal((await anonimo('POST', '/api/auth/recuperar', { email: 'ninguem@unita.com.br' })).status, 200, 'não revela se existe');
+  assert.equal(emails.length, antes);
+  assert.equal((await anonimo('POST', '/api/auth/recuperar', { email: 'VER@unita.com.br' })).status, 200);
+  const link = emails.at(-1);
+  assert.deepEqual([link.tipo, link.email], ['recovery', 'ver@unita.com.br']);
+
+  assert.equal((await anonimo('POST', '/api/auth/definir-senha', { token: 'falso', senha: 'senha-nova-123' })).status, 400);
+  assert.equal((await anonimo('POST', '/api/auth/definir-senha', { token: link.token, senha: 'curta' })).status, 400);
+  const nova = cliente(srv.base, srv.fetchExterno);
+  assert.equal((await nova('POST', '/api/auth/definir-senha', { token: link.token, senha: 'senha-forte-2' })).status, 200);
+  assert.equal((await nova('GET', '/api/auth/sessao')).dados.usuario.email, 'ver@unita.com.br', 'já entra');
+});
+
+test('cookie de sessão: SameSite=Lax em http (local); em HTTPS, SameSite=None; Secure; Partitioned (iframe do portal)', async () => {
+  const r = await cliente(srv.base, srv.fetchExterno)('POST', '/api/auth/login', { email: 'ver@unita.com.br', senha: 'senha-forte-2' });
+  const cookie = r.res.headers.get('set-cookie');
+  assert.match(cookie, /HttpOnly/);
+  assert.match(cookie, /SameSite=Lax/);
+  assert.doesNotMatch(cookie, /Secure/);
+  assert.equal(cookieSessao('x', { seguro: true }), 'sessao=x; Path=/; HttpOnly; SameSite=None; Secure; Partitioned; Max-Age=43200');
+  assert.equal(cookieExpirado({ seguro: true }), 'sessao=; Path=/; HttpOnly; SameSite=None; Secure; Partitioned; Max-Age=0');
 });
 
 test('sem login, nada de dados', async () => {
