@@ -17,6 +17,7 @@ export async function subirServidor({ store = 'local' } = {}) {
     ignorarEnvLocal: true,
     env: {
       DATA_SOURCE: 'exemplo', INCC_ONLINE: 'false', SESSION_SECRET: 'segredo-de-teste', STORE: store, DOMINIO_EMAIL: 'unita.com.br',
+      VERCEL: '', COOKIE_SECURE: 'false', // o build da Vercel roda os testes com VERCEL=1: o servidor de teste é http
       SUPABASE_URL: supabase?.url ?? '', SUPABASE_ANON_KEY: CHAVES.anon, SUPABASE_SERVICE_ROLE_KEY: CHAVES.servico,
     },
     config: { dataDir },
