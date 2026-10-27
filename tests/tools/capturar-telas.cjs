@@ -2,7 +2,7 @@
  * Gera as capturas de tela usadas nos relatórios (docs/MANUAL_DE_USO.html e docs/MAPA_DE_DADOS.html).
  *
  * Sobe o servidor em modo exemplo (dados fictícios, pasta de dados temporária), cadastra conteúdo de
- * demonstração (cadastro de obra, TxC, fotos, tela do cliente) e fotografa cada tela em 1600×900.
+ * demonstração (cadastro de obra, TxC, fotos, nova tela) e fotografa cada tela em 1600×900.
  * Para cada captura grava também a posição dos elementos anotados (docs/img/posicoes.json), usada para
  * desenhar os marcadores numerados por cima das imagens.
  *
@@ -61,7 +61,7 @@ const TELAS = [
   {
     nome: 'admin-midia-form', hash: '#/admin/midias',
     antes: async (p) => { await p.getByRole('button', { name: 'Cadastrar imagens' }).click(); },
-    marcas: [[1, '.modal .form-grade'], [2, '.modal textarea'], [3, '.modal .zona-envio'], [4, '.modal .check']],
+    marcas: [[1, '.modal .form-grade'], [2, '.modal textarea'], [3, '.modal .zona-envio'], [4, '.modal .form-grade .field:last-child']],
   },
   {
     nome: 'admin-tela-form', hash: '#/admin/telas',

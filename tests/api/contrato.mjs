@@ -126,6 +126,17 @@ test('mídias: upload da imagem, cadastro por obra/mês, filtro, exclusão', asy
   assert.equal((await planejamento('POST', '/api/midias', { tipo: 'txc', obra: 'Residencial Alpha', mes: '2026-13', arquivoId: up.dados.id })).status, 400);
   const m = await planejamento('POST', '/api/midias', { tipo: 'txc', obra: 'Residencial Alpha', mes: '2026-03', grupo: 'Torre A', arquivoId: up.dados.id });
   assert.equal(m.status, 201);
+  assert.equal(m.dados.destino, 'ambas', 'sem destino = Obra e Cliente');
+  assert.equal(m.dados.visivelCliente, true);
+
+  // Destino: só Cliente; o PUT parcial mantém o que não foi enviado.
+  let ed = await planejamento('PUT', `/api/midias/${m.dados.id}`, { destino: 'cliente' });
+  assert.equal(ed.status, 200);
+  assert.deepEqual([ed.dados.destino, ed.dados.visivelCliente, ed.dados.grupo], ['cliente', true, 'Torre A']);
+  ed = await planejamento('PUT', `/api/midias/${m.dados.id}`, { destino: 'obra' });
+  assert.deepEqual([ed.dados.destino, ed.dados.visivelCliente], ['obra', false]);
+  ed = await planejamento('PUT', `/api/midias/${m.dados.id}`, { destino: 'ambas' });
+  assert.equal(ed.dados.destino, 'ambas');
 
   const lista = await viewer('GET', '/api/midias?tipo=txc&chaveObra=residencial%20alpha&mes=2026-03');
   assert.equal(lista.dados.length, 1);
@@ -147,6 +158,15 @@ test('telas do cliente: criar com blocos, validar e remover arquivos órfãos', 
   });
   assert.equal(t.status, 201, JSON.stringify(t.dados));
   assert.deepEqual(t.dados.obras, ['residencial alpha']);
+  assert.equal(t.dados.destino, 'cliente', 'sem destino = Somente Cliente, como antes');
+
+  const daObra = await planejamento('POST', '/api/telas', { titulo: 'Equipe da obra', destino: 'obra', blocos: [{ tipo: 'texto', texto: 'Interno' }] });
+  assert.equal(daObra.status, 201);
+  assert.equal(daObra.dados.destino, 'obra');
+  const editada = await planejamento('PUT', `/api/telas/${daObra.dados.id}`, { ...daObra.dados, destino: 'ambas' });
+  assert.equal(editada.dados.destino, 'ambas');
+  assert.equal((await viewer('GET', '/api/telas')).dados.find((x) => x.id === daObra.dados.id).destino, 'ambas');
+  assert.equal((await planejamento('DELETE', `/api/telas/${daObra.dados.id}`)).status, 200);
 
   const sem = await planejamento('PUT', `/api/telas/${t.dados.id}`, { ...t.dados, blocos: t.dados.blocos.slice(1) });
   assert.equal(sem.status, 200);

@@ -90,11 +90,11 @@ footer { text-align: center; color: var(--apagado); font-size: 12.5px; padding-b
   <p>Cada tela da apresentação Obra/Cliente com pontos numerados: o que é, de onde vem (aba e coluna) e como é calculado. Use para validar os números contra o Power BI e as planilhas.</p>
 </div></header>
 <div class="corpo">
-  <nav class="sumario" aria-label="Sumário"><b>Sumário</b><a href="#fontes">De onde vêm os dados</a><a href="#capa">Capa (Início)</a><a href="#filtros">Filtros estilo Excel</a><a href="#resumo-geral">Resumo Geral</a><a href="#ficha">Ficha da obra (+ Infos da obra)</a><a href="#resumo-fisico">Resumo Físico</a><a href="#resumo-economico">Resumo Econômico (IEC)</a><a href="#galeria">Tempo x Caminho e Acompanhamento Fotográfico</a><a href="#telas-cliente">Telas do cliente</a><a href="#administracao">Administração</a></nav>
+  <nav class="sumario" aria-label="Sumário"><b>Sumário</b><a href="#fontes">De onde vêm os dados</a><a href="#capa">Capa (Início)</a><a href="#filtros">Filtros estilo Excel</a><a href="#resumo-geral">Resumo Geral</a><a href="#ficha">Ficha da obra (+ Infos da obra)</a><a href="#resumo-fisico">Resumo Físico</a><a href="#resumo-economico">Resumo Econômico (IEC)</a><a href="#galeria">Tempo x Caminho e Acompanhamento Fotográfico</a><a href="#telas-cliente">Novas telas</a><a href="#administracao">Administração</a></nav>
   <main><section class="capitulo" id="fontes"><div class="rotulo">Visão geral</div><h2>De onde vêm os dados</h2>
   <p>A apresentação lê quatro abas de uma planilha no SharePoint pelo Microsoft Graph e completa com informações cadastradas no próprio app. Nada é calculado no servidor: ele só entrega as planilhas, e os cálculos (as medidas que existiam no Power BI) rodam no navegador, no código de <code>public/js/domain</code>.</p>
   <div class="tabela"><table><thead><tr><th>Fonte</th><th>O que traz</th><th>Como chega</th><th>Atualização</th></tr></thead>
-    <tbody><tr><td><code>BD_Infos Gerais</code></td><td>Curvas físicas mês a mês por obra (previsto, replanejado, realizado, metas, CEF/Banco), assertividade, homens/mês, comentários e principais metas</td><td>Graph: <code>drives/{drive}/items/{item}/workbook/worksheets('BD_Infos Gerais')/usedRange</code></td><td>Cache de 30 min no servidor; botão <b>Atualizar dados</b> relê na hora</td></tr><tr><td><code>BD_Físico por atividade</code></td><td>Mesmas curvas por item da EAP (pai e filho), pesos e comentários por atividade (~25 mil linhas)</td><td>Graph, aba <code>BD_Físico por atividade</code>; o navegador recebe só a obra aberta</td><td>Pré-carregada quando o servidor inicia; mesmo cache</td></tr><tr><td><code>BD_Orc</code></td><td>Orçamento base físico por item e total (ITEM = Geral) e descrição dos itens</td><td>Graph, aba <code>BD_Orc</code></td><td>Mesmo cache</td></tr><tr><td><code>BD_Econômico</code></td><td>Custos, saldos, projeção, resultado, IEC, aditivos e comentários por item e mês</td><td>Graph, aba <code>BD_Econômico</code></td><td>Mesmo cache</td></tr><tr><td>Cadastro de obras (no app)</td><td>Nº de UH, áreas, INCC base, prazos, equipe, endereço, situação</td><td>Administração → Cadastro de obras (ou importação da planilha &quot;Painel de Obras&quot;)</td><td>Na hora em que o Planejamento salva</td></tr><tr><td>INCC-DI</td><td>Número-índice mês a mês</td><td>Histórico FGV (1994–ago/2026) + Banco Central, série SGS 192 (variação % mensal)</td><td>Automático 1× por dia; correção manual em Fontes e INCC</td></tr><tr><td>TxC, fotos e telas do cliente</td><td>Imagens, planilhas e textos</td><td>Administração (upload) — ficam no servidor, fora do SharePoint</td><td>Na hora</td></tr></tbody></table></div>
+    <tbody><tr><td><code>BD_Infos Gerais</code></td><td>Curvas físicas mês a mês por obra (previsto, replanejado, realizado, metas, CEF/Banco), assertividade, homens/mês, comentários e principais metas</td><td>Graph: <code>drives/{drive}/items/{item}/workbook/worksheets('BD_Infos Gerais')/usedRange</code></td><td>Cache de 30 min no servidor; botão <b>Atualizar dados</b> relê na hora</td></tr><tr><td><code>BD_Físico por atividade</code></td><td>Mesmas curvas por item da EAP (pai e filho), pesos e comentários por atividade (~25 mil linhas)</td><td>Graph, aba <code>BD_Físico por atividade</code>; o navegador recebe só a obra aberta</td><td>Pré-carregada quando o servidor inicia; mesmo cache</td></tr><tr><td><code>BD_Orc</code></td><td>Orçamento base físico por item e total (ITEM = Geral) e descrição dos itens</td><td>Graph, aba <code>BD_Orc</code></td><td>Mesmo cache</td></tr><tr><td><code>BD_Econômico</code></td><td>Custos, saldos, projeção, resultado, IEC, aditivos e comentários por item e mês</td><td>Graph, aba <code>BD_Econômico</code></td><td>Mesmo cache</td></tr><tr><td>Cadastro de obras (no app)</td><td>Nº de UH, áreas, INCC base, prazos, equipe, endereço, situação</td><td>Administração → Cadastro de obras (ou importação da planilha &quot;Painel de Obras&quot;)</td><td>Na hora em que o Planejamento salva</td></tr><tr><td>INCC-DI</td><td>Número-índice mês a mês</td><td>Histórico FGV (1994–ago/2026) + Banco Central, série SGS 192 (variação % mensal)</td><td>Automático 1× por dia; correção manual em Fontes e INCC</td></tr><tr><td>TxC, fotos e novas telas</td><td>Imagens, planilhas e textos</td><td>Administração (upload) — ficam no servidor, fora do SharePoint</td><td>Na hora</td></tr></tbody></table></div>
   <div class="nota"><b>Junção entre as abas</b>As abas são ligadas pelo <b>nome da obra</b>, ignorando maiúsculas, acentos e espaços ("MetroCasa" = "Metrocasa"). O BD_Econômico não tem o Nº da obra UAU, por isso o nome é a chave.</div>
   <div class="nota"><b>Mês de referência</b>As planilhas trazem 36 meses por obra, inclusive os futuros. O mês de referência padrão é o último mês em que alguma obra filtrada teve <code>Realizado Mês</code> &gt; 0, sem passar do mês atual. Pode ser trocado no filtro.</div>
   <h3>Visão Obra × visão Cliente</h3>
@@ -212,7 +212,7 @@ footer { text-align: center; color: var(--apagado); font-size: 12.5px; padding-b
         <span class="num">5</span>
         <div>
           <h4>Troca Obra / Cliente</h4>
-          <p>Muda a apresentação inteira para as colunas &quot;- Cliente&quot; e mostra as telas do cliente no menu.</p>
+          <p>Muda a apresentação inteira para as colunas &quot;- Cliente&quot;; cada visão mostra no menu as novas telas destinadas a ela.</p>
           
           
         </div>
@@ -696,7 +696,7 @@ footer { text-align: center; color: var(--apagado); font-size: 12.5px; padding-b
         <span class="num">3</span>
         <div>
           <h4>Foto</h4>
-          <p>Na visão Cliente só aparecem as imagens marcadas &quot;Exibir na apresentação ao cliente&quot;.</p>
+          <p>Cada visão mostra só as imagens destinadas a ela (caixa &quot;Apresentação&quot;: Obra, Cliente ou ambas).</p>
           
           
         </div>
@@ -710,7 +710,7 @@ footer { text-align: center; color: var(--apagado); font-size: 12.5px; padding-b
           
         </div>
       </li></ol></section>
-</section><section class="capitulo" id="telas-cliente"><div class="rotulo">Apresentação Cliente</div><h2>Telas do cliente</h2>
+</section><section class="capitulo" id="telas-cliente"><div class="rotulo">Apresentações Obra e Cliente</div><h2>Novas telas</h2>
   <figure class="tela" data-tela="tela-cliente">
     <div class="tela-quadro">
       <img src="img/tela-cliente.jpg" alt="Tela criada pelo Planejamento" loading="lazy" width="1600" height="900">
@@ -723,8 +723,8 @@ footer { text-align: center; color: var(--apagado); font-size: 12.5px; padding-b
         <span class="num">1</span>
         <div>
           <h4>Tela no menu</h4>
-          <p>Aparece na apresentação Cliente para as obras escolhidas (ou todas), na ordem definida.</p>
-          <p class="origem"><span>Origem</span>Administração → Telas do cliente</p>
+          <p>Aparece na apresentação escolhida (Obra, Cliente ou ambas) para as obras escolhidas (ou todas), na ordem definida.</p>
+          <p class="origem"><span>Origem</span>Administração → Novas telas</p>
           
         </div>
       </li>
@@ -804,7 +804,7 @@ footer { text-align: center; color: var(--apagado); font-size: 12.5px; padding-b
   <figure class="tela" data-tela="admin-midia-form">
     <div class="tela-quadro">
       <img src="img/admin-midia-form.jpg" alt="Cadastro de TxC / fotos" loading="lazy" width="1600" height="900">
-      <a class="marca" href="#admin-midia-form-1" data-n="1" style="left:21.75%;top:23.19%;width:56.50%;height:19.22%" aria-label="Ponto 1: Obra, mês, torre/local e ordem"><b>1</b></a><a class="marca" href="#admin-midia-form-2" data-n="2" style="left:21.75%;top:47.03%;width:56.50%;height:10.67%" aria-label="Ponto 2: Comentário"><b>2</b></a><a class="marca" href="#admin-midia-form-3" data-n="3" style="left:21.75%;top:62.31%;width:56.50%;height:9.11%" aria-label="Ponto 3: Área de envio"><b>3</b></a><a class="marca" href="#admin-midia-form-4" data-n="4" style="left:21.75%;top:73.19%;width:56.50%;height:2.44%" aria-label="Ponto 4: Exibir ao cliente"><b>4</b></a>
+      <a class="marca" href="#admin-midia-form-1" data-n="1" style="left:21.75%;top:23.19%;width:56.50%;height:19.22%" aria-label="Ponto 1: Obra, mês, torre/local e ordem"><b>1</b></a><a class="marca" href="#admin-midia-form-2" data-n="2" style="left:21.75%;top:47.03%;width:56.50%;height:10.67%" aria-label="Ponto 2: Comentário"><b>2</b></a><a class="marca" href="#admin-midia-form-3" data-n="3" style="left:21.75%;top:62.31%;width:56.50%;height:9.11%" aria-label="Ponto 3: Área de envio"><b>3</b></a><a class="marca" href="#admin-midia-form-4" data-n="4" style="left:21.75%;top:73.19%;width:56.50%;height:2.44%" aria-label="Ponto 4: Apresentação"><b>4</b></a>
     </div>
     <figcaption>Cadastro de TxC / fotos <span>· captura com dados fictícios</span></figcaption>
   </figure>
@@ -839,8 +839,8 @@ footer { text-align: center; color: var(--apagado); font-size: 12.5px; padding-b
       <li id="admin-midia-form-4" data-n="4">
         <span class="num">4</span>
         <div>
-          <h4>Exibir ao cliente</h4>
-          <p>Desmarcado = só a apresentação Obra mostra.</p>
+          <h4>Apresentação</h4>
+          <p>Obra e Cliente, Somente Obra ou Somente Cliente.</p>
           
           
         </div>
@@ -848,10 +848,10 @@ footer { text-align: center; color: var(--apagado); font-size: 12.5px; padding-b
   
   <figure class="tela" data-tela="admin-tela-form">
     <div class="tela-quadro">
-      <img src="img/admin-tela-form.jpg" alt="Edição de tela do cliente" loading="lazy" width="1600" height="900">
+      <img src="img/admin-tela-form.jpg" alt="Edição de tela" loading="lazy" width="1600" height="900">
       <a class="marca" href="#admin-tela-form-1" data-n="1" style="left:21.75%;top:10.94%;width:56.50%;height:7.50%" aria-label="Ponto 1: Título, subtítulo e ordem no menu"><b>1</b></a><a class="marca" href="#admin-tela-form-2" data-n="2" style="left:21.75%;top:32.67%;width:56.50%;height:28.83%" aria-label="Ponto 2: Bloco de conteúdo"><b>2</b></a>
     </div>
-    <figcaption>Edição de tela do cliente <span>· captura com dados fictícios</span></figcaption>
+    <figcaption>Edição de tela <span>· captura com dados fictícios</span></figcaption>
   </figure>
   <section class="legenda" aria-label="Pontos da tela"><ol>
       <li id="admin-tela-form-1" data-n="1">

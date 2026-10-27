@@ -3,8 +3,8 @@
  *
  * Rotas:
  *   #/obra/<aba>            apresentação Obra
- *   #/cliente/<aba>         apresentação Cliente (colunas "- Cliente" + telas extras)
- *   #/cliente/tela/<id>     tela personalizada do cliente
+ *   #/cliente/<aba>         apresentação Cliente (colunas "- Cliente")
+ *   #/<visão>/tela/<id>     tela extra (Administração → Novas telas) da apresentação Obra ou Cliente
  *   #/admin/<seção>         administração (Planejamento/Dev)
  *   #/conta                 minha conta
  */
@@ -29,7 +29,7 @@ import { renderLogin } from './pages/login.js';
 import { renderResumoEconomico } from './pages/resumo-economico.js';
 import { renderResumoFisico } from './pages/resumo-fisico.js';
 import { renderResumoGeral } from './pages/resumo-geral.js';
-import { renderTelaCliente } from './pages/tela-cliente.js';
+import { renderTelaExtra } from './pages/tela-extra.js';
 
 const raiz = document.getElementById('app');
 
@@ -50,33 +50,36 @@ const ABAS = [
 const SECOES_ADMIN = [
   { id: 'cadastro-obras', nome: 'Cadastro de obras', render: renderAdminCadastro, capacidade: 'editarConteudo' },
   { id: 'midias', nome: 'TxC e fotos', render: renderAdminMidias, capacidade: 'editarConteudo' },
-  { id: 'telas', nome: 'Telas do cliente', render: renderAdminTelas, capacidade: 'editarConteudo' },
+  { id: 'telas', nome: 'Novas telas', render: renderAdminTelas, capacidade: 'editarConteudo' },
   { id: 'usuarios', nome: 'Usuários', render: renderAdminUsuarios, capacidade: 'administrar' },
   { id: 'fontes', nome: 'Fontes e INCC', render: renderAdminFontes, capacidade: 'editarConteudo' },
 ];
 
-let telasCliente = [];
+let telasExtras = [];
+
+/** Telas extras que aparecem na apresentação `visao` para as obras filtradas. */
+const telasDaVisao = (visao) => (visao ? telasDaObra(telasExtras, estado.filtro.obras ?? [], visao) : []);
 
 // ── Rotas ────────────────────────────────────────────────────────────
 for (const visao of ['obra', 'cliente']) {
   rota(`/${visao}/:aba`, ({ aba }) => paginaApresentacao(visao, ABAS.find((a) => a.id === aba) ?? ABAS[0]));
+  rota(`/${visao}/tela/:id`, ({ id }) => paginaApresentacao(visao, {
+    id: `tela-${id}`, nome: 'Tela', periodo: false, render: (alvo) => renderTelaExtra(alvo, telasExtras.find((t) => t.id === id), visao),
+  }));
 }
-rota('/cliente/tela/:id', ({ id }) => paginaApresentacao('cliente', {
-  id: `tela-${id}`, nome: 'Tela', periodo: false, render: (alvo) => renderTelaCliente(alvo, telasCliente.find((t) => t.id === id)),
-}));
 rota('/admin/:secao', ({ secao }) => paginaAdmin(SECOES_ADMIN.find((s) => s.id === secao) ?? SECOES_ADMIN[0]));
 rota('/conta', () => paginaSimples(renderConta));
 
 // ── Shell ────────────────────────────────────────────────────────────
 function cabecalho(visao, abaAtual) {
   const u = estado.usuario;
-  const telas = visao === 'cliente' ? telasDaObra(telasCliente, estado.filtro.obras ?? []) : [];
+  const telas = telasDaVisao(visao);
   const link = (href, texto, atual) => h('a', { href: `#${href}`, 'aria-current': atual ? 'page' : null }, texto);
   return h('header', { class: 'app-header' }, h('div', { class: 'in' },
     h('a', { href: '#/obra/inicio', 'aria-label': 'Início' }, h('img', { class: 'logo', src: 'assets/brand/logo-unita-white.png', alt: 'Unità Engenharia' })),
     visao ? h('nav', { 'aria-label': 'Abas da apresentação' },
       ABAS.map((a) => link(`/${visao}/${a.id}`, a.nome, a.id === abaAtual)),
-      telas.map((t) => link(`/cliente/tela/${t.id}`, t.titulo, abaAtual === `tela-${t.id}`))) : h('nav', {}),
+      telas.map((t) => link(`/${visao}/tela/${t.id}`, t.titulo, abaAtual === `tela-${t.id}`))) : h('nav', {}),
     h('div', { class: 'direita' },
       h('div', { class: 'visao', role: 'group', 'aria-label': 'Apresentação' },
         h('a', { href: `#/obra/${ABAS.some((a) => a.id === abaAtual) ? abaAtual : 'inicio'}`, 'aria-current': String(visao === 'obra') }, 'Obra'),
@@ -115,8 +118,7 @@ async function paginaApresentacao(visao, aba) {
   const alvo = h('div');
   conteudo.append(alvo);
   try {
-    const telas = visao === 'cliente' ? telasDaObra(telasCliente, estado.filtro.obras ?? []) : [];
-    await aba.render(alvo, { base, filtro: estado.filtro, visao, usuario: estado.usuario, abas: ABAS, telas });
+    await aba.render(alvo, { base, filtro: estado.filtro, visao, usuario: estado.usuario, abas: ABAS, telas: telasDaVisao(visao) });
   } catch (e) {
     console.error(e);
     montar(alvo, alerta('error', 'Erro ao montar a aba', e.message));
@@ -173,16 +175,16 @@ async function carregarTudo() {
   if (!caminhoAtual().startsWith('/') || caminhoAtual() === '/') ir('/obra/inicio');
   desenhar();
   await Promise.all([estado.carregarDados(), carregarTelas()]);
-  desenhar(); // as telas do cliente podem chegar depois dos dados: redesenha para o menu e a capa mostrarem
+  desenhar(); // as telas extras podem chegar depois dos dados: redesenha para o menu e a capa mostrarem
 }
 
 async function carregarTelas() {
-  telasCliente = await api.get('/telas').catch(() => []);
+  telasExtras = await api.get('/telas').catch(() => []);
 }
 
 estado.ouvir(() => { if (!estado.carregando || !estado.bruto) desenhar(); });
 window.addEventListener('hashchange', () => {
-  if (caminhoAtual().startsWith('/cliente') || caminhoAtual().startsWith('/admin/telas')) carregarTelas().then(desenhar);
+  if (/^\/(obra|cliente|admin\/telas)/.test(caminhoAtual())) carregarTelas().then(desenhar);
   else desenhar();
 });
 window.addEventListener('sessao-expirada', () => {

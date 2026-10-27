@@ -21,14 +21,14 @@ No primeiro acesso o app pede para criar o usuário **Dev**; ele cadastra os dem
 | Papel | Pode |
 |---|---|
 | Dev | tudo, inclusive usuários e diagnóstico das fontes |
-| Planejamento | cadastrar fotos, TxC, telas do cliente, cadastro de obras; atualizar dados |
+| Planejamento | cadastrar fotos, TxC, novas telas, cadastro de obras; atualizar dados |
 | Viewer | só visualizar as apresentações |
 
 ## Abas
 
 Início · Resumo Geral · Resumo Físico · Resumo Econômico · Tempo x Caminho · Acompanhamento Fotográfico.
-A apresentação Cliente tem as mesmas abas com as colunas "- Cliente" e mais as **telas do cliente** (planilhas
-somente leitura, imagens e textos montados pelo Planejamento). Botão **Apresentar** = tela cheia sem filtros.
+A apresentação Cliente tem as mesmas abas com as colunas "- Cliente". As **novas telas** (planilhas somente leitura,
+imagens e textos montados pelo Planejamento) e as imagens de TxC/fotos vão para a apresentação Obra, Cliente ou ambas. Botão **Apresentar** = tela cheia sem filtros.
 
 ## Estrutura
 

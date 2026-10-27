@@ -1,14 +1,15 @@
 /**
- * Administração → Telas do cliente: o Planejamento cria telas extras da apresentação Cliente com
+ * Administração → Novas telas: o Planejamento cria telas extras das apresentações Obra e/ou Cliente com
  * imagens, planilhas (exibidas somente leitura) e textos, por obra.
  */
 import { api } from '../core/api.js';
 import { h, montar } from '../core/dom.js';
 import { estado } from '../core/estado.js';
-import { TIPOS_BLOCO } from '../domain/conteudo.js';
+import { DESTINOS, TIPOS_BLOCO, destinoDaTela } from '../domain/conteudo.js';
 import { abrirModal, alerta, badge, botaoAcao, campo, carregando, confirmar, toast, vazio } from '../ui/componentes.js';
 import { ir } from '../core/roteador.js';
 import { seletorArquivos } from '../ui/seletor-arquivos.js';
+import { seletorDestino } from '../ui/seletor-destino.js';
 
 const ACEITA = {
   imagem: 'image/png,image/jpeg,image/webp,image/gif',
@@ -28,19 +29,20 @@ export async function renderAdminTelas(alvo) {
     const nomeObra = (chave) => base.obras.find((o) => o.chave === chave)?.nome ?? chave;
     montar(alvo,
       h('div', { class: 'titulo-pagina' },
-        h('div', {}, h('h1', {}, 'Telas do cliente'), h('p', {}, 'Telas extras da apresentação Cliente, com planilhas (somente leitura), imagens e textos.')),
+        h('div', {}, h('h1', {}, 'Novas telas'), h('p', {}, 'Telas extras das apresentações Obra e Cliente, com planilhas (somente leitura), imagens e textos.')),
         h('button', { class: 'btn primary', type: 'button', onclick: () => abrirFormTela({}, desenhar) }, 'Nova tela')),
       telas.length
         ? h('div', { class: 'sheet' }, h('table', { class: 'lista-admin' },
-          h('thead', {}, h('tr', {}, h('th', { class: 'first' }, 'Tela'), h('th', {}, 'Obras'), h('th', {}, 'Blocos'), h('th', {}, 'Ordem'), h('th', {}, 'Situação'), h('th', {}))),
+          h('thead', {}, h('tr', {}, h('th', { class: 'first' }, 'Tela'), h('th', {}, 'Apresentação'), h('th', {}, 'Obras'), h('th', {}, 'Blocos'), h('th', {}, 'Ordem'), h('th', {}, 'Situação'), h('th', {}))),
           h('tbody', {}, telas.map((t) => h('tr', {},
             h('td', { class: 'first' }, t.titulo),
+            h('td', { class: 'esq' }, DESTINOS[destinoDaTela(t)]),
             h('td', { class: 'texto' }, t.obras.length ? t.obras.map(nomeObra).join(', ') : 'Todas'),
             h('td', {}, t.blocos.length),
             h('td', {}, t.ordem),
             h('td', {}, t.ativa ? badge('Ativa', 'success') : badge('Oculta', 'neutral')),
             h('td', { class: 'acoes' },
-              h('button', { class: 'btn ghost sm', type: 'button', onclick: () => ir(`/cliente/tela/${t.id}`) }, 'Ver'),
+              h('button', { class: 'btn ghost sm', type: 'button', onclick: () => ir(`/${destinoDaTela(t) === 'obra' ? 'obra' : 'cliente'}/tela/${t.id}`) }, 'Ver'),
               h('button', { class: 'btn ghost sm', type: 'button', onclick: () => abrirFormTela(t, desenhar) }, 'Editar'),
               h('button', { class: 'btn ghost sm', type: 'button', onclick: async () => {
                 if (!(await confirmar('Excluir tela?', `"${t.titulo}" e seus arquivos serão apagados.`, { rotulo: 'Excluir', perigo: true }))) return;
@@ -60,6 +62,7 @@ function abrirFormTela(inicial, aoSalvar) {
   const subtitulo = h('input', { value: inicial.subtitulo ?? '' });
   const ordem = h('input', { type: 'number', value: inicial.ordem ?? 0 });
   const ativa = h('input', { type: 'checkbox', checked: inicial.ativa !== false });
+  const destino = seletorDestino(destinoDaTela(inicial));
   const obrasSel = new Set(inicial.obras ?? []);
   const obras = h('div', { class: 'form-grade' }, base.obras.map((o) => h('label', { class: 'check' },
     h('input', { type: 'checkbox', checked: obrasSel.has(o.chave), onchange: (e) => (e.target.checked ? obrasSel.add(o.chave) : obrasSel.delete(o.chave)) }), o.nome)));
@@ -70,11 +73,11 @@ function abrirFormTela(inicial, aoSalvar) {
   desenharBlocos();
 
   const m = abrirModal({
-    titulo: inicial.id ? 'Editar tela' : 'Nova tela do cliente',
+    titulo: inicial.id ? 'Editar tela' : 'Nova tela',
     largo: true,
     conteudo: h('div', { class: 'stack' },
       erro,
-      h('div', { class: 'form-grade' }, campo('Título *', titulo), campo('Subtítulo', subtitulo), campo('Ordem no menu', ordem)),
+      h('div', { class: 'form-grade' }, campo('Título *', titulo), campo('Subtítulo', subtitulo), destino.elemento, campo('Ordem no menu', ordem)),
       h('label', { class: 'check' }, ativa, 'Tela ativa (aparece na apresentação)'),
       h('div', {}, h('p', { class: 'sub' }, 'Obras (nenhuma marcada = todas)'), obras),
       h('div', {}, h('p', { class: 'sub' }, 'Conteúdo'), listaBlocos,
@@ -86,7 +89,7 @@ function abrirFormTela(inicial, aoSalvar) {
       botaoAcao('Salvar', async () => {
         montar(erro);
         try {
-          const corpo = { titulo: titulo.value, subtitulo: subtitulo.value, ordem: Number(ordem.value), ativa: ativa.checked, obras: [...obrasSel], blocos };
+          const corpo = { titulo: titulo.value, subtitulo: subtitulo.value, destino: destino.valor(), ordem: Number(ordem.value), ativa: ativa.checked, obras: [...obrasSel], blocos };
           if (inicial.id) await api.put(`/telas/${inicial.id}`, corpo);
           else await api.post('/telas', corpo);
           m.fechar();

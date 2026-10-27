@@ -81,7 +81,7 @@ Fonte online: `https://api.bcb.gov.br/dados/serie/bcdata.sgs.192/dados?formato=j
 | POST | `/obras/cadastro/importar` | editarConteudo | `{ linhas: [ { "<cabeçalho do Painel de Obras>": valor } ] }` → `{ importados, obras }` |
 | DELETE | `/obras/cadastro/:id` | editarConteudo | → `{ ok }` |
 
-## Arquivos, mídias (TxC/fotos) e telas do cliente
+## Arquivos, mídias (TxC/fotos) e telas extras
 
 | Método | Caminho | Permissão | Corpo → Resposta |
 |---|---|---|---|
@@ -90,11 +90,11 @@ Fonte online: `https://api.bcb.gov.br/dados/serie/bcdata.sgs.192/dados?formato=j
 | GET | `/arquivos/:id` | ver | bytes do arquivo (local) ou **302** para URL assinada de leitura (Supabase) |
 | DELETE | `/arquivos/:id` | editarConteudo | descarta um arquivo (ex.: envio direto que falhou) |
 | GET | `/midias?tipo=&chaveObra=&mes=` | ver | → `midia[]` (mês decrescente) |
-| POST | `/midias` | editarConteudo | `{ tipo: "txc"\|"foto", obra, mes: "AAAA-MM", grupo?, comentario?, arquivoId, visivelCliente?, ordem? }` → 201 |
+| POST | `/midias` | editarConteudo | `{ tipo: "txc"\|"foto", obra, mes: "AAAA-MM", grupo?, comentario?, arquivoId, destino?, ordem? }` → 201. `destino`: `"ambas"` (padrão) \| `"obra"` \| `"cliente"`; `visivelCliente` (antigo) ainda é aceito e é devolvido derivado do destino |
 | PUT | `/midias/:id` | editarConteudo | campos parciais → mídia (arquivo trocado é apagado) |
 | DELETE | `/midias/:id` | editarConteudo | apaga a mídia e o arquivo |
 | GET | `/telas` | ver | → `tela[]` por ordem |
-| POST/PUT | `/telas`, `/telas/:id` | editarConteudo | `{ titulo, subtitulo?, obras: [nome\|chave], ordem, ativa, blocos: [{ tipo: "imagem"\|"planilha"\|"texto", titulo?, arquivoId?, aba?, texto?, largura: "inteira"\|"metade" }] }` |
+| POST/PUT | `/telas`, `/telas/:id` | editarConteudo | `{ titulo, subtitulo?, destino: "obra"\|"cliente"\|"ambas" (padrão "cliente"), obras: [nome\|chave], ordem, ativa, blocos: [{ tipo: "imagem"\|"planilha"\|"texto", titulo?, arquivoId?, aba?, texto?, largura: "inteira"\|"metade" }] }` |
 | DELETE | `/telas/:id` | editarConteudo | apaga a tela e seus arquivos |
 
 Tipos aceitos no upload: PNG, JPEG, WEBP, GIF, PDF, CSV, XLS, XLSX, XLSM.
