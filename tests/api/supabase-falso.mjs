@@ -2,18 +2,22 @@
  * Supabase simulado em memória para os testes: atende, por `fetch`, os mesmos endereços que
  * server/supabase/cliente.mjs usa — Auth (GoTrue), banco (PostgREST, filtros `eq.` e `order`) e Storage.
  * Exige a chave certa em cada área (anon no login, service role no resto), o que pega erros de configuração.
+ * Os e-mails de convite e de nova senha ficam em `emails` ({ tipo, email, token, endereco }), com o token que o
+ * link real levaria ao app.
  */
 import { randomUUID } from 'node:crypto';
 
 export const CHAVES = { anon: 'chave-anon-teste', servico: 'chave-servico-teste' };
 
 export function criarSupabaseFalso({ url = 'http://supabase.falso' } = {}) {
-  const usuarios = new Map(); // id → {id, email, senha, banido}
+  const usuarios = new Map(); // id → {id, email, senha, banido, confirmado}
   const tokens = new Map(); // access/refresh → id
   const tabelas = new Map(); // nome → linhas[]
   const objetos = new Map(); // "bucket/caminho" → {dados, tipo}
   const assinaturas = new Map(); // token → "bucket/caminho"
   const chamadas = [];
+  const emails = [];
+  const enviarEmail = (tipo, usuario, endereco) => emails.push({ tipo, email: usuario.email, token: sessaoPara(usuario).access_token, endereco });
 
   const json = (status, corpo) => new Response(corpo === undefined ? null : JSON.stringify(corpo), { status, headers: { 'content-type': 'application/json' } });
   const tabela = (nome) => { if (!tabelas.has(nome)) tabelas.set(nome, []); return tabelas.get(nome); };
@@ -75,19 +79,36 @@ export function criarSupabaseFalso({ url = 'http://supabase.falso' } = {}) {
       return id ? json(200, { id, email: usuarios.get(id).email }) : json(401, { msg: 'token inválido' });
     }
     if (caminho === '/auth/v1/logout') return json(204);
+    if (caminho === '/auth/v1/invite') {
+      if (!servico) return json(403, { msg: 'precisa da service role' });
+      let u = [...usuarios.values()].find((x) => x.email === corpo.email);
+      if (u?.confirmado) return json(422, { msg: 'A user with this email address has already been registered' });
+      if (!u) {
+        u = { id: randomUUID(), email: corpo.email, senha: null, banido: false, confirmado: false };
+        usuarios.set(u.id, u);
+      }
+      enviarEmail('invite', u, alvo.searchParams.get('redirect_to'));
+      return json(200, { id: u.id, email: u.email });
+    }
+    if (caminho === '/auth/v1/recover') {
+      if (cab.apikey !== CHAVES.anon) return json(401, { msg: 'apikey inválida' });
+      const u = [...usuarios.values()].find((x) => x.email === corpo.email);
+      if (u) enviarEmail('recovery', u, alvo.searchParams.get('redirect_to'));
+      return json(200, {});
+    }
     if (caminho.startsWith('/auth/v1/admin/users')) {
       if (!servico) return json(403, { msg: 'precisa da service role' });
       const id = decodeURIComponent(caminho.split('/')[5] ?? '');
       if (metodo === 'POST') {
         if ([...usuarios.values()].some((x) => x.email === corpo.email)) return json(422, { msg: 'A user with this email address has already been registered' });
-        const u = { id: randomUUID(), email: corpo.email, senha: corpo.password, banido: false };
+        const u = { id: randomUUID(), email: corpo.email, senha: corpo.password, banido: false, confirmado: true };
         usuarios.set(u.id, u);
         return json(200, { id: u.id, email: u.email });
       }
       const u = usuarios.get(id);
       if (!u) return json(404, { msg: 'User not found' });
       if (metodo === 'PUT') {
-        if (corpo.password) u.senha = corpo.password;
+        if (corpo.password) Object.assign(u, { senha: corpo.password, confirmado: true });
         if (corpo.ban_duration) u.banido = corpo.ban_duration !== 'none';
         return json(200, { id: u.id, email: u.email });
       }
@@ -170,5 +191,5 @@ export function criarSupabaseFalso({ url = 'http://supabase.falso' } = {}) {
     return json(404, { message: `rota simulada não existe: ${metodo} ${caminho}` });
   }
 
-  return { url, fetch: atender, usuarios, tabelas, objetos, chamadas };
+  return { url, fetch: atender, usuarios, tabelas, objetos, chamadas, emails };
 }

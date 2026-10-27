@@ -30,7 +30,8 @@ export function carregarConfig(sobrescrever = {}) {
     publicDir: join(RAIZ, 'public'),
     cacheMinutos: Number(env.CACHE_MINUTOS || 30),
     segredoSessao: env.SESSION_SECRET || null,
-    exigirLogin: env.EXIGIR_LOGIN === 'true', // testes automáticos: ignora o login desativado em app.mjs
+    // Só e-mails deste domínio entram (vazio = qualquer domínio).
+    dominioEmail: (env.DOMINIO_EMAIL ?? 'unitaengenharia.com.br').trim().toLowerCase().replace(/^@/, ''),
     cookieSeguro: env.COOKIE_SECURE === 'true' || Boolean(env.VERCEL),
     graph: {
       tenantId: env.MS_GRAPH_TENANT_ID || '',
