@@ -8,7 +8,7 @@ import { associarObrasConhecidas, cadastrosDePlanilha, normalizarCadastro } from
 import { chaveObra } from '../../public/js/domain/normalizar.js';
 import { enviarJson, erro, lerJson } from '../http/respostas.mjs';
 
-export function registrarDados(rotas, { planilhas, incc, cadastro, config }) {
+export function registrarDados(rotas, { planilhas, incc, cadastro, acidentes, config }) {
   /** Abas do resumo + cadastro + INCC (o que a apresentação carrega ao abrir). */
   async function resumo() {
     incc.atualizar().catch(() => {}); // segundo plano, no máximo 1× por dia
@@ -96,6 +96,9 @@ export function registrarDados(rotas, { planilhas, incc, cadastro, config }) {
   });
 
   rotas.adicionar('DELETE', '/api/obras/cadastro/:id', { permissao: 'editarConteudo' }, async ({ req, res, params }) => {
+    // v22: acidentes da Segurança do Trabalho apontam para o cadastro (no Supabase, FK on delete restrict).
+    const vinculados = acidentes ? await acidentes.contarDaObra(params.id) : 0;
+    if (vinculados) throw erro(409, `Esta obra tem ${vinculados} acidente(s) na Segurança do Trabalho. Exclua ou mova os acidentes antes de excluir o cadastro.`);
     if (!(await cadastro.remover(params.id))) throw erro(404, 'Cadastro não encontrado.');
     enviarJson(req, res, 200, { ok: true });
   });

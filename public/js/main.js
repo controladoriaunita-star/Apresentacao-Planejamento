@@ -20,6 +20,9 @@ import { icone } from './ui/icones.js';
 import { renderAdminCadastro } from './pages/admin-cadastro.js';
 import { renderAdminFontes } from './pages/admin-fontes.js';
 import { renderAdminMidias } from './pages/admin-midias.js';
+import { renderAdminSeguranca } from './pages/admin-seguranca.js';
+import { renderDashboardSeguranca } from './pages/dashboard-seguranca.js';
+import { renderSegurancaTrabalho } from './pages/seguranca-trabalho.js';
 import { renderAdminTelas } from './pages/admin-telas.js';
 import { renderAdminUsuarios } from './pages/admin-usuarios.js';
 import { renderConta } from './pages/conta.js';
@@ -45,12 +48,17 @@ const ABAS = [
   { id: 'resumo-economico', nome: 'Resumo Econômico', render: renderResumoEconomico, periodo: false, icone: 'economico', descricao: 'IEC, custos e resultado por item' },
   { id: 'tempo-caminho', nome: 'Tempo x Caminho', render: (a, c) => renderGaleria(a, c, 'txc'), periodo: false, icone: 'caminho', descricao: 'Linhas de balanço por torre' },
   { id: 'fotos', nome: 'Acompanhamento Fotográfico', render: (a, c) => renderGaleria(a, c, 'foto'), periodo: false, icone: 'camera', descricao: 'Fotos do mês por local' },
+  // v22 — Segurança do Trabalho (dados e Dashboard Segurança: Administração → Segurança do Trabalho)
+  { id: 'seguranca-trabalho', nome: 'Segurança do Trabalho', render: renderSegurancaTrabalho, periodo: false, icone: 'alerta', descricao: 'Acidentes ocorridos no mês por tipo' },
 ];
 
 const SECOES_ADMIN = [
   { id: 'cadastro-obras', nome: 'Cadastro de obras', render: renderAdminCadastro, capacidade: 'editarConteudo' },
   { id: 'midias', nome: 'TxC e fotos', render: renderAdminMidias, capacidade: 'editarConteudo' },
   { id: 'telas', nome: 'Novas telas', render: renderAdminTelas, capacidade: 'editarConteudo' },
+  { id: 'seguranca', nome: 'Segurança do Trabalho', render: renderAdminSeguranca, capacidade: 'editarConteudo' },
+  // Sub-aba de Segurança do Trabalho (botão "Dashboard Segurança"); não aparece na lista lateral.
+  { id: 'seguranca-dashboard', nome: 'Dashboard Segurança', render: renderDashboardSeguranca, capacidade: 'editarConteudo', dentroDe: 'seguranca' },
   { id: 'usuarios', nome: 'Usuários', render: renderAdminUsuarios, capacidade: 'administrar' },
   { id: 'fontes', nome: 'Fontes e INCC', render: renderAdminFontes, capacidade: 'editarConteudo' },
 ];
@@ -130,8 +138,8 @@ async function paginaAdmin(secao) {
   const alvo = h('div', { class: 'painel-admin' });
   montar(raiz, cabecalho(null, null), h('main', { class: 'conteudo' }, h('div', { class: 'admin' },
     h('aside', {}, h('div', { class: 'eyebrow' }, 'Administração'), h('h3', {}, 'Conteúdo da apresentação'),
-      h('nav', { 'aria-label': 'Seções' }, SECOES_ADMIN.filter((s) => pode(estado.usuario.papel, s.capacidade))
-        .map((s) => h('a', { href: `#/admin/${s.id}`, 'aria-current': s.id === secao.id ? 'page' : null }, s.nome)))),
+      h('nav', { 'aria-label': 'Seções' }, SECOES_ADMIN.filter((s) => !s.dentroDe && pode(estado.usuario.papel, s.capacidade))
+        .map((s) => h('a', { href: `#/admin/${s.id}`, 'aria-current': s.id === (secao.dentroDe ?? secao.id) ? 'page' : null }, s.nome)))),
     alvo)));
   const bloqueio = estadoDosDados();
   if (bloqueio || !estado.bruto) return montar(alvo, bloqueio ?? carregando(6));

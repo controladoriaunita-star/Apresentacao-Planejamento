@@ -102,6 +102,29 @@ export class ClienteSupabase {
     return criada;
   }
 
+  /**
+   * Consulta com os operadores do PostgREST (`in.(…)`, `gte.`, `lte.`, `ilike.`, `limit`, `offset`, `select`).
+   * Com `contar`, pede o total exato (cabeçalho Content-Range) para a paginação. Usado pela Segurança do Trabalho.
+   * @param {URLSearchParams} params
+   */
+  async consultar(tabela, params, { contar = false } = {}) {
+    const res = await this.#chamar(`/rest/v1/${tabela}?${params}`, { bruto: true, cabecalhos: contar ? { prefer: 'count=exact' } : {} });
+    const texto = await res.text();
+    let dados = null;
+    try { dados = texto ? JSON.parse(texto) : null; } catch { dados = texto; }
+    if (!res.ok) throw new ErroSupabase(`Supabase: ${dados?.message ?? `HTTP ${res.status}`}`, res.status, dados);
+    const total = contar ? Number(String(res.headers.get('content-range') ?? '').split('/')[1]) : null;
+    return { linhas: dados ?? [], total: Number.isFinite(total) ? total : (dados ?? []).length };
+  }
+
+  /** Insere várias linhas num único comando (atômico). `ignorarDuplicados` pula conflitos em `conflito`. */
+  async inserirVarios(tabela, linhas, { conflito = null, ignorarDuplicados = false } = {}) {
+    if (!linhas.length) return [];
+    const q = conflito ? `?on_conflict=${encodeURIComponent(conflito)}` : '';
+    const prefer = `return=representation${conflito && ignorarDuplicados ? ',resolution=ignore-duplicates' : ''}`;
+    return this.#chamar(`/rest/v1/${tabela}${q}`, { metodo: 'POST', corpo: linhas, cabecalhos: { prefer } });
+  }
+
   async atualizar(tabela, filtros, campos) {
     const q = new URLSearchParams();
     for (const [k, v] of Object.entries(filtros)) q.append(k, `eq.${v}`);

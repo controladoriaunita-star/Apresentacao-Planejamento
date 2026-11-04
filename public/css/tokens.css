@@ -57,6 +57,14 @@
   --series-2: var(--color-secondary);
   --series-3: var(--info);
   --series-4: var(--ink-400);
+  /* Tipos de acidente (Segurança do Trabalho) — mesma leitura do "Modelo - Indicador Segurança do Trabalho":
+     SPT verde, CPT azul, TRJ laranja, FT vermelho. Só referências às cores da identidade. */
+  --acidente-spt: var(--success);
+  --acidente-cpt: var(--info);
+  --acidente-trj: var(--color-primary);
+  --acidente-ft: var(--error);
+  /* Dashboard Segurança: números da classificação no quadro de totais = rótulos dos eixos e valores dos gráficos */
+  --seg-fonte-numero: 22px;
   --chart-grid: var(--ink-200);
   --chart-axis: var(--ink-500);
 

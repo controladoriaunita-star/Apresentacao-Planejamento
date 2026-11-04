@@ -100,6 +100,109 @@ const pluginReferencia = {
   },
 };
 
+/**
+ * Gráfico de categorias (contagens) — Segurança do Trabalho. Mesmo visual dos demais (opcoesBase), com:
+ * barras verticais ou horizontais, empilhadas por série, linha opcional e o valor escrito em cada barra/ponto
+ * (como os gráficos da planilha de referência).
+ * @param {{tipo?: 'bar'|'line', horizontal?: boolean, empilhado?: boolean, categorias: string[],
+ *          series: Array<{rotulo, valores, cor}>, descricao?: string, legendaSempre?: boolean}} def
+ */
+export function graficoCategorias(alvo, def) {
+  const Chart = window.Chart;
+  if (!Chart) return montar(alvo, h('p', { class: 'muted' }, 'Biblioteca de gráficos indisponível.'));
+  instancias.get(alvo)?.destroy();
+  const tipo = def.tipo ?? 'bar';
+  const tela = h('canvas', { role: 'img', 'aria-label': def.descricao ?? def.series.map((s) => s.rotulo).join(', ') });
+  const caixa = h('div', { class: 'grafico' }, tela);
+  const legendaCategorias = def.coresCategorias ? legendaSempre(def.categorias.map((c, i) => ({ rotulo: def.rotulosLegenda?.[i] ?? c, cor: def.coresCategorias[i] }))) : null;
+  montar(alvo, ...[legendaCategorias ?? (def.legendaSempre || def.series.length > 1 ? legendaSempre(def.series) : null), caixa, tabelaCategorias(def)].filter(Boolean));
+
+  // `espessura`: multiplica a grossura máxima das barras (Dashboard Segurança usa 2 = o dobro).
+  const espessura = def.espessura ?? 1;
+  const datasets = def.series.map((s) => {
+    // `coresCategorias`: uma cor por barra (ex.: classificação do acidente com as cores de cada tipo).
+    const cor = def.coresCategorias ? def.coresCategorias.map(token) : token(s.cor);
+    return tipo === 'bar'
+      ? {
+        label: s.rotulo, data: s.valores, backgroundColor: cor, hoverBackgroundColor: cor, borderRadius: def.empilhado ? 3 : 6 * espessura, borderSkipped: def.empilhado ? false : 'start',
+        maxBarThickness: (def.horizontal ? 22 : 34) * espessura, categoryPercentage: espessura > 1 ? 0.9 : 0.78, barPercentage: espessura > 1 ? 0.94 : 0.9,
+      }
+      : { label: s.rotulo, data: s.valores, borderColor: cor, backgroundColor: token('--color-primary-soft'), fill: Boolean(def.area), borderWidth: 2.75, tension: 0, pointRadius: 4, pointBackgroundColor: cor, pointHoverRadius: 6, pointBorderColor: token('--surface'), pointBorderWidth: 1.5 };
+  });
+  const opcoes = opcoesBase({ percentual: false });
+  const eixoValor = def.horizontal ? 'x' : 'y';
+  const eixoCategoria = def.horizontal ? 'y' : 'x';
+  opcoes.indexAxis = def.horizontal ? 'y' : 'x';
+  opcoes.interaction = { mode: 'index', intersect: false, axis: eixoCategoria };
+  opcoes.layout = { padding: { top: def.horizontal ? 0 : 18, right: def.horizontal ? 28 : 4 } };
+  opcoes.plugins.tooltip.callbacks = { label: (c) => ` ${c.dataset.label}: ${c.raw ?? VAZIO}` };
+  const valor = opcoes.scales.y;
+  const categoria = opcoes.scales.x;
+  // `fonte`: tamanho (px) dos rótulos dos eixos e dos valores escritos nas barras.
+  const fonte = def.fonte ? { family: 'Inter', size: def.fonte, weight: '600' } : null;
+  valor.ticks = { ...valor.ticks, precision: 0, callback: (v) => v, ...(fonte ? { font: fonte } : {}) };
+  // `max`: topo fixo do eixo de valores (Segurança do Trabalho: maior mês + 2). Com teto inteiro, passo 1.
+  if (def.max) { valor.max = def.max; valor.ticks.stepSize = def.max <= 12 ? 1 : undefined; valor.ticks.maxTicksLimit = 13; }
+  categoria.ticks = { ...categoria.ticks, autoSkip: !def.horizontal, maxRotation: def.horizontal ? 0 : 50, ...(fonte ? { font: fonte } : {}) };
+  if (fonte) opcoes.layout.padding = { top: def.horizontal ? 0 : def.fonte + 12, right: def.horizontal ? def.fonte * 2 + 12 : 4 };
+  opcoes.scales = {
+    [eixoValor]: { ...valor, stacked: Boolean(def.empilhado), grid: { ...valor.grid, display: !def.horizontal }, ...(def.horizontal ? { border: { display: false }, ticks: { ...valor.ticks, display: false } } : {}) },
+    [eixoCategoria]: { ...categoria, stacked: Boolean(def.empilhado) },
+  };
+  opcoes.plugins.rotulosValor = { empilhado: Boolean(def.empilhado), horizontal: Boolean(def.horizontal), fonte: def.fonte ?? null };
+  const chart = new Chart(tela, { type: tipo, data: { labels: def.categorias, datasets }, options: opcoes, plugins: [pluginRotulos] });
+  instancias.set(alvo, chart);
+  return chart;
+}
+
+/** Escreve o valor em cada barra/ponto (zeros ficam sem rótulo, como no Excel). */
+const pluginRotulos = {
+  id: 'rotulosValor',
+  afterDatasetsDraw(chart, _args, opcoes) {
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.font = opcoes?.fonte ? `700 ${opcoes.fonte}px Inter, sans-serif` : `600 ${fonteEixo()}px Inter, sans-serif`;
+    chart.data.datasets.forEach((ds, i) => {
+      const meta = chart.getDatasetMeta(i);
+      if (meta.hidden) return;
+      meta.data.forEach((el, j) => {
+        const v = ds.data[j];
+        if (!v) return;
+        const { x, y } = el.tooltipPosition();
+        if (opcoes?.empilhado) {
+          ctx.fillStyle = token('--surface');
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          const props = el.getProps(['x', 'y', 'base'], true);
+          const meio = opcoes.horizontal ? [(props.x + props.base) / 2, props.y] : [props.x, (props.y + props.base) / 2];
+          ctx.fillText(String(v), meio[0], meio[1]);
+        } else if (opcoes?.horizontal) {
+          ctx.fillStyle = token('--ink-800');
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(String(v), x + 8, y);
+        } else {
+          ctx.fillStyle = token('--ink-800');
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(String(v), x, y - 6);
+        }
+      });
+    });
+    ctx.restore();
+  },
+};
+
+function legendaSempre(series) {
+  return h('div', { class: 'legenda' }, series.map((s) => h('span', {}, h('i', { style: { background: `var(${s.cor})` } }), s.rotulo)));
+}
+
+function tabelaCategorias(def) {
+  return h('table', { class: 'sr-only' },
+    h('thead', {}, h('tr', {}, h('th', {}, 'Categoria'), def.series.map((s) => h('th', {}, s.rotulo)))),
+    h('tbody', {}, def.categorias.map((c, i) => h('tr', {}, h('td', {}, c), def.series.map((s) => h('td', {}, s.valores[i] ?? VAZIO))))));
+}
+
 function legenda(series) {
   if (series.length < 2) return null;
   return h('div', { class: 'legenda' }, series.map((s) => h('span', {},

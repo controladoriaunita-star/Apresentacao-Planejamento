@@ -124,6 +124,22 @@ export function botaoAcao(rotulo, acao, classe = 'btn secondary') {
   return botao;
 }
 
+/**
+ * Faz o elemento ocupar a altura que sobra até o pé da janela (gráficos da Segurança do Trabalho), com mínimo.
+ * Em telas pequenas (largura < 760 px ou altura < 620 px) usa só o mínimo e a página rola normalmente.
+ */
+export function ocuparAteRodape(el, { minimo = 300, folga = 20 } = {}) {
+  const ajustar = () => {
+    if (!el.isConnected) return window.removeEventListener('resize', ajustar);
+    const cabe = window.innerWidth >= 760 && window.innerHeight >= 620;
+    const livre = Math.floor(window.innerHeight - (el.getBoundingClientRect().top + window.scrollY) - folga);
+    el.style.height = `${cabe ? Math.max(minimo, livre) : minimo}px`;
+  };
+  window.addEventListener('resize', ajustar);
+  requestAnimationFrame(ajustar);
+  ajustar();
+}
+
 /** Campo de formulário com rótulo. */
 export function campo(rotulo, controle, ajuda = null) {
   return h('label', { class: 'field' }, h('span', {}, rotulo), controle, ajuda ? h('small', {}, ajuda) : null);

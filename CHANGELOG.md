@@ -5,7 +5,34 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v21 |
+| Dev (local) | v22 (em validação — ainda não versionada no Git) |
+
+## v22 — 04/11/2026 — módulo Segurança do Trabalho
+
+- **Administração → Segurança do Trabalho** (Planejamento/Dev): cadastro manual de acidentes (todos os campos
+  obrigatórios; Incorporador e Método construtivo preenchidos pelo Cadastro de obras), **Baixar modelo** (.xlsx com as
+  abas Dados, Listas e Instruções), **Importar planilha** com pré-visualização (novos, já cadastrados, repetidos na
+  planilha, com erro), de-para de nomes de obra e gravação só dos registros novos e válidos, e **tabela histórica**
+  com filtros (obras, período, tipo), pesquisa (acidentado, empresa), ordenação por data, paginação no servidor,
+  detalhes, edição e exclusão.
+- **Dashboard Segurança** — sub-aba de Administração → Segurança do Trabalho (botão "Dashboard Segurança", rota
+  `#/admin/seguranca-dashboard`): os indicadores das abas Dashboard-01 e Dashboard-02 da planilha
+  "Controle de Acidentes-Dashboard.xlsx". Quadro de totais (total, média de dias de afastamento, classificação) e um
+  botão por indicador — por período, classificação (colorida por tipo), fase, ano, parte do corpo, obra, função e
+  empresa (10 primeiros com empates, como as tabelas dinâmicas). O indicador escolhido ocupa o resto da tela, com
+  gráfico e ranking (quantidade e % do total). Filtros: obras do cadastro e segmentador de ano.
+- Nova aba **Segurança do Trabalho** (Obra e Cliente): tabela por período e gráfico de colunas "Nº de acidentes
+  ocorridos no mês" por tipo (SPT, CPT, TRJ, FT), como o "Modelo - Indicador Segurança do Trabalho". O gráfico vai até
+  o pé da tela; eixo de 1 mês antes do primeiro acidente a 1 mês depois do último (meses sem acidente no meio ficam),
+  com no mínimo 12 meses. Em tela cheia segue a obra do filtro geral; fora dela, o seletor "Obra exibida" permite
+  outra obra ou todas.
+- Prevenção de duplicidade na planilha acumulativa: chave = data + obra + acidentado + tipo + parte do corpo + função +
+  empresa (`chaveDedup`, única no banco).
+- Cadastro de obras: excluir uma obra com acidentes passa a ser recusado (409), em vez de deixar acidentes órfãos.
+- Supabase: rodar `supabase/migrations/003_seguranca_trabalho.sql` **antes** de publicar (tabela `acidentes`).
+- Testes: `tests/domain/seguranca.test.mjs` e `tests/api/seguranca.test.mjs` (local e Supabase simulado). O simulador
+  do Supabase passou a entender `in.`, `gte.`, `lte.`, `ilike.`, `limit/offset`, `count=exact` e inserção em lote.
+- Detalhes técnicos e pendências: `docs/SEGURANCA_TRABALHO.md`.
 
 ## v21 — 27/10/2026 — novas telas e imagens na apresentação Obra, Cliente ou ambas
 

@@ -26,7 +26,9 @@ No primeiro acesso o app pede para criar o usuário **Dev**; ele cadastra os dem
 
 ## Abas
 
-Início · Resumo Geral · Resumo Físico · Resumo Econômico · Tempo x Caminho · Acompanhamento Fotográfico.
+Início · Resumo Geral · Resumo Físico · Resumo Econômico · Tempo x Caminho · Acompanhamento Fotográfico ·
+Dashboard Segurança · Segurança do Trabalho (acidentes cadastrados em Administração → Segurança do Trabalho;
+ver `docs/SEGURANCA_TRABALHO.md`).
 A apresentação Cliente tem as mesmas abas com as colunas "- Cliente". As **novas telas** (planilhas somente leitura,
 imagens e textos montados pelo Planejamento) e as imagens de TxC/fotos vão para a apresentação Obra, Cliente ou ambas. Botão **Apresentar** = tela cheia sem filtros.
 

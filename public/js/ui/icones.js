@@ -33,7 +33,9 @@ const CAMINHOS = {
   local: ['M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z', 'M12 7a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5z'],
   predio: ['M4 21V5l8-3v19', 'M12 9h8v12', 'M2 21h20', 'M7 8h2', 'M7 12h2', 'M7 16h2', 'M15 13h2', 'M15 17h2'],
   regua: ['M3 17L17 3l4 4L7 21z', 'M7 13l2 2', 'M10 10l2 2', 'M13 7l2 2'],
-  relogio: ['M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z', 'M12 7v5l3 2'],
+  escudo: ['M12 3l8 3v6c0 4.5-3.4 8.3-8 9c-4.6-.7-8-4.5-8-9V6z', 'M9 12l2 2l4-4'],
+  alerta: ['M12 4l9 16H3z', 'M12 10v4', 'M12 17v.01'],
+  relogio:['M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z', 'M12 7v5l3 2'],
 };
 
 export function icone(nome, { tamanho = 18, classe = 'ico' } = {}) {

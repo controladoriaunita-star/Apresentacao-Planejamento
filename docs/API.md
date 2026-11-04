@@ -83,7 +83,7 @@ Fonte online: `https://api.bcb.gov.br/dados/serie/bcdata.sgs.192/dados?formato=j
 | GET | `/obras/cadastro` | ver | → `cadastro[]` |
 | PUT | `/obras/cadastro` | editarConteudo | campos de `public/js/domain/cadastro-obra.js` → cadastro salvo (um por obra; atualiza pela `chave`) |
 | POST | `/obras/cadastro/importar` | editarConteudo | `{ linhas: [ { "<cabeçalho do Painel de Obras>": valor } ] }` → `{ importados, obras }` |
-| DELETE | `/obras/cadastro/:id` | editarConteudo | → `{ ok }` |
+| DELETE | `/obras/cadastro/:id` | editarConteudo | → `{ ok }`. **409** se a obra tiver acidentes na Segurança do Trabalho (v22) |
 
 ## Arquivos, mídias (TxC/fotos) e telas extras
 
@@ -102,3 +102,19 @@ Fonte online: `https://api.bcb.gov.br/dados/serie/bcdata.sgs.192/dados?formato=j
 | DELETE | `/telas/:id` | editarConteudo | apaga a tela e seus arquivos |
 
 Tipos aceitos no upload: PNG, JPEG, WEBP, GIF, PDF, CSV, XLS, XLSX, XLSM.
+
+## Segurança do Trabalho (v22)
+
+Regras em `public/js/domain/seguranca.js`; detalhes em `docs/SEGURANCA_TRABALHO.md`. Acidente =
+`{ id, obraId, data, faseObra, nomeAcidentado, funcao, empresa, tipo: "CPT"|"SPT"|"TRJ"|"FT", parteCorpo, diasAfastamento, resumo, origem, criadoPor, criadoEm, atualizadoPor, atualizadoEm }`.
+Nas respostas vêm também `obra`, `chaveObra`, `incorporador` (= Cliente) e `metodoConstrutivo` (= Sistema estrutural), lidos do Cadastro de obras.
+
+| Método | Caminho | Permissão | Corpo → Resposta |
+|---|---|---|---|
+| GET | `/seguranca/acidentes?obras=<ids>\|chaves=<chaves>&de=&ate=&tipos=CPT,SPT&nome=&empresa=&ordem=asc\|desc&pagina=1&tamanho=50` | ver | → `{ itens, total, pagina, tamanho }`. `tamanho` até 200; `tamanho=todos` (abas da apresentação) até 5000 |
+| GET | `/seguranca/indicadores?obras=\|chaves=&anos=2025,2026` | ver | → `{ anosDisponiveis, anos, indicadores }` (`calcularIndicadores`) |
+| POST | `/seguranca/acidentes` | editarConteudo | campos do acidente → 201. 400 campo inválido/obra sem Cliente ou Sistema estrutural; **409** acidente já existe (`chaveDedup`) |
+| PUT | `/seguranca/acidentes/:id` | editarConteudo | campos parciais → acidente (mesmas validações; 409 se virar duplicado) |
+| DELETE | `/seguranca/acidentes/:id` | editarConteudo | → `{ ok }` |
+| POST | `/seguranca/importacao/analisar` | editarConteudo | `{ linhas: [ { "<cabeçalho>": valor, __linha } ], mapaObras?: { "<chave do nome>": "<id do cadastro>" } }` → `{ linhas: [{ linha, situacao: "novo"\|"existente"\|"repetido"\|"erro", erros, avisos, entrada, acidente }], totais, obrasNaoEncontradas }` — não grava |
+| POST | `/seguranca/importacao` | editarConteudo | mesmo corpo → reanalisa e grava só os `novo` num único comando → `{ importados, jaExistentes, repetidos, comErro, erros: [{ linha, erros }] }` |
