@@ -11,10 +11,7 @@ import { ir } from '../core/roteador.js';
 import { seletorArquivos } from '../ui/seletor-arquivos.js';
 import { seletorDestino } from '../ui/seletor-destino.js';
 
-const ACEITA = {
-  imagem: 'image/png,image/jpeg,image/webp,image/gif',
-  planilha: '.xlsx,.xlsm,.xls,.csv',
-};
+const ACEITA_PLANILHAS = '.xlsx,.xlsm,.xls,.csv';
 
 export async function renderAdminTelas(alvo) {
   const desenhar = async () => {
@@ -136,9 +133,9 @@ function editorBloco(b, i, blocos, redesenhar) {
       ? campo('Texto', h('textarea', { oninput: (e) => { b.texto = e.target.value; } }, b.texto ?? ''))
       : h('div', { class: 'stack', style: { gap: '6px' } },
         seletorArquivos({
-          aceita: ACEITA[b.tipo], aoEscolher: enviar,
+          imagens: b.tipo === 'imagem', aceita: b.tipo === 'planilha' ? ACEITA_PLANILHAS : '', aoEscolher: enviar,
           titulo: b.tipo === 'imagem' ? 'Arraste a imagem ou clique para escolher' : 'Arraste a planilha ou clique para escolher',
-          dica: b.tipo === 'imagem' ? 'PNG, JPG ou WEBP' : 'XLSX, XLS ou CSV — exibida somente leitura',
+          dica: b.tipo === 'imagem' ? 'Qualquer formato de imagem (JPG, PNG, HEIC, WEBP, TIFF…)' : 'XLSX, XLS ou CSV — exibida somente leitura',
         }).elemento,
         estadoArquivo));
 }

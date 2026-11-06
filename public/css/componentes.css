@@ -65,6 +65,7 @@
   transition: border-color 0.15s, background 0.15s;
 }
 .zona-envio:hover, .zona-envio:focus-visible, .zona-envio.arrastando { border-color: var(--color-primary); background: var(--color-primary-soft); outline: none; }
+.zona-envio.convertendo { cursor: progress; opacity: 0.6; } /* convertendo imagem (HEIC, TIFF…) para JPG/PNG */
 .zona-icone { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--surface); color: var(--color-primary); box-shadow: var(--shadow-card); flex-shrink: 0; }
 .zona-texto { display: flex; flex-direction: column; gap: 2px; }
 .zona-texto b { font-weight: 500; color: var(--ink-800); }

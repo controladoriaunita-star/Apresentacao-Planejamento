@@ -10,7 +10,7 @@ import { normalizarMidia, normalizarTela } from '../../public/js/domain/conteudo
 import { enviarBinario, enviarJson, erro, lerCorpo, lerJson } from '../http/respostas.mjs';
 import { TIPOS_ACEITOS } from '../store/arquivos.mjs';
 
-const MENSAGEM_TIPO = 'Tipo de arquivo não aceito. Envie imagem (PNG, JPG, WEBP), PDF ou planilha (XLSX, XLS, CSV).';
+const MENSAGEM_TIPO = 'Tipo de arquivo não aceito. Envie imagem (PNG, JPG, WEBP, GIF — o app converte os demais formatos), PDF ou planilha (XLSX, XLS, CSV).';
 const nomeSeguro = (nome) => String(nome ?? 'arquivo').replace(/[\\/:*?"<>|]+/g, '_').slice(0, 180);
 
 export function registrarConteudo(rotas, { arquivos, midias, telas, config }) {

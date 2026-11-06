@@ -6,7 +6,7 @@
  */
 import { chaveObra, dataIso, numero, texto } from './normalizar.js';
 
-export const GRUPOS_CADASTRO = ['Identificação', 'Equipe', 'Características', 'Áreas e unidades', 'Prazos', 'Orçamento e INCC'];
+export const GRUPOS_CADASTRO = ['Identificação', 'Equipe', 'Características', 'Áreas e unidades', 'Prazos', 'Orçamento e INCC', 'Apresentação'];
 
 export const CAMPOS_CADASTRO = [
   { campo: 'obra', rotulo: 'Obra', cabecalho: 'Obras', outros: ['Nome da Obra'], tipo: 'texto', grupo: 'Identificação', obrigatorio: true },
@@ -50,6 +50,8 @@ export const CAMPOS_CADASTRO = [
   { campo: 'mesOrcamento', rotulo: 'Mês do orçamento', cabecalho: 'Mês Orçamento', tipo: 'data', grupo: 'Orçamento e INCC' },
   { campo: 'dataBaseIncc', rotulo: 'Data-base INCC', cabecalho: 'Data base INCC', tipo: 'data', grupo: 'Orçamento e INCC', usadoEm: 'INCC base (se o índice ficar vazio)' },
   { campo: 'inccBase', rotulo: 'INCC do orçamento base (índice)', cabecalho: 'INCC (Orç. Base)', tipo: 'numero', grupo: 'Orçamento e INCC', usadoEm: 'INCC base e % de reajuste' },
+  // Aba Segurança do Trabalho: padrão na apresentação Obra; na Cliente só para as obras marcadas aqui.
+  { campo: 'segurancaCliente', rotulo: 'Segurança do Trabalho na apresentação Cliente', tipo: 'opcao', opcoes: ['', 'sim'], rotulos: { '': 'Não exibir', sim: 'Exibir' }, grupo: 'Apresentação', ajuda: 'Na apresentação Obra a aba aparece sempre' },
 ];
 
 const POR_CAMPO = new Map(CAMPOS_CADASTRO.map((c) => [c.campo, c]));

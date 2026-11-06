@@ -37,20 +37,38 @@ export function criarSupabaseFalso({ url = 'http://supabase.falso' } = {}) {
     return init.body;
   }
 
+  /** Valores de `in.("a","b",c)` (aspas opcionais, com \" e \\ escapados). */
+  const valoresIn = (texto) => [...texto.slice(1, -1).matchAll(/"((?:[^"\\]|\\.)*)"|([^,]+)/g)].map((m) => (m[1] !== undefined ? m[1].replace(/\\(.)/g, '$1') : m[2]));
+
   function filtrar(linhas, params) {
     let resultado = linhas;
     for (const [k, v] of params) {
-      if (k === 'select' || k === 'order' || k === 'on_conflict') continue;
-      const valor = v.replace(/^eq\./, '');
-      resultado = resultado.filter((l) => String(l[k]) === valor);
+      if (['select', 'order', 'on_conflict', 'limit', 'offset'].includes(k)) continue;
+      const [, op, valor] = v.match(/^(eq|in|gte|lte|ilike)\.(.*)$/s) ?? [null, 'eq', v];
+      if (op === 'eq') resultado = resultado.filter((l) => String(l[k]) === valor);
+      if (op === 'in') { const vs = new Set(valoresIn(valor)); resultado = resultado.filter((l) => vs.has(String(l[k]))); }
+      if (op === 'gte') resultado = resultado.filter((l) => String(l[k]) >= valor);
+      if (op === 'lte') resultado = resultado.filter((l) => String(l[k]) <= valor);
+      if (op === 'ilike') { const t = valor.replace(/\*/g, '').toLowerCase(); resultado = resultado.filter((l) => String(l[k] ?? '').toLowerCase().includes(t)); }
     }
     const ordem = params.get('order');
     if (ordem) {
-      const [col, dir] = ordem.split('.');
-      resultado = [...resultado].sort((a, b) => String(a[col] ?? '').localeCompare(String(b[col] ?? '')) * (dir === 'desc' ? -1 : 1));
+      const criterios = ordem.split(',').map((c) => c.split('.'));
+      resultado = [...resultado].sort((a, b) => {
+        for (const [col, dir] of criterios) {
+          const d = String(a[col] ?? '').localeCompare(String(b[col] ?? '')) * (dir === 'desc' ? -1 : 1);
+          if (d) return d;
+        }
+        return 0;
+      });
     }
     return resultado;
   }
+
+  /** Únicos do banco real que a API precisa ver respeitados (supabase/migrations). */
+  const UNICOS = { acidentes: ['chave_dedup'] };
+  const violaUnico = (nome, linhas, nova, ignorar = null) => (UNICOS[nome] ?? []).some((col) => linhas.some((l) => l !== ignorar && l[col] === nova[col]));
+  const colunas = (linha, select) => (!select || select === '*' ? { ...linha } : Object.fromEntries(select.split(',').map((c) => [c, linha[c]])));
 
   async function atender(entrada, init = {}) {
     const alvo = new URL(typeof entrada === 'string' ? entrada : entrada.url);
@@ -121,10 +139,33 @@ export function criarSupabaseFalso({ url = 'http://supabase.falso' } = {}) {
       const nome = caminho.slice('/rest/v1/'.length);
       const linhas = tabela(nome);
       const params = alvo.searchParams;
-      if (metodo === 'GET') return json(200, filtrar(linhas, params).map((l) => ({ ...l })));
+      if (metodo === 'GET') {
+        const todas = filtrar(linhas, params);
+        const inicio = Number(params.get('offset') ?? 0);
+        const fim = params.has('limit') ? inicio + Number(params.get('limit')) : undefined;
+        const pagina = todas.slice(inicio, fim).map((l) => colunas(l, params.get('select')));
+        const cabecalhos = { 'content-type': 'application/json' };
+        if (/count=exact/.test(cab.prefer ?? '')) cabecalhos['content-range'] = `${inicio}-${inicio + pagina.length - 1}/${todas.length}`;
+        return new Response(JSON.stringify(pagina), { status: 200, headers: cabecalhos });
+      }
+      if (metodo === 'POST' && Array.isArray(corpo)) {
+        // Inserção em lote: tudo ou nada; com resolution=ignore-duplicates pula os conflitos em on_conflict.
+        const ignorar = /ignore-duplicates/.test(cab.prefer ?? '');
+        const conflito = params.get('on_conflict');
+        const criadas = [];
+        for (const nova of corpo) {
+          const repetida = (conflito && [...linhas, ...criadas].some((l) => l[conflito] === nova[conflito])) || violaUnico(nome, [...linhas, ...criadas], nova);
+          if (repetida && ignorar) continue;
+          if (repetida) return json(409, { message: 'duplicate key value violates unique constraint' });
+          criadas.push({ ...nova });
+        }
+        linhas.push(...criadas);
+        return json(201, criadas.map((l) => ({ ...l })));
+      }
       if (metodo === 'POST') {
         const conflito = params.get('on_conflict');
         const nova = { ...corpo };
+        if (!conflito && violaUnico(nome, linhas, nova)) return json(409, { message: 'duplicate key value violates unique constraint' });
         const i = conflito ? linhas.findIndex((l) => l[conflito] === nova[conflito]) : -1;
         if (i >= 0) linhas[i] = { ...linhas[i], ...nova };
         else {
@@ -135,6 +176,7 @@ export function criarSupabaseFalso({ url = 'http://supabase.falso' } = {}) {
       }
       const alvos = filtrar(linhas, params);
       if (metodo === 'PATCH') {
+        if (alvos.some((l) => violaUnico(nome, linhas, { ...l, ...corpo }, l))) return json(409, { message: 'duplicate key value violates unique constraint' });
         for (const l of alvos) Object.assign(l, corpo);
         return json(200, alvos.map((l) => ({ ...l })));
       }

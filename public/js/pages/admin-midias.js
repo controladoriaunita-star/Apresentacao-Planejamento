@@ -10,8 +10,6 @@ import { abrirModal, alerta, botaoAcao, campo, carregando, confirmar, toast, vaz
 import { seletorArquivos } from '../ui/seletor-arquivos.js';
 import { seletorDestino } from '../ui/seletor-destino.js';
 
-const IMAGENS = 'image/png,image/jpeg,image/webp,image/gif';
-
 /**
  * Formulário de cadastro/edição. Em cadastro novo aceita vários arquivos: cada um vira um registro.
  * @param {object} inicial  {tipo, obra, mes, …} ou a mídia existente (com id)
@@ -28,9 +26,9 @@ export function abrirFormMidia(inicial, aoSalvar) {
   const ordem = h('input', { type: 'number', value: inicial.ordem ?? 0, style: { maxWidth: '120px' } });
   const destino = seletorDestino(destinoDaMidia(inicial));
   const arquivos = seletorArquivos({
-    aceita: IMAGENS, multiplo: !editando,
+    imagens: true, multiplo: !editando,
     titulo: editando ? 'Arraste a nova imagem ou clique para trocar' : 'Arraste as imagens aqui ou clique para escolher',
-    dica: editando ? 'Opcional — sem nova imagem, mantém a atual' : 'PNG, JPG ou WEBP · cada imagem vira um registro com os mesmos dados',
+    dica: editando ? 'Opcional — sem nova imagem, mantém a atual · qualquer formato de imagem' : 'Qualquer formato de imagem (JPG, PNG, HEIC, WEBP, TIFF…) · cada imagem vira um registro com os mesmos dados',
   });
 
   const salvar = async () => {

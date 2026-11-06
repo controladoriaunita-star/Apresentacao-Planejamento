@@ -5,7 +5,55 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v21 |
+| Dev (local) | v23 (em validação — ainda não publicada) |
+
+## v23 — 05/11/2026 — Segurança do Trabalho na Obra/Cliente, papel Segurança e imagens em qualquer formato
+
+- Módulo Segurança do Trabalho (v22, feito à parte a partir da mesma `main`) trazido para o projeto, com:
+  - Aba **Segurança do Trabalho** é **padrão na apresentação Obra** e **opcional no Cliente**: só aparece (menu,
+    atalhos da capa e seletor "Obra exibida") para as obras marcadas no Cadastro de obras → grupo **Apresentação** →
+    "Segurança do Trabalho na apresentação Cliente" (padrão: Não exibir). Campo novo dentro de `dados` do cadastro —
+    sem migration. Trocar para uma obra não marcada estando na aba leva à capa do Cliente.
+- Novo papel **Segurança**: entra direto em Administração → Segurança do Trabalho; vê só essa seção e o Dashboard
+  Segurança (sem apresentações, sem Obra/Cliente, sem Apresentar). Não carrega os dados das planilhas: as obras vêm de
+  `GET /api/seguranca/obras` (só id, nome, cliente e sistema estrutural). Capacidades novas em `domain/permissoes.js`:
+  `verSeguranca` (ler acidentes/indicadores — todos os papéis), `editarSeguranca` (Dev, Planejamento, Segurança) e
+  `conta` (trocar a própria senha — todos). Supabase: rodar `supabase/migrations/004_papel_seguranca.sql`.
+- **Imagens em qualquer formato** (TxC e fotos, blocos de imagem das Novas telas). Antes: só PNG, JPG, WEBP e GIF.
+  Agora também HEIC/HEIF (iPhone), TIFF, BMP, AVIF, SVG, ICO, JFIF…: o navegador converte para JPG (fotos) ou PNG
+  (SVG/ICO/AVIF/BMP) antes do envio (`ui/imagem.js`), então o servidor e o Storage continuam guardando só formatos que
+  qualquer navegador abre (SVG nunca é servido cru). HEIC usa `vendor/heic2any.min.js` e TIFF `vendor/utif.js` +
+  `vendor/pako_inflate.min.js`, carregados só quando necessários. Arquivo que não é imagem, inclusive arrastado para
+  a área de envio, passa a ser recusado com aviso.
+- Testes: papel Segurança na API (local e Supabase simulado) e 3 testes de tela novos
+  (`tests/e2e/02-seguranca-e-imagens.spec.cjs`, com imagens de exemplo em `tests/fixtures/imagens`).
+
+## v22 — 04/11/2026 — módulo Segurança do Trabalho
+
+- **Administração → Segurança do Trabalho** (Planejamento/Dev): cadastro manual de acidentes (todos os campos
+  obrigatórios; Incorporador e Método construtivo preenchidos pelo Cadastro de obras), **Baixar modelo** (.xlsx com as
+  abas Dados, Listas e Instruções), **Importar planilha** com pré-visualização (novos, já cadastrados, repetidos na
+  planilha, com erro), de-para de nomes de obra e gravação só dos registros novos e válidos, e **tabela histórica**
+  com filtros (obras, período, tipo), pesquisa (acidentado, empresa), ordenação por data, paginação no servidor,
+  detalhes, edição e exclusão.
+- **Dashboard Segurança** — sub-aba de Administração → Segurança do Trabalho (botão "Dashboard Segurança", rota
+  `#/admin/seguranca-dashboard`): os indicadores das abas Dashboard-01 e Dashboard-02 da planilha
+  "Controle de Acidentes-Dashboard.xlsx". Quadro de totais (total, média de dias de afastamento, classificação) e um
+  botão por indicador — por período, classificação (colorida por tipo), fase, ano, parte do corpo, obra, função e
+  empresa (10 primeiros com empates, como as tabelas dinâmicas). O indicador escolhido ocupa o resto da tela, com
+  gráfico e ranking (quantidade e % do total). Filtros: obras do cadastro e segmentador de ano.
+- Nova aba **Segurança do Trabalho** (Obra e Cliente): tabela por período e gráfico de colunas "Nº de acidentes
+  ocorridos no mês" por tipo (SPT, CPT, TRJ, FT), como o "Modelo - Indicador Segurança do Trabalho". O gráfico vai até
+  o pé da tela; eixo de 1 mês antes do primeiro acidente a 1 mês depois do último (meses sem acidente no meio ficam),
+  com no mínimo 12 meses. Em tela cheia segue a obra do filtro geral; fora dela, o seletor "Obra exibida" permite
+  outra obra ou todas.
+- Prevenção de duplicidade na planilha acumulativa: chave = data + obra + acidentado + tipo + parte do corpo + função +
+  empresa (`chaveDedup`, única no banco).
+- Cadastro de obras: excluir uma obra com acidentes passa a ser recusado (409), em vez de deixar acidentes órfãos.
+- Supabase: rodar `supabase/migrations/003_seguranca_trabalho.sql` **antes** de publicar (tabela `acidentes`).
+- Testes: `tests/domain/seguranca.test.mjs` e `tests/api/seguranca.test.mjs` (local e Supabase simulado). O simulador
+  do Supabase passou a entender `in.`, `gte.`, `lte.`, `ilike.`, `limit/offset`, `count=exact` e inserção em lote.
+- Detalhes técnicos e pendências: `docs/SEGURANCA_TRABALHO.md`.
 
 ## v21 — 27/10/2026 — novas telas e imagens na apresentação Obra, Cliente ou ambas
 
