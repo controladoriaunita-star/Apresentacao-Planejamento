@@ -116,8 +116,8 @@ const pct = (v) => fmtPercentual(v, 1);
  */
 function tabela(r, { abertos, pais, retirados, aoRetirar }) {
   const cols = [
-    ['Orçamento', (l) => fmtMoeda(l.orcamento), 'extra'],
-    ['Orç. projetado', (l) => fmtMoeda(l.economico?.orcamentoProjetado), 'extra'],
+    ['Orçamento (R$)', (l) => fmtMoeda(l.orcamento), 'extra'],
+    ['Orç. projetado (R$)', (l) => fmtMoeda(l.economico?.orcamentoProjetado), 'extra'],
     ['IEC', (l) => (l.economico?.iec ? fmtNumero(l.economico.iec, 3) : VAZIO), 'extra'],
     ['Realizado acm', (l) => pct(l.realizadoAcm), 'cur'],
     ['Realizado mês', (l) => pct(l.realizadoMes), 'cur'],

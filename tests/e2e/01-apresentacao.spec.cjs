@@ -41,12 +41,12 @@ test('Painel de obras: grupos expandem, colunas fixadas ficam na tela inicial e 
   // expandir o grupo mostra as demais colunas; o alfinete fixa a coluna, que fica ao recolher e após recarregar
   await grupos.getByRole('button', { name: 'Expandir Informações Gerais' }).click();
   await expect(coluna('Cidade')).toBeVisible();
-  await painel.getByRole('button', { name: 'Fixar Orçamento raso na tela inicial' }).click();
+  await painel.getByRole('button', { name: 'Fixar Orçamento raso (R$) na tela inicial' }).click();
   await grupos.getByRole('button', { name: 'Recolher Informações Gerais' }).click();
   await expect(coluna('Cidade')).toHaveCount(0);
   await page.reload();
   await expect(coluna('Orçamento raso')).toBeVisible();
-  await painel.getByRole('button', { name: 'Desafixar Orçamento raso na tela inicial' }).click();
+  await painel.getByRole('button', { name: 'Desafixar Orçamento raso (R$) na tela inicial' }).click();
   await expect(coluna('Orçamento raso')).toHaveCount(0);
   await page.getByRole('button', { name: 'Todas do cadastro' }).click();
   await painel.getByRole('link', { name: 'Torre Gama' }).click();
@@ -126,7 +126,7 @@ test('Resumo Econômico: item expande com detalhes e comentários', async ({ pag
   await expect(comentario).toBeHidden();
   await page.getByRole('button', { name: 'Detalhes de ESTRUTURA' }).click();
   await expect(comentario).toBeVisible();
-  await expect(page.locator('tr.detalhe:not(.oculto)').getByText('Saldos contratos', { exact: true })).toBeVisible();
+  await expect(page.locator('tr.detalhe:not(.oculto)').getByText('Saldos contratos (R$)', { exact: true })).toBeVisible();
 });
 
 test('filtro de obras estilo Excel: pesquisa e aplica só os resultados', async ({ page }) => {
