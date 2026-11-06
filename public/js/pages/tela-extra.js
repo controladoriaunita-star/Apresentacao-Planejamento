@@ -1,16 +1,18 @@
 /**
- * Telas personalizadas da apresentação Cliente: imagens, planilhas (somente leitura) e textos
- * montados pelo Planejamento em Administração → Telas do cliente.
+ * Telas extras das apresentações Obra e Cliente: imagens, planilhas (somente leitura) e textos
+ * montados pelo Planejamento em Administração → Novas telas.
  */
 import { api } from '../core/api.js';
 import { h, montar } from '../core/dom.js';
 import { card, cardTitulo, vazio } from '../ui/componentes.js';
 import { visualizarPlanilha } from '../ui/planilha.js';
 
-export function renderTelaCliente(alvo, tela) {
+const EYEBROW = { obra: 'Apresentação da obra', cliente: 'Apresentação ao cliente' };
+
+export function renderTelaExtra(alvo, tela, visao) {
   if (!tela) return montar(alvo, vazio('Tela não encontrada', 'Ela pode ter sido removida ou não se aplica às obras filtradas.'));
   montar(alvo,
-    h('div', { class: 'titulo-pagina' }, h('div', {}, h('div', { class: 'eyebrow' }, 'Apresentação ao cliente'), h('h1', {}, tela.titulo), tela.subtitulo ? h('p', {}, tela.subtitulo) : null)),
+    h('div', { class: 'titulo-pagina' }, h('div', {}, h('div', { class: 'eyebrow' }, EYEBROW[visao]), h('h1', {}, tela.titulo), tela.subtitulo ? h('p', {}, tela.subtitulo) : null)),
     tela.blocos.length
       ? h('div', { class: 'blocos' }, tela.blocos.map((b) => card({ class: `card-pad ${b.largura === 'metade' ? '' : 'inteira'}` },
         b.titulo ? cardTitulo(b.titulo) : null,

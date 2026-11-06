@@ -20,6 +20,7 @@ export const estado = {
   filtro: lerFiltroSalvo(),
   carregando: false,
   erro: null,
+  obrasSeguranca: null, // papel Segurança: só as obras do cadastro (sem os dados das apresentações)
 
   ouvir(fn) {
     ouvintes.add(fn);
@@ -52,6 +53,26 @@ export const estado = {
       this.carregando = false;
       this.avisar();
     }
+  },
+
+  /** Papel Segurança: carrega só id/nome/cliente/sistema estrutural das obras do Cadastro de obras. */
+  async carregarObrasSeguranca() {
+    this.carregando = true;
+    this.erro = null;
+    this.avisar();
+    try {
+      this.obrasSeguranca = await api.get('/seguranca/obras');
+    } catch (e) {
+      this.erro = e.message;
+    } finally {
+      this.carregando = false;
+      this.avisar();
+    }
+  },
+
+  /** Obras do Cadastro de obras (completo ou, no papel Segurança, o resumo de /seguranca/obras). */
+  cadastros() {
+    return this.bruto?.cadastro ?? this.obrasSeguranca ?? [];
   },
 
   /** BD_Físico por atividade de uma obra (sob demanda, em cache). */

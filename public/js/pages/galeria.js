@@ -10,7 +10,7 @@ import { api } from '../core/api.js';
 import { h, montar } from '../core/dom.js';
 import { fmtMes, fmtMesLongo } from '../core/formato.js';
 import { estado } from '../core/estado.js';
-import { TIPOS_MIDIA } from '../domain/conteudo.js';
+import { TIPOS_MIDIA, midiasDaVisao } from '../domain/conteudo.js';
 import { pode } from '../domain/permissoes.js';
 import { alerta, badge, carregando, vazio } from '../ui/componentes.js';
 import { obraUnica } from '../ui/filtros.js';
@@ -42,7 +42,7 @@ export async function renderGaleria(alvo, ctx, tipo) {
   } catch (e) {
     return montar(alvo, titulo, alerta('error', 'Não foi possível carregar as imagens', e.message));
   }
-  if (visao === 'cliente') lista = lista.filter((m) => m.visivelCliente);
+  lista = midiasDaVisao(lista, visao);
 
   const meses = [...new Set(lista.map((m) => m.mes))].sort().reverse(); // mais recente primeiro
   if (!meses.length) {

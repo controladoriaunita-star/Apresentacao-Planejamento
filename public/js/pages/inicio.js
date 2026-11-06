@@ -33,7 +33,7 @@ export function renderInicio(alvo, { base, filtro, visao, abas, telas }) {
 
   const atalhos = [
     ...abas.filter((a) => !a.capa).map((a) => ({ href: `#/${visao}/${a.id}`, nome: a.nome, descricao: a.descricao, icone: a.icone })),
-    ...telas.map((t) => ({ href: `#/cliente/tela/${t.id}`, nome: t.titulo, descricao: t.subtitulo ?? 'Tela do cliente', icone: 'planilha' })),
+    ...telas.map((t) => ({ href: `#/${visao}/tela/${t.id}`, nome: t.titulo, descricao: t.subtitulo ?? 'Tela do cliente', icone: 'planilha' })),
   ];
 
   montar(alvo, h('section', { class: `capa ${visao === 'cliente' ? '' : 'capa-obras'}` },

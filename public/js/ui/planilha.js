@@ -43,6 +43,22 @@ export async function linhasComoObjetos(arquivo, nomesAba = []) {
 }
 
 /**
+ * Gera e baixa um .xlsx no navegador (modelo de importação da Segurança do Trabalho).
+ * @param {string} nomeArquivo
+ * @param {Array<{nome: string, linhas: unknown[][], larguras?: number[]}>} abas
+ */
+export async function baixarPlanilha(nomeArquivo, abas) {
+  const XLSX = await carregarSheetJs();
+  const wb = XLSX.utils.book_new();
+  for (const aba of abas) {
+    const ws = XLSX.utils.aoa_to_sheet(aba.linhas);
+    if (aba.larguras) ws['!cols'] = aba.larguras.map((wch) => ({ wch }));
+    XLSX.utils.book_append_sheet(wb, ws, aba.nome);
+  }
+  XLSX.writeFile(wb, nomeArquivo);
+}
+
+/**
  * Devolve na hora um elemento que é preenchido com a planilha de um arquivo enviado (com abas),
  * como tabela somente leitura.
  * Os valores aparecem formatados como no Excel (texto exibido da célula).

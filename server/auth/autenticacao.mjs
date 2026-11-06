@@ -21,6 +21,7 @@
  */
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { erro } from '../http/respostas.mjs';
+import { papelValido } from '../../public/js/domain/permissoes.js';
 import { ColecaoJson } from '../store/json-store.mjs';
 import { ColecaoSupabase } from '../store/supabase-store.mjs';
 import { conferirSenha, gerarHash, validarSenha } from './senha.mjs';
@@ -44,7 +45,7 @@ function exigirDados({ nome, email, senha, papel }, { dominio, comSenha = true, 
   const problema = (String(nome ?? '').trim() ? null : 'Informe o nome.')
     ?? validarEmail(email)
     ?? (dominio && !normalizarEmail(email).endsWith(`@${dominio}`) ? `Use um e-mail @${dominio}.` : null)
-    ?? (comPapel && !['dev', 'planejamento', 'viewer'].includes(papel) ? 'Papel inválido.' : null)
+    ?? (comPapel && !papelValido(papel) ? 'Papel inválido.' : null)
     ?? (comSenha ? validarSenha(senha) : null);
   if (problema) throw erro(400, problema);
 }

@@ -242,6 +242,66 @@ test('galeria de fotos: meses, locais, teclado e ampliar', async ({ page }) => {
   await expect(page.locator('.visor')).toHaveCount(0);
 });
 
+test('Novas telas e imagens aparecem só na apresentação escolhida (Obra, Cliente ou ambas)', async ({ page }) => {
+  await entrar(page, DEV);
+  await page.evaluate(async () => {
+    const H = { 'x-requested-with': 'fetch', 'content-type': 'application/json' };
+    const post = (url, corpo) => fetch(url, { method: 'POST', headers: H, body: JSON.stringify(corpo) });
+    for (const [titulo, destino] of [['Equipe interna', 'obra'], ['Marcos do cliente', 'cliente'], ['Cronograma geral', 'ambas']]) {
+      await post('/api/telas', { titulo, destino, blocos: [{ tipo: 'texto', texto: `Conteúdo de ${titulo}` }] });
+    }
+    const png = await new Promise((r) => { const c = document.createElement('canvas'); c.width = 40; c.height = 30; c.toBlob(r, 'image/png'); });
+    for (const [local, destino] of [['Decorado', 'cliente'], ['Canteiro', 'obra']]) {
+      const a = await (await fetch('/api/arquivos', { method: 'POST', headers: { 'x-requested-with': 'fetch', 'content-type': 'image/png' }, body: png })).json();
+      await post('/api/midias', { tipo: 'foto', obra: 'Residencial Alpha', mes: '2026-03', grupo: local, arquivoId: a.id, destino });
+    }
+  });
+
+  // Telas no menu de cada apresentação
+  const menu = page.getByRole('navigation', { name: 'Abas da apresentação' });
+  await page.goto('/#/obra/resumo-fisico');
+  await expect(menu.getByRole('link', { name: 'Equipe interna' })).toBeVisible();
+  await expect(menu.getByRole('link', { name: 'Cronograma geral' })).toBeVisible();
+  await expect(menu.getByRole('link', { name: 'Marcos do cliente' })).toHaveCount(0);
+  await menu.getByRole('link', { name: 'Equipe interna' }).click();
+  await expect(page).toHaveURL(/#\/obra\/tela\//);
+  await expect(page.getByText('Conteúdo de Equipe interna')).toBeVisible();
+  await expect(page.getByText('Apresentação da obra')).toBeVisible();
+
+  await page.goto('/#/cliente/resumo-fisico');
+  await expect(menu.getByRole('link', { name: 'Marcos do cliente' })).toBeVisible();
+  await expect(menu.getByRole('link', { name: 'Cronograma geral' })).toBeVisible();
+  await expect(menu.getByRole('link', { name: 'Equipe interna' })).toHaveCount(0);
+
+  // Fotos de cada apresentação (obra Alpha, mês 03/2026)
+  await page.goto('/#/obra/fotos');
+  await page.locator('[data-teste="filtro-obras"]').click();
+  await page.getByRole('searchbox', { name: 'Pesquisar' }).fill('alpha');
+  await page.getByLabel('(Selecionar todos os resultados)').check();
+  await page.getByRole('button', { name: 'OK', exact: true }).click();
+  await page.getByRole('tab', { name: /MAR\/26/ }).click();
+  await expect(page.getByRole('tab', { name: /Canteiro/ })).toBeVisible();
+  await expect(page.getByRole('tab', { name: /Decorado/ })).toHaveCount(0);
+  await page.goto('/#/cliente/fotos');
+  await page.getByRole('tab', { name: /MAR\/26/ }).click();
+  await expect(page.getByRole('tab', { name: /Decorado/ })).toBeVisible();
+  await expect(page.getByRole('tab', { name: /Canteiro/ })).toHaveCount(0);
+
+  // Administração: nome novo e caixa "Apresentação" nos dois formulários
+  await page.goto('/#/admin/telas');
+  await expect(page.getByRole('heading', { name: 'Novas telas' })).toBeVisible();
+  await expect(page.getByRole('row', { name: /Equipe interna/ })).toContainText('Somente Obra');
+  await page.getByRole('button', { name: 'Nova tela' }).click();
+  await expect(page.getByRole('dialog').getByRole('combobox', { name: /^Apresentação/ })).toHaveValue('cliente');
+  await page.getByRole('button', { name: 'Cancelar' }).click();
+  await page.goto('/#/admin/midias');
+  await page.getByRole('button', { name: 'Acompanhamento fotográfico' }).click();
+  await expect(page.getByRole('row', { name: /Decorado/ })).toContainText('Somente Cliente');
+  await page.getByRole('button', { name: 'Cadastrar imagens' }).click();
+  await expect(page.getByRole('dialog').getByRole('combobox', { name: /^Apresentação/ })).toHaveValue('ambas');
+  await expect(page.getByText('Exibir na apresentação ao cliente')).toHaveCount(0);
+});
+
 test('Dev cadastra um Viewer, que não vê a administração', async ({ page }) => {
   await entrar(page, DEV);
   await page.goto('/#/admin/usuarios');

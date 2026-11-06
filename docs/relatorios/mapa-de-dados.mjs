@@ -20,7 +20,7 @@ cap('fontes', 'Visão geral', 'De onde vêm os dados', `
     ['`BD_Econômico`', 'Custos, saldos, projeção, resultado, IEC, aditivos e comentários por item e mês', 'Graph, aba `BD_Econômico`', 'Mesmo cache'],
     ['Cadastro de obras (no app)', 'Nº de UH, áreas, INCC base, prazos, equipe, endereço, situação', 'Administração → Cadastro de obras (ou importação da planilha "Painel de Obras")', 'Na hora em que o Planejamento salva'],
     ['INCC-DI', 'Número-índice mês a mês', 'Histórico FGV (1994–ago/2026) + Banco Central, série SGS 192 (variação % mensal)', 'Automático 1× por dia; correção manual em Fontes e INCC'],
-    ['TxC, fotos e telas do cliente', 'Imagens, planilhas e textos', 'Administração (upload) — ficam no servidor, fora do SharePoint', 'Na hora'],
+    ['TxC, fotos e novas telas', 'Imagens, planilhas e textos', 'Administração (upload) — ficam no servidor, fora do SharePoint', 'Na hora'],
   ])}
   <div class="nota"><b>Junção entre as abas</b>As abas são ligadas pelo <b>nome da obra</b>, ignorando maiúsculas, acentos e espaços ("MetroCasa" = "Metrocasa"). O BD_Econômico não tem o Nº da obra UAU, por isso o nome é a chave.</div>
   <div class="nota"><b>Mês de referência</b>As planilhas trazem 36 meses por obra, inclusive os futuros. O mês de referência padrão é o último mês em que alguma obra filtrada teve <code>Realizado Mês</code> &gt; 0, sem passar do mês atual. Pode ser trocado no filtro.</div>
@@ -49,7 +49,7 @@ cap('capa', 'Aba Início', 'Capa (Início)', telaAnotada('capa-obra', 'Início (
   { n: 2, titulo: 'Avanço físico realizado', origem: '`Realizado Acumulado` em ' + IG },
   { n: 3, titulo: 'Planejado acumulado', origem: '`Replanejado Atual Acumulado - Cliente` em ' + IG },
   { n: 4, titulo: 'Desvio', calculo: 'Realizado acumulado − Planejado acumulado (positivo = adiantado).' },
-  { n: 5, titulo: 'Troca Obra / Cliente', texto: 'Muda a apresentação inteira para as colunas "- Cliente" e mostra as telas do cliente no menu.' },
+  { n: 5, titulo: 'Troca Obra / Cliente', texto: 'Muda a apresentação inteira para as colunas "- Cliente"; cada visão mostra no menu as novas telas destinadas a ela.' },
 ]));
 
 cap('filtros', 'Todas as abas', 'Filtros estilo Excel', telaAnotada('filtro-obras', 'Filtro de obras aberto', [
@@ -128,13 +128,13 @@ cap('galeria', 'Abas Tempo x Caminho e Fotos', 'Tempo x Caminho e Acompanhamento
   ${telaAnotada('fotos', 'Acompanhamento Fotográfico', [
     { n: 1, titulo: 'Meses com fotos' },
     { n: 2, titulo: 'Locais', origem: 'campo **Local** do cadastro da foto' },
-    { n: 3, titulo: 'Foto', texto: 'Na visão Cliente só aparecem as imagens marcadas "Exibir na apresentação ao cliente".' },
+    { n: 3, titulo: 'Foto', texto: 'Cada visão mostra só as imagens destinadas a ela (caixa "Apresentação": Obra, Cliente ou ambas).' },
     { n: 4, titulo: 'Comentário', origem: 'cadastro da foto' },
   ])}
 `);
 
-cap('telas-cliente', 'Apresentação Cliente', 'Telas do cliente', telaAnotada('tela-cliente', 'Tela criada pelo Planejamento', [
-  { n: 1, titulo: 'Tela no menu', texto: 'Aparece na apresentação Cliente para as obras escolhidas (ou todas), na ordem definida.', origem: 'Administração → Telas do cliente' },
+cap('telas-cliente', 'Apresentações Obra e Cliente', 'Novas telas', telaAnotada('tela-cliente', 'Tela criada pelo Planejamento', [
+  { n: 1, titulo: 'Tela no menu', texto: 'Aparece na apresentação escolhida (Obra, Cliente ou ambas) para as obras escolhidas (ou todas), na ordem definida.', origem: 'Administração → Novas telas' },
   { n: 2, titulo: 'Planilha somente leitura', origem: 'arquivo XLSX/XLS/CSV enviado; abre a aba escolhida (ou a primeira), com abas clicáveis quando houver mais de uma' },
   { n: 3, titulo: 'Imagem', origem: 'arquivo enviado' },
   { n: 4, titulo: 'Texto livre' },
@@ -151,9 +151,9 @@ cap('administracao', 'Planejamento e Dev', 'Administração', `
     { n: 1, titulo: 'Obra, mês, torre/local e ordem' },
     { n: 2, titulo: 'Comentário', texto: 'Aparece ao lado da imagem na apresentação.' },
     { n: 3, titulo: 'Área de envio', texto: 'Arraste ou clique; várias imagens viram vários registros com os mesmos dados.' },
-    { n: 4, titulo: 'Exibir ao cliente', texto: 'Desmarcado = só a apresentação Obra mostra.' },
+    { n: 4, titulo: 'Apresentação', texto: 'Obra e Cliente, Somente Obra ou Somente Cliente.' },
   ])}
-  ${telaAnotada('admin-tela-form', 'Edição de tela do cliente', [
+  ${telaAnotada('admin-tela-form', 'Edição de tela', [
     { n: 1, titulo: 'Título, subtítulo e ordem no menu' },
     { n: 2, titulo: 'Bloco de conteúdo', texto: 'Título, largura (inteira/meia) e, para planilha, a aba a exibir. O arquivo é enviado na hora.' },
     { n: 3, titulo: 'Adicionar bloco', texto: 'Imagem, planilha ou texto.' },

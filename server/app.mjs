@@ -17,7 +17,9 @@ import { Roteador } from './http/roteador.mjs';
 import { registrarAuth } from './routes/auth.mjs';
 import { registrarConteudo } from './routes/conteudo.mjs';
 import { registrarDados } from './routes/dados.mjs';
+import { registrarSeguranca } from './routes/seguranca.mjs';
 import { registrarUsuarios } from './routes/usuarios.mjs';
+import { RepositorioAcidentesLocal, RepositorioAcidentesSupabase } from './store/acidentes.mjs';
 import { FonteIncc } from './sources/incc.mjs';
 import { FontePlanilhas } from './sources/planilhas.mjs';
 import { supabaseConfigurado } from './config.mjs';
@@ -36,6 +38,7 @@ export function criarApp(config, { fetchImpl } = {}) {
   registrarUsuarios(rotas, deps);
   registrarDados(rotas, deps);
   registrarConteudo(rotas, deps);
+  registrarSeguranca(rotas, deps);
 
   async function tratar(req, res) {
     const url = new URL(req.url, 'http://localhost');
@@ -81,6 +84,7 @@ function dependenciasLocais(config, fetchImpl) {
     cadastro: new ColecaoJson(config.dataDir, 'cadastro-obras'),
     midias: new ColecaoJson(config.dataDir, 'midias'),
     telas: new ColecaoJson(config.dataDir, 'telas'),
+    acidentes: new RepositorioAcidentesLocal(config.dataDir),
     arquivos: new RepositorioArquivosLocal(config.dataDir),
     planilhas: new FontePlanilhas(config, fetchImpl, armazem),
     incc: new FonteIncc(config, fetchImpl, armazem),
@@ -106,6 +110,7 @@ function dependenciasSupabase(config, fetchImpl) {
     cadastro: new ColecaoSupabase(cliente, 'cadastro_obras', { mapa: linhaCadastro, ordem: 'obra.asc' }),
     midias: new ColecaoSupabase(cliente, 'midias'),
     telas: new ColecaoSupabase(cliente, 'telas'),
+    acidentes: new RepositorioAcidentesSupabase(cliente),
     arquivos: new RepositorioArquivosSupabase(cliente),
     planilhas: new FontePlanilhas(config, fetchImpl, armazem),
     incc: new FonteIncc(config, fetchImpl, armazem),
