@@ -98,3 +98,14 @@ Variáveis de ambiente: nenhuma nova.
    dashboard inteiro, para os números da tela serem coerentes entre si.
 4. **Fase da obra**: lista da aba Dados (Fundação, Estrutura, Acabamento, Assistência Técnica).
 5. Pesquisa por nome/empresa: no modo local ignora acentos; no Supabase (`ilike`) diferencia acentos.
+
+## v23 — Obra/Cliente e papel Segurança
+
+- A aba Segurança do Trabalho é padrão na apresentação Obra. No Cliente é opcional por obra: Cadastro de obras →
+  grupo **Apresentação** → "Segurança do Trabalho na apresentação Cliente" (`segurancaCliente: 'sim'`, guardado em
+  `dados` do cadastro, sem migration). No Cliente, a aba só aparece quando alguma obra do filtro geral está marcada, e
+  o seletor "Obra exibida" só lista (e "Todas as obras" só soma) as obras marcadas.
+- Papel **Segurança** (`seguranca`): só Administração → Segurança do Trabalho e Dashboard Segurança. Não lê
+  `/api/dados/resumo` (orçamentos, curvas): as obras vêm de `GET /api/seguranca/obras`. Rotas de escrita da Segurança
+  exigem `editarSeguranca` (Dev, Planejamento, Segurança); leituras, `verSeguranca` (todos os papéis — o Viewer vê a
+  aba da apresentação). Supabase: `004_papel_seguranca.sql` amplia o `check` de `perfis.papel`.

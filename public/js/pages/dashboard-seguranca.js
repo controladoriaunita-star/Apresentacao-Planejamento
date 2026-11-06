@@ -34,7 +34,7 @@ const INDICADORES = [
 const preferencias = { obras: null, anos: [], indicador: 'periodo' }; // lembradas enquanto o app estiver aberto
 
 export async function renderDashboardSeguranca(alvo) {
-  const cadastros = (estado.bruto?.cadastro ?? []).filter((c) => c.id).sort((a, b) => a.obra.localeCompare(b.obra, 'pt-BR'));
+  const cadastros = estado.cadastros().filter((c) => c.id).sort((a, b) => a.obra.localeCompare(b.obra, 'pt-BR'));
   const q = new URLSearchParams();
   if (preferencias.obras) q.set('obras', preferencias.obras.join(','));
   if (preferencias.anos.length) q.set('anos', preferencias.anos.join(','));

@@ -81,7 +81,7 @@ export function registrarAuth(rotas, { autenticacao }) {
     }
   });
 
-  rotas.adicionar('PUT', '/api/auth/senha', { permissao: 'ver' }, async ({ req, res, usuario }) => {
+  rotas.adicionar('PUT', '/api/auth/senha', { permissao: 'conta' }, async ({ req, res, usuario }) => {
     const { senhaAtual, novaSenha } = await lerJson(req);
     const problema = validarSenha(novaSenha);
     if (problema) throw erro(400, problema);

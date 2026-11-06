@@ -75,7 +75,7 @@ function abrirForm(inicial, aoSalvar) {
   const erro = h('div');
   const controle = (def) => {
     const valor = inicial[def.campo] ?? '';
-    if (def.tipo === 'opcao') return h('select', {}, def.opcoes.map((o) => h('option', { value: o, selected: o === valor }, o || 'Automática')));
+    if (def.tipo === 'opcao') return h('select', {}, def.opcoes.map((o) => h('option', { value: o, selected: o === valor }, def.rotulos?.[o] ?? (o || 'Automática'))));
     if (def.tipo === 'data') return h('input', { type: 'date', value: valor ? String(valor).slice(0, 10) : '' });
     return h('input', { value: valor, inputmode: def.tipo === 'numero' ? 'decimal' : null });
   };

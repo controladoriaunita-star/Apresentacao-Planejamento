@@ -22,7 +22,7 @@ const COR_TIPO = { CPT: 'info', SPT: 'success', TRJ: 'primary', FT: 'error' };
 /** Filtros da tabela histórica (lembrados enquanto a aba estiver aberta). */
 const filtro = { obras: null, de: '', ate: '', tipos: [], nome: '', empresa: '', ordem: 'desc', pagina: 1 };
 
-const cadastrosDaObra = () => (estado.bruto?.cadastro ?? []).filter((c) => c.id).sort((a, b) => a.obra.localeCompare(b.obra, 'pt-BR'));
+const cadastrosDaObra = () => estado.cadastros().filter((c) => c.id).sort((a, b) => a.obra.localeCompare(b.obra, 'pt-BR'));
 export const seloTipo = (sigla) => h('span', { class: `badge b-${COR_TIPO[sigla] ?? 'neutral'}`, title: NOME_TIPO[sigla] ?? '' }, sigla);
 
 export async function renderAdminSeguranca(alvo) {

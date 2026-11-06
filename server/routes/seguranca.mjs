@@ -38,7 +38,7 @@ export function registrarSeguranca(rotas, { acidentes, cadastro }) {
 
   const comObra = (porId) => ({ chaveDedup, ...a }) => ({ ...a, ...dadosDaObra(porId.get(a.obraId)) });
 
-  rotas.adicionar('GET', '/api/seguranca/acidentes', { permissao: 'ver' }, async ({ req, res, url }) => {
+  rotas.adicionar('GET', '/api/seguranca/acidentes', { permissao: 'verSeguranca' }, async ({ req, res, url }) => {
     const todas = await cadastros();
     const p = url.searchParams;
     const todos = p.get('tamanho') === 'todos';
@@ -58,8 +58,19 @@ export function registrarSeguranca(rotas, { acidentes, cadastro }) {
     enviarJson(req, res, 200, { itens: itens.map(comObra(new Map(todas.map((c) => [c.id, c])))), total, pagina, tamanho });
   });
 
+  /**
+   * Obras do Cadastro de obras só com o que a Segurança do Trabalho usa — para o papel Segurança, que não
+   * carrega os dados das apresentações (orçamentos, curvas etc.).
+   */
+  rotas.adicionar('GET', '/api/seguranca/obras', { permissao: 'editarSeguranca' }, async ({ req, res }) => {
+    const obras = (await cadastros()).map(({ id, chave, obra, cliente, sistemaEstrutural }) => ({
+      id, chave, obra, cliente: cliente ?? null, sistemaEstrutural: sistemaEstrutural ?? null,
+    }));
+    enviarJson(req, res, 200, obras);
+  });
+
   /** Indicadores do Dashboard Segurança. `anos` = segmentador de ano (vazio = todos). */
-  rotas.adicionar('GET', '/api/seguranca/indicadores', { permissao: 'ver' }, async ({ req, res, url }) => {
+  rotas.adicionar('GET', '/api/seguranca/indicadores', { permissao: 'verSeguranca' }, async ({ req, res, url }) => {
     const todas = await cadastros();
     const porId = new Map(todas.map((c) => [c.id, c]));
     const { itens } = await acidentes.consultar({
@@ -85,7 +96,7 @@ export function registrarSeguranca(rotas, { acidentes, cadastro }) {
     return { acidente, obra };
   }
 
-  rotas.adicionar('POST', '/api/seguranca/acidentes', { permissao: 'editarConteudo' }, async ({ req, res, usuario }) => {
+  rotas.adicionar('POST', '/api/seguranca/acidentes', { permissao: 'editarSeguranca' }, async ({ req, res, usuario }) => {
     const { acidente, obra } = await validarComObra(await lerJson(req));
     try {
       const salvo = await acidentes.inserir({ ...acidente, origem: 'manual', criadoPor: usuario.email });
@@ -96,7 +107,7 @@ export function registrarSeguranca(rotas, { acidentes, cadastro }) {
     }
   });
 
-  rotas.adicionar('PUT', '/api/seguranca/acidentes/:id', { permissao: 'editarConteudo' }, async ({ req, res, params, usuario }) => {
+  rotas.adicionar('PUT', '/api/seguranca/acidentes/:id', { permissao: 'editarSeguranca' }, async ({ req, res, params, usuario }) => {
     const atual = await acidentes.obter(params.id);
     if (!atual) throw erro(404, 'Acidente não encontrado.');
     const { acidente, obra } = await validarComObra({ ...atual, ...(await lerJson(req)) });
@@ -109,7 +120,7 @@ export function registrarSeguranca(rotas, { acidentes, cadastro }) {
     }
   });
 
-  rotas.adicionar('DELETE', '/api/seguranca/acidentes/:id', { permissao: 'editarConteudo' }, async ({ req, res, params }) => {
+  rotas.adicionar('DELETE', '/api/seguranca/acidentes/:id', { permissao: 'editarSeguranca' }, async ({ req, res, params }) => {
     if (!(await acidentes.remover(params.id))) throw erro(404, 'Acidente não encontrado.');
     enviarJson(req, res, 200, { ok: true });
   });
@@ -127,12 +138,12 @@ export function registrarSeguranca(rotas, { acidentes, cadastro }) {
     return analisarImportacao(linhas, todas, existentes, { mapaObras: mapaObras ?? {} });
   }
 
-  rotas.adicionar('POST', '/api/seguranca/importacao/analisar', { permissao: 'editarConteudo' }, async ({ req, res }) => {
+  rotas.adicionar('POST', '/api/seguranca/importacao/analisar', { permissao: 'editarSeguranca' }, async ({ req, res }) => {
     enviarJson(req, res, 200, await analisar(req));
   });
 
   /** Grava só as linhas novas e válidas, num único comando; as demais voltam no relatório. */
-  rotas.adicionar('POST', '/api/seguranca/importacao', { permissao: 'editarConteudo' }, async ({ req, res, usuario }) => {
+  rotas.adicionar('POST', '/api/seguranca/importacao', { permissao: 'editarSeguranca' }, async ({ req, res, usuario }) => {
     const analise = await analisar(req);
     const novos = analise.linhas.filter((l) => l.situacao === 'novo').map((l) => ({ ...l.acidente, origem: 'importacao', criadoPor: usuario.email }));
     const inseridos = await acidentes.inserirVarios(novos);

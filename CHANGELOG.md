@@ -5,7 +5,28 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v22 (em validação — ainda não versionada no Git) |
+| Dev (local) | v23 (em validação — ainda não publicada) |
+
+## v23 — 05/11/2026 — Segurança do Trabalho na Obra/Cliente, papel Segurança e imagens em qualquer formato
+
+- Módulo Segurança do Trabalho (v22, feito à parte a partir da mesma `main`) trazido para o projeto, com:
+  - Aba **Segurança do Trabalho** é **padrão na apresentação Obra** e **opcional no Cliente**: só aparece (menu,
+    atalhos da capa e seletor "Obra exibida") para as obras marcadas no Cadastro de obras → grupo **Apresentação** →
+    "Segurança do Trabalho na apresentação Cliente" (padrão: Não exibir). Campo novo dentro de `dados` do cadastro —
+    sem migration. Trocar para uma obra não marcada estando na aba leva à capa do Cliente.
+- Novo papel **Segurança**: entra direto em Administração → Segurança do Trabalho; vê só essa seção e o Dashboard
+  Segurança (sem apresentações, sem Obra/Cliente, sem Apresentar). Não carrega os dados das planilhas: as obras vêm de
+  `GET /api/seguranca/obras` (só id, nome, cliente e sistema estrutural). Capacidades novas em `domain/permissoes.js`:
+  `verSeguranca` (ler acidentes/indicadores — todos os papéis), `editarSeguranca` (Dev, Planejamento, Segurança) e
+  `conta` (trocar a própria senha — todos). Supabase: rodar `supabase/migrations/004_papel_seguranca.sql`.
+- **Imagens em qualquer formato** (TxC e fotos, blocos de imagem das Novas telas). Antes: só PNG, JPG, WEBP e GIF.
+  Agora também HEIC/HEIF (iPhone), TIFF, BMP, AVIF, SVG, ICO, JFIF…: o navegador converte para JPG (fotos) ou PNG
+  (SVG/ICO/AVIF/BMP) antes do envio (`ui/imagem.js`), então o servidor e o Storage continuam guardando só formatos que
+  qualquer navegador abre (SVG nunca é servido cru). HEIC usa `vendor/heic2any.min.js` e TIFF `vendor/utif.js` +
+  `vendor/pako_inflate.min.js`, carregados só quando necessários. Arquivo que não é imagem, inclusive arrastado para
+  a área de envio, passa a ser recusado com aviso.
+- Testes: papel Segurança na API (local e Supabase simulado) e 3 testes de tela novos
+  (`tests/e2e/02-seguranca-e-imagens.spec.cjs`, com imagens de exemplo em `tests/fixtures/imagens`).
 
 ## v22 — 04/11/2026 — módulo Segurança do Trabalho
 

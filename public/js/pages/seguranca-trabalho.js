@@ -5,6 +5,8 @@
  *
  * Filtro: no modo apresentação (tela cheia) vale sempre a obra do filtro geral (a mesma do Resumo Geral).
  * Fora dele, o seletor "Obra exibida" permite outra obra do cadastro ou todas as obras.
+ * Apresentação Cliente: a aba é opcional por obra (Cadastro de obras → "Segurança do Trabalho na apresentação
+ * Cliente"); só as obras marcadas aparecem, tanto no filtro geral quanto no seletor.
  */
 import { api } from '../core/api.js';
 import { h, montar } from '../core/dom.js';
@@ -24,17 +26,19 @@ const TIPO = Object.fromEntries(TIPOS_ACIDENTE.map((t) => [t.sigla, t]));
 const apresentando = () => document.body.classList.contains('apresentando');
 
 export async function renderSegurancaTrabalho(alvo, contexto) {
-  const { base, filtro } = contexto;
+  const { base, filtro, visao } = contexto;
   // Filtro geral mudou (ex.: outra obra no Resumo): a tela acompanha.
-  const assinatura = filtro.obras.join('|');
+  const assinatura = `${visao}|${filtro.obras.join('|')}`;
   if (assinatura !== filtroVisto) { filtroVisto = assinatura; escolha = FILTRO; }
   const modo = apresentando() ? FILTRO : escolha;
-  const cadastros = (estado.bruto?.cadastro ?? []).filter((c) => c.id);
+  const cliente = visao === 'cliente';
+  const cadastros = (estado.bruto?.cadastro ?? []).filter((c) => c.id && (!cliente || c.segurancaCliente === 'sim'));
+  const permitidas = new Set(cadastros.map((c) => c.chave));
 
   let chaves;
   let titulo;
-  if (modo === TODAS) { chaves = null; titulo = 'Todas as obras'; } else if (modo === FILTRO) {
-    chaves = filtro.obras;
+  if (modo === TODAS) { chaves = cliente ? [...permitidas] : null; titulo = 'Todas as obras'; } else if (modo === FILTRO) {
+    chaves = cliente ? filtro.obras.filter((c) => permitidas.has(c)) : filtro.obras;
     const nomes = base.obras.filter((o) => chaves.includes(o.chave)).map((o) => o.nome);
     titulo = nomes.length === 1 ? nomes[0] : `${nomes.length} obras do filtro`;
   } else {

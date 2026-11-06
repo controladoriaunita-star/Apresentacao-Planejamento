@@ -124,5 +124,52 @@ for (const store of ['local', 'supabase']) {
       assert.equal((await dev('DELETE', `/api/seguranca/acidentes/${primeiro.id}`)).status, 200);
       assert.equal((await dev('GET', '/api/seguranca/indicadores')).dados.indicadores.total, 2);
     });
+
+    test('papel Segurança: só acidentes, indicadores e obras resumidas; nada das apresentações', async () => {
+      const email = 'seg@unita.com.br';
+      const senha = 'senha-forte-3';
+      const seg = cliente(srv.base, srv.fetchExterno);
+      if (store === 'local') {
+        assert.equal((await dev('POST', '/api/usuarios', { nome: 'Seg', email, papel: 'seguranca', senha })).status, 201);
+        assert.equal((await seg('POST', '/api/auth/login', { email, senha })).status, 200);
+      } else {
+        assert.equal((await dev('POST', '/api/usuarios', { nome: 'Seg', email, papel: 'seguranca' })).status, 201);
+        const convite = srv.supabase.emails.at(-1);
+        const r = await seg('POST', '/api/auth/definir-senha', { token: convite.token, senha });
+        assert.equal(r.status, 200, JSON.stringify(r.dados));
+        assert.equal(r.dados.usuario.papel, 'seguranca');
+      }
+
+      // Pode: obras resumidas (sem orçamento), acidentes, indicadores, cadastrar acidente e trocar a própria senha.
+      let r = await seg('GET', '/api/seguranca/obras');
+      assert.equal(r.status, 200);
+      assert.deepEqual(Object.keys(r.dados[0]).sort(), ['chave', 'cliente', 'id', 'obra', 'sistemaEstrutural']);
+      assert.equal((await seg('GET', '/api/seguranca/acidentes')).status, 200);
+      assert.equal((await seg('GET', '/api/seguranca/indicadores')).status, 200);
+      r = await seg('POST', '/api/seguranca/acidentes', acidente({ nomeAcidentado: 'Fulano da Segurança', data: '2026-03-02' }));
+      assert.equal(r.status, 201, JSON.stringify(r.dados));
+      assert.equal((await seg('POST', '/api/seguranca/importacao/analisar', { linhas: [] })).status, 200);
+      assert.equal((await seg('DELETE', `/api/seguranca/acidentes/${r.dados.id}`)).status, 200);
+      if (store === 'local') assert.equal((await seg('PUT', '/api/auth/senha', { senhaAtual: senha, novaSenha: 'senha-forte-4' })).status, 200);
+
+      // Não pode: dados das apresentações, cadastro de obras, conteúdo, usuários.
+      for (const [metodo, caminho, corpo] of [
+        ['GET', '/api/dados/resumo'], ['GET', '/api/obras/cadastro'], ['GET', '/api/telas'], ['GET', '/api/midias'], ['GET', '/api/incc'],
+        ['PUT', '/api/obras/cadastro', { obra: 'X' }], ['POST', '/api/arquivos/envio', { nome: 'a.png', tipo: 'image/png', tamanho: 10 }],
+        ['GET', '/api/usuarios'],
+      ]) {
+        assert.equal((await seg(metodo, caminho, corpo)).status, 403, `${metodo} ${caminho}`);
+      }
+
+      // Viewer continua lendo os acidentes (aba da apresentação), mas não grava nem lista as obras resumidas.
+      const ver = cliente(srv.base, srv.fetchExterno);
+      if (store === 'local') {
+        await dev('POST', '/api/usuarios', { nome: 'Ver', email: 'ver-seg@unita.com.br', papel: 'viewer', senha });
+        assert.equal((await ver('POST', '/api/auth/login', { email: 'ver-seg@unita.com.br', senha })).status, 200);
+        assert.equal((await ver('GET', '/api/seguranca/acidentes')).status, 200);
+        assert.equal((await ver('GET', '/api/seguranca/obras')).status, 403);
+        assert.equal((await ver('POST', '/api/seguranca/acidentes', acidente())).status, 403);
+      }
+    });
   });
 }
