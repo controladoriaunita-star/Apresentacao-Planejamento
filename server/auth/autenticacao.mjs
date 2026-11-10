@@ -6,6 +6,9 @@
  *   papel e situação na tabela `perfis` (id = id do usuário no Auth). Desativar um usuário também o
  *   bloqueia no Auth.
  *
+ * v26: o usuário também guarda `obras` (null = todas) e `apresentacoes` ("ambas" | "obra" | "cliente") —
+ * regras em public/js/domain/acesso.js. Quem não tem os campos vê tudo.
+ *
  * Nos dois casos o navegador recebe o cookie `sessao`, assinado com HMAC (o JS da página não lê tokens).
  * O papel é relido a cada requisição: mudar papel ou desativar vale na hora. Só entram e-mails do domínio
  * DOMINIO_EMAIL (config.dominioEmail).
@@ -40,6 +43,17 @@ export function usuarioPublico({ senhaHash, ...resto }) {
 }
 
 const normalizarEmail = (email) => String(email ?? '').trim().toLowerCase();
+
+/**
+ * Acesso de um usuário novo. Só grava o que foge do padrão (todas as obras, Obra e Cliente): assim o app
+ * continua criando usuários no Supabase mesmo antes de rodar a migration 005 (colunas novas em `perfis`).
+ */
+function acessoInicial({ obras, apresentacoes }) {
+  return {
+    ...(Array.isArray(obras) ? { obras } : {}),
+    ...(apresentacoes && apresentacoes !== 'ambas' ? { apresentacoes } : {}),
+  };
+}
 
 function exigirDados({ nome, email, senha, papel }, { dominio, comSenha = true, comPapel = false }) {
   const problema = (String(nome ?? '').trim() ? null : 'Informe o nome.')
@@ -115,7 +129,7 @@ export class AutenticacaoLocal {
     exigirDados(dados, { dominio: this.config.dominioEmail, comPapel: true });
     const email = normalizarEmail(dados.email);
     if (await this.usuarios.buscarPor('email', email)) throw erro(409, 'Já existe um usuário com este e-mail.');
-    return usuarioPublico(await this.usuarios.inserir({ nome: dados.nome.trim(), email, papel: dados.papel, ativo: true, senhaHash: gerarHash(dados.senha) }));
+    return usuarioPublico(await this.usuarios.inserir({ nome: dados.nome.trim(), email, papel: dados.papel, ativo: true, ...acessoInicial(dados), senhaHash: gerarHash(dados.senha) }));
   }
 
   async atualizar(id, campos) {
@@ -211,7 +225,7 @@ export class AutenticacaoSupabase {
   }
 
   /** Com senha: usuário já confirmado (primeiro acesso). Sem senha: convite por e-mail que volta a `endereco`. */
-  async #criarNoAuth({ nome, email, papel, senha }, endereco) {
+  async #criarNoAuth({ nome, email, papel, senha, ...resto }, endereco) {
     let criado;
     try {
       criado = senha
@@ -222,7 +236,7 @@ export class AutenticacaoSupabase {
       throw e;
     }
     const id = criado.id ?? criado.user?.id;
-    return this.perfis.inserir({ id, nome: nome.trim(), email: normalizarEmail(email), papel, ativo: true });
+    return this.perfis.inserir({ id, nome: nome.trim(), email: normalizarEmail(email), papel, ativo: true, ...acessoInicial(resto) });
   }
 
   async criar(dados, endereco) {

@@ -6,12 +6,16 @@
  *   #/cliente/<aba>         apresentação Cliente (colunas "- Cliente")
  *   #/<visão>/tela/<id>     tela extra (Administração → Novas telas) da apresentação Obra ou Cliente
  *   #/admin/<seção>         administração (Planejamento/Dev; papel Segurança: só Segurança do Trabalho)
+ *
+ * v26: Viewer restrito por obra (o servidor só entrega as obras liberadas) e por apresentação — a rota da
+ * apresentação não liberada leva à mesma aba da outra, e o seletor Obra/Cliente só mostra as liberadas.
  *   #/conta                 minha conta
  */
 import { api } from './core/api.js';
 import { h, montar } from './core/dom.js';
 import { estado } from './core/estado.js';
 import { caminhoAtual, ir, resolver, rota } from './core/roteador.js';
+import { acessoDe } from './domain/acesso.js';
 import { telasDaObra } from './domain/conteudo.js';
 import { PAPEIS, pode } from './domain/permissoes.js';
 import { alerta, carregando, toast } from './ui/componentes.js';
@@ -81,19 +85,22 @@ function abasDaVisao(visao) {
 /** Papel Segurança não abre as apresentações: entra direto na Administração → Segurança do Trabalho. */
 const veApresentacoes = () => pode(estado.usuario?.papel, 'ver');
 const secoesPermitidas = () => SECOES_ADMIN.filter((s) => !s.dentroDe && pode(estado.usuario?.papel, s.capacidade));
-const rotaInicial = () => (veApresentacoes() ? '/obra/inicio' : `/admin/${secoesPermitidas()[0]?.id ?? 'seguranca'}`);
+/** Apresentações liberadas para o usuário (v26: o Viewer pode ter só a Obra ou só o Cliente). */
+const visoesLiberadas = () => acessoDe(estado.usuario).visoes;
+const rotaInicial = () => (veApresentacoes() ? `/${visoesLiberadas()[0]}/inicio` : `/admin/${secoesPermitidas()[0]?.id ?? 'seguranca'}`);
 
 // ── Rotas ────────────────────────────────────────────────────────────
 for (const visao of ['obra', 'cliente']) {
   rota(`/${visao}/:aba`, ({ aba }) => {
+    if (!visoesLiberadas().includes(visao)) return ir(`/${visoesLiberadas()[0]}/${aba}`);
     const encontrada = abasDaVisao(visao).find((a) => a.id === aba);
     // Aba opcional desligada para as obras do filtro (ex.: trocou a obra estando nela): volta à capa.
     if (!encontrada && ABAS.some((a) => a.id === aba)) return ir(`/${visao}/inicio`);
     return paginaApresentacao(visao, encontrada ?? ABAS[0]);
   });
-  rota(`/${visao}/tela/:id`, ({ id }) => paginaApresentacao(visao, {
+  rota(`/${visao}/tela/:id`, ({ id }) => (!visoesLiberadas().includes(visao) ? ir(rotaInicial()) : paginaApresentacao(visao, {
     id: `tela-${id}`, nome: 'Tela', periodo: false, render: (alvo) => renderTelaExtra(alvo, telasExtras.find((t) => t.id === id), visao),
-  }));
+  })));
 }
 rota('/admin/:secao', ({ secao }) => paginaAdmin(SECOES_ADMIN.find((s) => s.id === secao) ?? SECOES_ADMIN[0]));
 rota('/conta', () => paginaSimples(renderConta));
@@ -112,7 +119,7 @@ function cabecalho(visao, abaAtual) {
       abasDaVisao(visao).map((a) => link(`/${visao}/${a.id}`, a.nome, a.id === abaAtual)),
       telas.map((t) => link(`/${visao}/tela/${t.id}`, t.titulo, abaAtual === `tela-${t.id}`))) : h('nav', {}),
     h('div', { class: 'direita' },
-      apresentacoes ? h('div', { class: 'visao', role: 'group', 'aria-label': 'Apresentação' },
+      apresentacoes && visoesLiberadas().length > 1 ? h('div', { class: 'visao', role: 'group', 'aria-label': 'Apresentação' },
         h('a', { href: `#/obra/${mesmaAba('obra')}`, 'aria-current': String(visao === 'obra') }, 'Obra'),
         h('a', { href: `#/cliente/${mesmaAba('cliente')}`, 'aria-current': String(visao === 'cliente') }, 'Cliente')) : null,
       apresentacoes ? h('button', { class: 'btn inverse sm', type: 'button', title: 'Tela cheia', onclick: alternarApresentacao }, icone('telaCheia', { tamanho: 16 }), 'Apresentar') : null,
@@ -147,6 +154,7 @@ async function paginaApresentacao(visao, aba) {
   montar(raiz, cabecalho(visao, aba.id), base && !aba.capa ? barraFiltros({ mostrarPeriodo: aba.periodo !== false }) : null, conteudo);
   if (estado.bruto?.aviso) conteudo.append(alerta('warning', 'Dados possivelmente desatualizados', estado.bruto.aviso));
   if (bloqueio || !base) return conteudo.append(bloqueio ?? carregando(8));
+  if (!base.obras.length) return conteudo.append(alerta('info', 'Nenhuma obra liberada', 'Seu usuário ainda não tem obras liberadas. Fale com o Dev.'));
   const alvo = h('div');
   conteudo.append(alvo);
   try {

@@ -3,6 +3,7 @@
  * O servidor não calcula medidas — os cálculos ficam em public/js/domain (testados e reaproveitados),
  * o que mantém este backend fino e fácil de reescrever em PHP.
  */
+import { filtrarMatriz } from '../../public/js/domain/acesso.js';
 import { ABAS } from '../../public/js/domain/colunas.js';
 import { associarObrasConhecidas, cadastrosDePlanilha, normalizarCadastro } from '../../public/js/domain/cadastro-obra.js';
 import { chaveObra } from '../../public/js/domain/normalizar.js';
@@ -10,8 +11,10 @@ import { enviarJson, erro, lerJson } from '../http/respostas.mjs';
 
 export function registrarDados(rotas, { planilhas, incc, cadastro, acidentes, config }) {
   /** Abas do resumo + cadastro + INCC (o que a apresentação carrega ao abrir). */
-  async function resumo() {
+  async function resumo(acesso) {
     incc.atualizar().catch(() => {}); // segundo plano, no máximo 1× por dia
+    // v26: usuário restrito só recebe as linhas das obras liberadas (e, só com o Cliente, sem as colunas "- Obra").
+    const aba = (nome, matriz) => semData(filtrarMatriz(matriz, nome, acesso));
     const [infos, orc, econ] = await Promise.all([
       planilhas.aba(ABAS.infosGerais), planilhas.aba(ABAS.orcamento), planilhas.aba(ABAS.economico),
     ]);
@@ -20,30 +23,31 @@ export function registrarDados(rotas, { planilhas, incc, cadastro, acidentes, co
       aviso: planilhas.aviso,
       atualizadoEm: [infos.lidoEm, orc.lidoEm, econ.lidoEm].sort()[0],
       abas: {
-        [ABAS.infosGerais]: semData(infos),
-        [ABAS.orcamento]: semData(orc),
-        [ABAS.economico]: semData(econ),
+        [ABAS.infosGerais]: aba(ABAS.infosGerais, infos),
+        [ABAS.orcamento]: aba(ABAS.orcamento, orc),
+        [ABAS.economico]: aba(ABAS.economico, econ),
       },
-      cadastro: await cadastro.listar(),
+      cadastro: (await cadastro.listar()).filter((c) => acesso.obra(c.chave)),
       incc: (await incc.listar()).itens.map(({ mes, indice }) => ({ mes, indice })),
     };
   }
 
-  rotas.adicionar('GET', '/api/dados/resumo', { permissao: 'ver' }, async ({ req, res }) => {
-    enviarJson(req, res, 200, await resumo());
+  rotas.adicionar('GET', '/api/dados/resumo', { permissao: 'ver' }, async ({ req, res, acesso }) => {
+    enviarJson(req, res, 200, await resumo(acesso));
   });
 
-  rotas.adicionar('GET', '/api/dados/fisico', { permissao: 'ver' }, async ({ req, res, url }) => {
+  rotas.adicionar('GET', '/api/dados/fisico', { permissao: 'ver' }, async ({ req, res, url, acesso }) => {
     const obra = url.searchParams.get('obra');
     if (!obra) throw erro(400, 'Informe a obra.');
-    enviarJson(req, res, 200, semData(await planilhas.fisicoDaObra(obra)));
+    if (!acesso.obra(obra)) throw erro(403, 'Você não tem acesso a esta obra.');
+    enviarJson(req, res, 200, semData(filtrarMatriz(await planilhas.fisicoDaObra(obra), ABAS.fisicoAtividade, acesso)));
   });
 
-  rotas.adicionar('POST', '/api/dados/atualizar', { permissao: 'editarConteudo' }, async ({ req, res }) => {
+  rotas.adicionar('POST', '/api/dados/atualizar', { permissao: 'editarConteudo' }, async ({ req, res, acesso }) => {
     // Devolve o resumo já relido nesta mesma instância: na Vercel um GET seguinte pode cair em outra
     // instância, com o cache em memória ainda antigo.
     await planilhas.atualizarTudo();
-    enviarJson(req, res, 200, { ok: true, ...(await resumo()) });
+    enviarJson(req, res, 200, { ok: true, ...(await resumo(acesso)) });
   });
 
   rotas.adicionar('GET', '/api/incc', { permissao: 'ver' }, async ({ req, res }) => {
@@ -67,8 +71,8 @@ export function registrarDados(rotas, { planilhas, incc, cadastro, acidentes, co
   });
 
   // ── Cadastro de obras ────────────────────────────────────────────────
-  rotas.adicionar('GET', '/api/obras/cadastro', { permissao: 'ver' }, async ({ req, res }) => {
-    enviarJson(req, res, 200, await cadastro.listar());
+  rotas.adicionar('GET', '/api/obras/cadastro', { permissao: 'ver' }, async ({ req, res, acesso }) => {
+    enviarJson(req, res, 200, (await cadastro.listar()).filter((c) => acesso.obra(c.chave)));
   });
 
   rotas.adicionar('PUT', '/api/obras/cadastro', { permissao: 'editarConteudo' }, async ({ req, res, usuario }) => {

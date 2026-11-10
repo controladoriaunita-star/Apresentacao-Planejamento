@@ -6,6 +6,7 @@
  *   2. modo "direto": o navegador envia ao Storage pela URL assinada e usa `arquivo.id`;
  *      modo "servidor": o navegador envia o corpo cru para POST /api/arquivos.
  */
+import { podeVerMidia, podeVerTela } from '../../public/js/domain/acesso.js';
 import { normalizarMidia, normalizarTela } from '../../public/js/domain/conteudo.js';
 import { enviarBinario, enviarJson, erro, lerCorpo, lerJson } from '../http/respostas.mjs';
 import { TIPOS_ACEITOS } from '../store/arquivos.mjs';
@@ -35,7 +36,15 @@ export function registrarConteudo(rotas, { arquivos, midias, telas, config }) {
     enviarJson(req, res, 201, await arquivos.salvar({ nome, tipo, dados, usuario: usuario.email }));
   });
 
-  rotas.adicionar('GET', '/api/arquivos/:id', { permissao: 'ver' }, async ({ res, params }) => {
+  /** v26: usuário restrito só baixa arquivo de mídia ou tela que ele pode ver. */
+  async function arquivoLiberado(id, acesso) {
+    if (!acesso.restrito) return true;
+    if ((await midias.listar()).some((m) => m.arquivoId === id && podeVerMidia(m, acesso))) return true;
+    return (await telas.listar()).some((t) => t.ativa !== false && podeVerTela(t, acesso) && t.blocos.some((b) => b.arquivoId === id));
+  }
+
+  rotas.adicionar('GET', '/api/arquivos/:id', { permissao: 'ver' }, async ({ res, params, acesso }) => {
+    if (!(await arquivoLiberado(params.id, acesso))) throw erro(404, 'Arquivo não encontrado.');
     const arquivo = await arquivos.ler(params.id).catch(() => null);
     if (!arquivo) throw erro(404, 'Arquivo não encontrado.');
     if (arquivo.redirecionar) {
@@ -56,10 +65,10 @@ export function registrarConteudo(rotas, { arquivos, midias, telas, config }) {
   });
 
   // ── Mídias (TxC e fotos) ──
-  rotas.adicionar('GET', '/api/midias', { permissao: 'ver' }, async ({ req, res, url }) => {
+  rotas.adicionar('GET', '/api/midias', { permissao: 'ver' }, async ({ req, res, url, acesso }) => {
     const filtro = Object.fromEntries(['tipo', 'chaveObra', 'mes'].map((k) => [k, url.searchParams.get(k)]).filter(([, v]) => v));
     const lista = (await midias.listar())
-      .filter((m) => Object.entries(filtro).every(([k, v]) => m[k] === v))
+      .filter((m) => Object.entries(filtro).every(([k, v]) => m[k] === v) && (!acesso.restrito || podeVerMidia(m, acesso)))
       .sort((a, b) => b.mes.localeCompare(a.mes) || a.ordem - b.ordem);
     enviarJson(req, res, 200, lista);
   });
@@ -86,8 +95,13 @@ export function registrarConteudo(rotas, { arquivos, midias, telas, config }) {
   });
 
   // ── Telas da apresentação Cliente ──
-  rotas.adicionar('GET', '/api/telas', { permissao: 'ver' }, async ({ req, res }) => {
-    enviarJson(req, res, 200, (await telas.listar()).sort((a, b) => a.ordem - b.ordem));
+  rotas.adicionar('GET', '/api/telas', { permissao: 'ver' }, async ({ req, res, acesso }) => {
+    let lista = await telas.listar();
+    // v26: usuário restrito só recebe as telas ativas que pode ver, sem os nomes das obras não liberadas.
+    if (acesso.restrito) {
+      lista = lista.filter((t) => t.ativa !== false && podeVerTela(t, acesso)).map((t) => ({ ...t, obras: t.obras.filter((o) => acesso.obra(o)) }));
+    }
+    enviarJson(req, res, 200, lista.sort((a, b) => a.ordem - b.ordem));
   });
 
   rotas.adicionar('POST', '/api/telas', { permissao: 'editarConteudo' }, async ({ req, res, usuario }) => {

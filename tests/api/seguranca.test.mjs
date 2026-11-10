@@ -171,5 +171,30 @@ for (const store of ['local', 'supabase']) {
         assert.equal((await ver('POST', '/api/seguranca/acidentes', acidente())).status, 403);
       }
     });
+
+    test('v26: viewer restrito só lê acidentes das obras liberadas (só Cliente: obras marcadas no cadastro)', async () => {
+      const senha = 'senha-forte-6';
+      const email = 'ver-restrito@unita.com.br';
+      const ver = cliente(srv.base, srv.fetchExterno);
+      const acesso = { obras: ['Obra Sem Sistema'], apresentacoes: 'ambas' };
+      if (store === 'local') {
+        assert.equal((await dev('POST', '/api/usuarios', { nome: 'Ver', email, papel: 'viewer', senha, ...acesso })).status, 201);
+        assert.equal((await ver('POST', '/api/auth/login', { email, senha })).status, 200);
+      } else {
+        assert.equal((await dev('POST', '/api/usuarios', { nome: 'Ver', email, papel: 'viewer', ...acesso })).status, 201);
+        assert.equal((await ver('POST', '/api/auth/definir-senha', { token: srv.supabase.emails.at(-1).token, senha })).status, 200);
+      }
+      assert.ok((await dev('GET', '/api/seguranca/acidentes')).dados.total > 0);
+      assert.equal((await ver('GET', '/api/seguranca/acidentes')).dados.total, 0, 'acidentes só da Obra Teste');
+      assert.equal((await ver('GET', `/api/seguranca/acidentes?obras=${obra.id}`)).dados.total, 0, 'nem pedindo a obra pelo id');
+      assert.equal((await ver('GET', '/api/seguranca/indicadores')).dados.indicadores.total, 0);
+
+      const id = (await dev('GET', '/api/usuarios')).dados.find((u) => u.email === email).id;
+      await dev('PUT', `/api/usuarios/${id}`, { obras: null, apresentacoes: 'cliente' });
+      assert.equal((await ver('GET', '/api/seguranca/acidentes')).dados.total, 0, 'só Cliente: obra não marcada no cadastro');
+      await dev('PUT', '/api/obras/cadastro', { ...obra, segurancaCliente: 'sim' });
+      const total = (await dev('GET', '/api/seguranca/acidentes')).dados.total;
+      assert.equal((await ver('GET', '/api/seguranca/acidentes')).dados.total, total);
+    });
   });
 }

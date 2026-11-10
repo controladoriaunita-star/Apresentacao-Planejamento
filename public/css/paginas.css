@@ -354,6 +354,12 @@ main.conteudo:has(.rodape-fixo) > div:last-child { flex: 1; display: flex; flex-
 .lista-admin td.acoes { text-align: right; white-space: nowrap; }
 .miniatura-admin { height: 44px; width: 64px; object-fit: cover; border-radius: 8px; display: block; }
 .bloco-editor { border: 1px solid var(--border-soft); background: var(--ink-50); border-radius: var(--r-card); padding: 14px; display: grid; gap: 12px; }
+/* v26 — Usuários: obras e apresentação liberadas para o Viewer */
+.acesso-usuario { border: 1px solid var(--border-soft); border-radius: var(--r-card); padding: 14px; margin: 0; }
+.acesso-usuario legend { padding: 0 6px; font-weight: 600; color: var(--ink-700); }
+.acesso-usuario[hidden], .acesso-obras[hidden] { display: none; }
+.acesso-obras { max-height: 260px; overflow: auto; display: grid; gap: 10px; padding: 10px; background: var(--ink-50); border-radius: 8px; }
+.acesso-membros { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px 14px; padding: 6px 0 0 26px; }
 
 /* ── Ficha da obra ("+ Infos da obra"), tela cheia ─────────────────── */
 body.sem-rolagem { overflow: hidden; }

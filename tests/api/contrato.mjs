@@ -54,9 +54,9 @@ test('primeiro acesso cria o Dev e depois fica bloqueado', async () => {
  * Local: o Dev define a senha inicial. Supabase: o Dev só convida e a pessoa cria a senha pelo link do e-mail
  * (o simulador guarda o token que o link levaria).
  */
-async function cadastrar(nome, email, papel, senha) {
-  if (store === 'local') return dev('POST', '/api/usuarios', { nome, email, papel, senha });
-  const r = await dev('POST', '/api/usuarios', { nome, email, papel });
+async function cadastrar(nome, email, papel, senha, extra = {}) {
+  if (store === 'local') return dev('POST', '/api/usuarios', { nome, email, papel, senha, ...extra });
+  const r = await dev('POST', '/api/usuarios', { nome, email, papel, ...extra });
   if (r.status !== 201) return r;
   const convite = srv.supabase.emails.at(-1);
   assert.deepEqual([convite.tipo, convite.email], ['invite', email]);
@@ -255,6 +255,89 @@ test('envio em dois passos: pede o modo, envia e lê de volta', async () => {
   }
 });
 
+/**
+ * v26 — Viewer restrito por obra e por apresentação: o servidor só entrega as obras liberadas (planilhas,
+ * cadastro, físico, mídias, telas e arquivos) e, para quem tem só o Cliente, sem as colunas "- Obra".
+ */
+test('acesso por obra e apresentação: viewer restrito só recebe o que foi liberado', async () => {
+  const PREVISTO_OBRA = 'Previsto Original Acumulado - Obra';
+  const PREVISTO_CLIENTE = 'Previsto Original Acumulado - Cliente';
+  const restrito = cliente(srv.base, srv.fetchExterno);
+  assert.equal((await dev('POST', '/api/usuarios', { nome: 'x', email: 'x1@unita.com.br', papel: 'viewer', senha: 'senha-forte-2', apresentacoes: 'tudo' })).status, 400);
+  assert.equal((await dev('POST', '/api/usuarios', { nome: 'x', email: 'x2@unita.com.br', papel: 'viewer', senha: 'senha-forte-2', obras: 'Residencial Alpha' })).status, 400);
+  const criado = await cadastrar('Restrito', 'restrito@unita.com.br', 'viewer', 'senha-forte-5', { obras: ['Residencial Alpha'], apresentacoes: 'cliente' });
+  assert.equal(criado.status, 201, JSON.stringify(criado.dados));
+  assert.deepEqual([criado.dados.obras, criado.dados.apresentacoes], [['residencial alpha'], 'cliente'], 'obras gravadas pela chave');
+  assert.equal((await restrito('POST', '/api/auth/login', { email: 'restrito@unita.com.br', senha: 'senha-forte-5' })).status, 200);
+  assert.equal((await restrito('GET', '/api/auth/sessao')).dados.usuario.apresentacoes, 'cliente', 'o front sabe o que mostrar');
+
+  // Planilhas: só as linhas da Alpha e, só com o Cliente, sem as colunas "- Obra".
+  let r = await restrito('GET', '/api/dados/resumo');
+  const infos = r.dados.abas['BD_Infos Gerais'];
+  const iNome = infos.colunas.indexOf('Nome da Obra');
+  assert.ok(infos.linhas.length > 0);
+  assert.deepEqual([...new Set(infos.linhas.map((l) => l[iNome]))], ['Residencial Alpha']);
+  assert.ok(!infos.colunas.includes(PREVISTO_OBRA), 'colunas internas não saem');
+  assert.ok(infos.colunas.includes(PREVISTO_CLIENTE));
+  for (const aba of ['BD_Orc', 'BD_Econômico']) {
+    const m = r.dados.abas[aba];
+    const i = m.colunas.indexOf('Nome da Obra');
+    assert.deepEqual([...new Set(m.linhas.map((l) => l[i]))], ['Residencial Alpha'], aba);
+  }
+  assert.deepEqual(r.dados.cadastro.map((c) => c.chave), ['residencial alpha'], 'cadastro só da obra liberada');
+  assert.deepEqual((await restrito('GET', '/api/obras/cadastro')).dados.map((c) => c.chave), ['residencial alpha']);
+  assert.equal((await restrito('GET', `/api/dados/fisico?obra=${encodeURIComponent('Edifício Beta')}`)).status, 403);
+  r = await restrito('GET', `/api/dados/fisico?obra=${encodeURIComponent('Residencial Alpha')}`);
+  assert.equal(r.status, 200);
+  assert.equal(r.dados.linhas.length, 24 * 4);
+  assert.ok(!r.dados.colunas.includes('Comentários - Obra'));
+
+  // Mídias, telas e arquivos: obra liberada e destino na apresentação liberada.
+  const arquivo = async () => (await planejamento('POST', '/api/arquivos', PNG, { 'content-type': 'image/png' })).dados.id;
+  const midia = async (obra, destino) => (await planejamento('POST', '/api/midias', { tipo: 'foto', obra, mes: '2026-03', arquivoId: await arquivo(), destino })).dados;
+  const alphaCliente = await midia('Residencial Alpha', 'ambas');
+  const alphaObra = await midia('Residencial Alpha', 'obra');
+  const beta = await midia('Edifício Beta', 'ambas');
+  assert.deepEqual((await restrito('GET', '/api/midias?tipo=foto')).dados.map((m) => m.id), [alphaCliente.id]);
+  assert.equal((await viewer('GET', '/api/midias?tipo=foto')).dados.length, 3, 'viewer sem restrição vê tudo');
+  assert.equal((await restrito('GET', `/api/arquivos/${alphaCliente.arquivoId}`)).status, 200);
+  assert.equal((await restrito('GET', `/api/arquivos/${beta.arquivoId}`)).status, 404, 'imagem de obra não liberada');
+  assert.equal((await restrito('GET', `/api/arquivos/${alphaObra.arquivoId}`)).status, 404, 'imagem só da Obra');
+
+  const tela = async (titulo, destino, obras) => (await planejamento('POST', '/api/telas', { titulo, destino, obras, blocos: [{ tipo: 'texto', texto: titulo }] })).dados;
+  const telas = [await tela('Geral cliente', 'cliente', []), await tela('Alpha e Beta', 'ambas', ['Residencial Alpha', 'Edifício Beta']), await tela('Só Beta', 'ambas', ['Edifício Beta']), await tela('Interna', 'obra', [])];
+  r = await restrito('GET', '/api/telas');
+  assert.deepEqual(r.dados.map((t) => t.titulo).sort(), ['Alpha e Beta', 'Geral cliente']);
+  assert.deepEqual(r.dados.find((t) => t.titulo === 'Alpha e Beta').obras, ['residencial alpha'], 'sem o nome das obras não liberadas');
+
+  // Só a Obra e todas as obras: recebe as duas variantes de coluna (o Painel de obras usa as "- Cliente").
+  const id = criado.dados.id;
+  assert.equal((await dev('PUT', `/api/usuarios/${id}`, { apresentacoes: 'x' })).status, 400);
+  r = await dev('PUT', `/api/usuarios/${id}`, { obras: null, apresentacoes: 'obra' });
+  assert.deepEqual([r.dados.obras, r.dados.apresentacoes], [null, 'obra']);
+  r = await restrito('GET', '/api/dados/resumo');
+  assert.equal(new Set(r.dados.abas['BD_Infos Gerais'].linhas.map((l) => l[iNome])).size, 3, 'vale na hora, sem novo login');
+  assert.ok(r.dados.abas['BD_Infos Gerais'].colunas.includes(PREVISTO_OBRA));
+  assert.ok(r.dados.abas['BD_Infos Gerais'].colunas.includes(PREVISTO_CLIENTE));
+  assert.deepEqual((await restrito('GET', '/api/telas')).dados.map((t) => t.titulo).sort(), ['Alpha e Beta', 'Interna', 'Só Beta']);
+
+  // Lista vazia = nenhuma obra.
+  await dev('PUT', `/api/usuarios/${id}`, { obras: [] });
+  r = await restrito('GET', '/api/dados/resumo');
+  assert.equal(r.dados.abas['BD_Infos Gerais'].linhas.length, 0);
+  assert.equal(r.dados.cadastro.length, 0);
+
+  // Só o Viewer é restrito: Planejamento com obras gravadas continua vendo tudo.
+  const plan = (await dev('GET', '/api/usuarios')).dados.find((u) => u.papel === 'planejamento');
+  await dev('PUT', `/api/usuarios/${plan.id}`, { obras: [], apresentacoes: 'cliente' });
+  r = await planejamento('GET', '/api/dados/resumo');
+  assert.equal(new Set(r.dados.abas['BD_Infos Gerais'].linhas.map((l) => l[iNome])).size, 3);
+  await dev('PUT', `/api/usuarios/${plan.id}`, { obras: null, apresentacoes: 'ambas' });
+
+  for (const m of [alphaCliente, alphaObra, beta]) await planejamento('DELETE', `/api/midias/${m.id}`);
+  for (const t of telas) await planejamento('DELETE', `/api/telas/${t.id}`);
+});
+
 test('INCC manual prevalece', async () => {
   const r = await planejamento('PUT', '/api/incc/2026-09', { indice: 1300.5 });
   assert.equal(r.status, 200);
@@ -264,7 +347,7 @@ test('INCC manual prevalece', async () => {
 
 test('usuário desativado perde o acesso na hora', async () => {
   const lista = (await dev('GET', '/api/usuarios')).dados;
-  const ver = lista.find((u) => u.papel === 'viewer');
+  const ver = lista.find((u) => u.email === 'ver@unita.com.br');
   assert.equal((await dev('PUT', `/api/usuarios/${ver.id}`, { ativo: false })).status, 200);
   assert.equal((await viewer('GET', '/api/dados/resumo')).status, 401);
   assert.equal((await viewer('POST', '/api/auth/login', { email: 'ver@unita.com.br', senha: 'senha-forte-2' })).status, 401, 'nem entra de novo');

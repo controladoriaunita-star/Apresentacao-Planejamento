@@ -16,7 +16,11 @@ limite de 4,5 MB por requisição da Vercel.
 
 1. Crie um projeto **novo, só deste app** (região São Paulo, se disponível).
 2. **SQL Editor** → cole e rode, em ordem, os arquivos de `supabase/migrations/` (`001_apresentacao.sql`,
-   `002_destino_telas_midias.sql`, `003_seguranca_trabalho.sql`, `004_papel_seguranca.sql`…). Podem rodar de novo sem problema.
+   `002_destino_telas_midias.sql`, `003_seguranca_trabalho.sql`, `004_papel_seguranca.sql`,
+   `005_acesso_por_obra.sql`…). Podem rodar de novo sem problema.
+   - **Projeto já existente (v26):** rode só o `005_acesso_por_obra.sql` (colunas `obras` e `apresentacoes` em
+     `perfis`, para o acesso por obra e por apresentação em Administração → Usuários). Rode **antes** de publicar a
+     v26: sem as colunas, salvar o acesso de um Viewer dá erro. Os usuários atuais continuam vendo tudo.
 3. **Authentication → Providers → Email**: deixe "Email" ligado. Desligue **"Allow new users to sign up"** — os
    usuários são convidados só pelo Dev, dentro do app.
 4. **Project Settings → API**: copie *Project URL*, a chave **anon/publishable** e a **service_role/secret**.

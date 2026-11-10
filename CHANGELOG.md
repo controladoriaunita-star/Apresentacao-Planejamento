@@ -5,7 +5,30 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v23 (em validação — ainda não publicada) |
+| Dev (local) | v26 (em validação — ainda não publicada) |
+
+## v26 — 10/11/2026 — acesso por obra e por apresentação (Administração → Usuários)
+
+- Em **Administração → Usuários**, para o papel **Viewer**: escolher a **apresentação** (Obra e Cliente, Somente Obra
+  ou Somente Cliente) e as **obras** — "Todas as obras" (padrão; inclui as que entrarem depois na planilha) ou
+  "Somente as obras selecionadas", com a lista agrupada por cliente e uma caixa que marca o cliente inteiro (o que
+  fica gravado são as obras; obra nova do mesmo cliente precisa ser marcada). Nenhuma marcada = não vê nenhuma obra.
+  A tabela de usuários ganhou a coluna **Acesso**. Dev, Planejamento e Segurança continuam vendo tudo. Usuários
+  atuais e novos começam com todas as obras, Obra e Cliente.
+- A restrição vale **no servidor** (regras em `public/js/domain/acesso.js`): `/dados/resumo` e `/dados/atualizar` só
+  levam as linhas e o cadastro das obras liberadas, `/dados/fisico` de outra obra dá 403, mídias, telas extras,
+  arquivos e acidentes/indicadores da Segurança do Trabalho são filtrados pela obra e pela apresentação. Quem tem
+  só o Cliente não recebe as colunas "- Obra" das planilhas (previstos, comentários e metas internos). Muda na hora,
+  sem novo login.
+- Front: o filtro de obras, o Painel de obras e a capa já mostram só as obras recebidas; o seletor Obra/Cliente
+  some quando só uma apresentação está liberada, o login abre direto nela e a rota direta da outra leva à mesma aba
+  da liberada. Sem nenhuma obra liberada aparece o aviso "Nenhuma obra liberada".
+- A exportação em PDF (PR da v25) usa os dados já carregados no navegador e só existe na apresentação Cliente, então
+  segue a mesma regra sem mudança.
+- Supabase: rodar `supabase/migrations/005_acesso_por_obra.sql` (colunas `obras` e `apresentacoes` em `perfis`)
+  antes de publicar.
+- Testes: contrato da API com Viewer restrito nos dois armazenamentos (planilhas, colunas, físico, cadastro, mídias,
+  telas, arquivos, Segurança do Trabalho) e teste de tela `tests/e2e/04-acesso-por-obra.spec.cjs`.
 
 ## v23 — 05/11/2026 — Segurança do Trabalho na Obra/Cliente, papel Segurança e imagens em qualquer formato
 
