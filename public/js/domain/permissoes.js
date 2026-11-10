@@ -19,13 +19,14 @@ export const CAPACIDADES = Object.freeze({
   verSeguranca: 'verSeguranca', // ler acidentes e indicadores (aba da apresentação e Administração → Segurança)
   editarSeguranca: 'editarSeguranca', // Administração → Segurança do Trabalho e Dashboard Segurança
   editarConteudo: 'editarConteudo', // fotos, TxC, telas do cliente, cadastro de obras, atualizar dados
+  exportarPdf: 'exportarPdf', // "Exportar PDF" da apresentação Cliente (material enviado ao cliente)
   administrar: 'administrar', // usuários, diagnóstico
 });
 
 const C = CAPACIDADES;
 const MATRIZ = {
-  dev: [C.conta, C.ver, C.verSeguranca, C.editarSeguranca, C.editarConteudo, C.administrar],
-  planejamento: [C.conta, C.ver, C.verSeguranca, C.editarSeguranca, C.editarConteudo],
+  dev: [C.conta, C.ver, C.verSeguranca, C.editarSeguranca, C.editarConteudo, C.exportarPdf, C.administrar],
+  planejamento: [C.conta, C.ver, C.verSeguranca, C.editarSeguranca, C.editarConteudo, C.exportarPdf],
   seguranca: [C.conta, C.verSeguranca, C.editarSeguranca],
   viewer: [C.conta, C.ver, C.verSeguranca],
 };

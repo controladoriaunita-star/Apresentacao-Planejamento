@@ -90,6 +90,7 @@ function dependenciasLocais(config, fetchImpl) {
     arquivos: new RepositorioArquivosLocal(config.dataDir),
     planilhas: new FontePlanilhas(config, fetchImpl, armazem),
     incc: new FonteIncc(config, fetchImpl, armazem),
+    armazem,
   };
 }
 
@@ -116,6 +117,7 @@ function dependenciasSupabase(config, fetchImpl) {
     arquivos: new RepositorioArquivosSupabase(cliente),
     planilhas: new FontePlanilhas(config, fetchImpl, armazem),
     incc: new FonteIncc(config, fetchImpl, armazem),
+    armazem,
   };
 }
 

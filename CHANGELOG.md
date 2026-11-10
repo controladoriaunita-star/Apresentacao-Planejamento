@@ -30,6 +30,63 @@ Cada versão só é fechada com `npm run verificar` passando.
 - Testes: contrato da API com Viewer restrito nos dois armazenamentos (planilhas, colunas, físico, cadastro, mídias,
   telas, arquivos, Segurança do Trabalho) e teste de tela `tests/e2e/04-acesso-por-obra.spec.cjs`.
 
+## v25 — 10/11/2026 — Exportar PDF da apresentação Cliente
+
+- **Botão "Exportar PDF"** no topo da apresentação **Cliente** (só Dev e Planejamento — capacidade nova
+  `exportarPdf` em `domain/permissoes.js`; some no modo Apresentar). Abre uma janela com a **obra** (padrão: a da
+  capa do Cliente) e as **seções**, todas marcadas, na ordem das abas: Capa, Resumo Geral, Resumo Físico, Resumo
+  Econômico, Tempo x Caminho, Acompanhamento Fotográfico, Segurança do Trabalho (se a obra estiver marcada para o
+  Cliente) e as telas extras do Cliente daquela obra. Competência = mês de referência do filtro.
+- **Como sai**: o app monta o documento e abre a impressão do navegador — escolher **"Salvar como PDF"** (nome
+  sugerido: `Unità - <obra> - Apresentação ao cliente - <AAAA-MM>`). Nada é gerado no servidor (sem custo na Vercel).
+  - **A4 paisagem**, capa escura com logo, obra, cliente, os 3 indicadores da capa e o sumário (sem cabeçalho);
+    nas demais páginas, cabeçalho com obra · cliente e competência, rodapé com "gerado em" e **Página X de Y**.
+  - Cada seção começa numa página nova e mostra o mesmo conteúdo da tela do Cliente (mesma base e mesmas funções de
+    tela), sem botões nem filtros.
+  - **Resumo Geral, Resumo Físico e Resumo Econômico: uma página cada, inteiros, com a menor redução possível.**
+    O Resumo Geral usa o layout do Dev: a grade começa no tamanho da página e só cresce (e é reduzida) até nenhum
+    quadro de valores ficar cortado; na impressão as linhas do CEF × Físico, da Análise econômica e do INCC ficam
+    mais justas para precisar de menos redução. Físico e Econômico saem como abrem na tela (só os itens principais,
+    sem subitens nem detalhes) e ocupam a página: quando a altura é o limite, a tabela é alargada (descrições
+    quebram menos) até preencher também a largura; sobrando altura, as linhas ficam mais altas; tabela pequena
+    pode ser ampliada até 1,2×.
+  - **Sem o selo "Competência" nas seções** e sem o título repetido no Resumo Geral: obra e competência já estão no
+    cabeçalho de toda página (o Resumo Geral ganha a altura). Itens sem subitens não ficam mais recuados no Físico.
+  - Nas demais tabelas (telas extras, Segurança) as largas são reduzidas para caber na largura, o cabeçalho se
+    repete em cada página e nenhuma linha/quadro é cortado ao meio.
+  - **TxC e fotos**: as imagens visíveis ao cliente do mês de referência (sem imagens no mês: o anterior mais recente,
+    como na tela), por torre/local e com o comentário — TxC uma por página, fotos duas. Seção sem imagens fica fora.
+  - Gráficos convertidos em imagem de alta resolução (3×) antes de imprimir: nítidos no PDF.
+- Arquivos: `pages/exportar-pdf.js`, `css/impressao.css`. Ajustes pequenos para reutilizar as telas com a obra do PDF:
+  `obraUnica` aceita o filtro, `mesExibido` (galeria) e `dadosCapaCliente` (capa) exportados, Resumo Geral e
+  Segurança do Trabalho reconhecem a montagem para impressão. Nenhum cálculo mudou.
+- Testes: permissão (`tests/domain/permissoes.test.mjs`) e tela (`tests/e2e/03-exportar-pdf.spec.cjs`): botão só no
+  Cliente e não para o Viewer, seções da janela, documento com as seções na ordem, sem canvas/botões, Físico e
+  Econômico recolhidos, os três resumos dentro de uma página e nenhum quadro do Resumo Geral cortado, TxC com torre
+  e comentário, regras da página, PDF real gerado pelo Edge com uma página por seção ao
+  menos, e limpeza depois de imprimir.
+- Dica: se o navegador mostrar o próprio cabeçalho/rodapé (data, endereço), desmarcar "Cabeçalhos e rodapés" em
+  "Mais configurações" da janela de impressão.
+
+## v24 — 10/11/2026 — Resumo Geral em grade ajustável pelo Dev, gráficos até o 100% + 1 mês
+
+- **Intervalo dos gráficos sem seleção**: saem os filtros "De" e "Até". Os gráficos vão do primeiro mês da obra até o
+  mês seguinte àquele em que o planejado atual chega a 100% (ex.: 100% em fevereiro → último mês março), nunca antes
+  do mês de referência nem depois do último mês da planilha.
+- **Rótulos de dados também na curva acumulada** (Realizado acima do ponto, Planejado atual abaixo; na vertical
+  quando os meses ficam próximos). As barras já tinham (v19).
+- **Todos os meses legíveis no eixo**: mês em duas linhas ("JAN" sobre "25"), sem pular meses; a legenda das
+  séries subiu para a linha do título e sobra mais altura para o gráfico.
+- **Tela toda coberta**: em tela cheia os quadros formam uma grade de 24 × 24 que ocupa a área inteira (sem espaço
+  vazio no rodapé); cada quadro estica o conteúdo até as bordas.
+- **Editar layout (Dev)**: botão no título do Resumo Geral. Arrastar move o quadro, a alça no canto o redimensiona,
+  tudo encaixado na grade (como os widgets da Apple); um quadro não cobre outro (fica vermelho e volta). Teclado:
+  setas movem, Shift + setas redimensionam. "Salvar para todas as apresentações" grava no servidor
+  (`PUT /api/layouts/resumo-geral`, armazém de documentos — sem migration no Supabase); "Restaurar padrão" volta ao
+  layout do app. Em telas pequenas os quadros ficam um abaixo do outro e a edição some.
+- Testes: grade (padrão cobre a tela sem sobreposição, limites, recusa de sobreposição), contrato da rota (só o Dev
+  salva; todos recebem no resumo) e tela (Dev redimensiona, salva, recarrega e restaura).
+
 ## v23 — 05/11/2026 — Segurança do Trabalho na Obra/Cliente, papel Segurança e imagens em qualquer formato
 
 - Módulo Segurança do Trabalho (v22, feito à parte a partir da mesma `main`) trazido para o projeto, com:
@@ -108,6 +165,34 @@ Cada versão só é fechada com `npm run verificar` passando.
   `docs/SUPABASE_VERCEL.md` → "Login e convites".
 - Testes: contrato com o convite, o reenvio, o "esqueci minha senha", o domínio e os atributos do cookie (local e
   Supabase simulado).
+
+## v19 — 26/10/2026 — ajustes do Resumo Geral, farol do econômico e simulação de volta
+
+- **Resumo Geral**: os três gráficos vão só até o último mês do replanejado atual (o mês em que ele chega ao valor
+  final), nunca antes do mês de referência. Os gráficos de barras ganharam rótulo de dados (na vertical quando a
+  barra é estreita) e o eixo da Assertividade vai ao menos a 100%.
+- Resumo Geral: todos os meses aparecem no eixo dos gráficos (inclinados quando não cabem) e os quadros da
+  esquerda e do rodapé ficaram com espaçamento enxuto, para os gráficos ganharem tamanho (em 1440 × 900 passam
+  de ~820 × 64 px para ~1000 × 108 px).
+- Resumo Geral: as linhas do quadro CEF × Físico e da Análise econômica se distribuem pela altura disponível
+  (sem sobra vazia no pé em telas altas; continuam enxutas em notebooks).
+- Resumo Geral: o velocímetro "Andamento geral" ocupa todo o quadro e acompanha o tamanho da tela
+  (~154 px de largura em 1366 × 768, ~180 px em 1440 × 900 e ~216 px em 1920 × 1080).
+- **Resumo Econômico**: farol ao lado da competência (`domain/validador-economico.js`). Verde = econômico do próprio
+  mês e último da obra; amarelo = a planilha só repetiu um fechamento anterior e o farol mostra a competência real
+  (ex.: SET/26 igual a MAI/26); azul = existe um econômico mais recente.
+- "IEC" (IEC Obra) e "IEC s/ correção" em vermelho quando acima de 1 (tabela e indicadores do Econômico).
+- Indicador "Variação de custo (mês)" passa a se chamar "Variação de Resultado (Sem correção)".
+- **Valores monetários sem casas decimais e sem símbolo**; o "(R$)" foi para o título da coluna/caixa (Resumo
+  Geral, Físico, Econômico, Painel de obras e ficha da obra). Os valores abreviados (R$ 13,5 mi) saíram.
+- **Cards crescem com os valores**: indicadores, análise econômica, custos por, detalhes do item e simulação não
+  cortam mais o valor com reticências; quando não cabem, quebram para a linha de baixo ou alargam a coluna.
+- **Simulação sem atividades voltou a funcionar**: desde a v10 cada coluna só era simulada se as atividades
+  "fechassem" com o total (±1 p.p.); na planilha atual quase nenhuma obra fecha (colunas do mês com o acumulado e
+  realizado das atividades diferente do BD_Infos Gerais), e tudo ficava "—". Agora as colunas acumuladas são
+  simuladas aplicando ao total oficial só o efeito da retirada (avisadas como "ajustado pela diferença"); só as
+  colunas do mês que não fecham continuam "—".
+- Correção: a tabela acessível dos gráficos podia esticar a página do Resumo Geral (barra de rolagem em 1366×768).
 
 ## v18 — 22/10/2026 — Painel de obras com colunas fixadas e grupos compactos
 

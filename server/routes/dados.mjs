@@ -6,10 +6,14 @@
 import { filtrarMatriz } from '../../public/js/domain/acesso.js';
 import { ABAS } from '../../public/js/domain/colunas.js';
 import { associarObrasConhecidas, cadastrosDePlanilha, normalizarCadastro } from '../../public/js/domain/cadastro-obra.js';
+import { normalizarLayout } from '../../public/js/domain/layout-resumo.js';
 import { chaveObra } from '../../public/js/domain/normalizar.js';
 import { enviarJson, erro, lerJson } from '../http/respostas.mjs';
 
-export function registrarDados(rotas, { planilhas, incc, cadastro, acidentes, config }) {
+/** Documento do armazém com o layout do Resumo Geral definido pelo Dev (vale para todas as apresentações). */
+const DOC_LAYOUT = 'layout-resumo-geral';
+
+export function registrarDados(rotas, { planilhas, incc, cadastro, acidentes, armazem, config }) {
   /** Abas do resumo + cadastro + INCC (o que a apresentação carrega ao abrir). */
   async function resumo(acesso) {
     incc.atualizar().catch(() => {}); // segundo plano, no máximo 1× por dia
@@ -29,6 +33,7 @@ export function registrarDados(rotas, { planilhas, incc, cadastro, acidentes, co
       },
       cadastro: (await cadastro.listar()).filter((c) => acesso.obra(c.chave)),
       incc: (await incc.listar()).itens.map(({ mes, indice }) => ({ mes, indice })),
+      layoutResumoGeral: (await armazem.ler(DOC_LAYOUT).catch(() => null))?.layout ?? null,
     };
   }
 
@@ -48,6 +53,19 @@ export function registrarDados(rotas, { planilhas, incc, cadastro, acidentes, co
     // instância, com o cache em memória ainda antigo.
     await planilhas.atualizarTudo();
     enviarJson(req, res, 200, { ok: true, ...(await resumo(acesso)) });
+  });
+
+  /** Layout do Resumo Geral (grade 24 × 24): só o Dev define; sem sobreposição de quadros. */
+  rotas.adicionar('PUT', '/api/layouts/resumo-geral', { permissao: 'administrar' }, async ({ req, res, usuario }) => {
+    const { layout } = await lerJson(req);
+    let normalizado;
+    try {
+      normalizado = normalizarLayout(layout, { estrito: true });
+    } catch (e) {
+      throw erro(400, e.message);
+    }
+    await armazem.gravar(DOC_LAYOUT, { layout: normalizado, atualizadoEm: new Date().toISOString(), por: usuario.email });
+    enviarJson(req, res, 200, { layout: normalizado });
   });
 
   rotas.adicionar('GET', '/api/incc', { permissao: 'ver' }, async ({ req, res }) => {

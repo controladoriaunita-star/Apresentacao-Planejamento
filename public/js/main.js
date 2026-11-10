@@ -26,6 +26,7 @@ import { renderAdminFontes } from './pages/admin-fontes.js';
 import { renderAdminMidias } from './pages/admin-midias.js';
 import { renderAdminSeguranca } from './pages/admin-seguranca.js';
 import { renderDashboardSeguranca } from './pages/dashboard-seguranca.js';
+import { abrirExportarPdf } from './pages/exportar-pdf.js';
 import { renderSegurancaTrabalho } from './pages/seguranca-trabalho.js';
 import { renderAdminTelas } from './pages/admin-telas.js';
 import { renderAdminUsuarios } from './pages/admin-usuarios.js';
@@ -42,20 +43,20 @@ const raiz = document.getElementById('app');
 
 /**
  * Abas das apresentações, na ordem pedida.
- * `periodo: false` = sem intervalo dos gráficos no filtro; `capa: true` = sem barra de filtros e largura total.
+ * `capa: true` = sem barra de filtros e largura total.
  * `icone` e `descricao` aparecem nos atalhos da capa.
  * `cliente: 'opcional'` = na apresentação Cliente só aparece se alguma obra do filtro estiver marcada no
  * Cadastro de obras (campo em `opcaoCliente`); na Obra aparece sempre.
  */
 const ABAS = [
-  { id: 'inicio', nome: 'Início', render: renderInicio, periodo: false, capa: true, icone: 'casa' },
+  { id: 'inicio', nome: 'Início', render: renderInicio, capa: true, icone: 'casa' },
   { id: 'resumo-geral', nome: 'Resumo Geral', render: renderResumoGeral, icone: 'grafico', descricao: 'Curvas, CEF × físico e análise econômica' },
-  { id: 'resumo-fisico', nome: 'Resumo Físico', render: renderResumoFisico, periodo: false, icone: 'fisico', descricao: 'Avanço por atividade da EAP' },
-  { id: 'resumo-economico', nome: 'Resumo Econômico', render: renderResumoEconomico, periodo: false, icone: 'economico', descricao: 'IEC, custos e resultado por item' },
-  { id: 'tempo-caminho', nome: 'Tempo x Caminho', render: (a, c) => renderGaleria(a, c, 'txc'), periodo: false, icone: 'caminho', descricao: 'Linhas de balanço por torre' },
-  { id: 'fotos', nome: 'Acompanhamento Fotográfico', render: (a, c) => renderGaleria(a, c, 'foto'), periodo: false, icone: 'camera', descricao: 'Fotos do mês por local' },
+  { id: 'resumo-fisico', nome: 'Resumo Físico', render: renderResumoFisico, icone: 'fisico', descricao: 'Avanço por atividade da EAP' },
+  { id: 'resumo-economico', nome: 'Resumo Econômico', render: renderResumoEconomico, icone: 'economico', descricao: 'IEC, custos e resultado por item' },
+  { id: 'tempo-caminho', nome: 'Tempo x Caminho', render: (a, c) => renderGaleria(a, c, 'txc'), icone: 'caminho', descricao: 'Linhas de balanço por torre' },
+  { id: 'fotos', nome: 'Acompanhamento Fotográfico', render: (a, c) => renderGaleria(a, c, 'foto'), icone: 'camera', descricao: 'Fotos do mês por local' },
   // v22 — Segurança do Trabalho (dados e Dashboard Segurança: Administração → Segurança do Trabalho)
-  { id: 'seguranca-trabalho', nome: 'Segurança do Trabalho', render: renderSegurancaTrabalho, periodo: false, icone: 'alerta', descricao: 'Acidentes ocorridos no mês por tipo', cliente: 'opcional', opcaoCliente: 'segurancaCliente' },
+  { id: 'seguranca-trabalho', nome: 'Segurança do Trabalho', render: renderSegurancaTrabalho, icone: 'alerta', descricao: 'Acidentes ocorridos no mês por tipo', cliente: 'opcional', opcaoCliente: 'segurancaCliente' },
 ];
 
 const SECOES_ADMIN = [
@@ -74,10 +75,13 @@ let telasExtras = [];
 /** Telas extras que aparecem na apresentação `visao` para as obras filtradas. */
 const telasDaVisao = (visao) => (visao ? telasDaObra(telasExtras, estado.filtro.obras ?? [], visao) : []);
 
-/** Abas da apresentação `visao`: as opcionais do Cliente só entram se alguma obra do filtro estiver marcada. */
-function abasDaVisao(visao) {
+/**
+ * Abas da apresentação `visao`: as opcionais do Cliente só entram se alguma obra do filtro (ou de `obras`,
+ * na exportação em PDF) estiver marcada.
+ */
+function abasDaVisao(visao, obras = estado.filtro.obras) {
   if (visao !== 'cliente') return ABAS;
-  const filtradas = new Set(estado.filtro.obras ?? []);
+  const filtradas = new Set(obras ?? []);
   const marcadas = (campo) => (estado.bruto?.cadastro ?? []).some((c) => filtradas.has(c.chave) && c[campo] === 'sim');
   return ABAS.filter((a) => a.cliente !== 'opcional' || marcadas(a.opcaoCliente));
 }
@@ -99,7 +103,7 @@ for (const visao of ['obra', 'cliente']) {
     return paginaApresentacao(visao, encontrada ?? ABAS[0]);
   });
   rota(`/${visao}/tela/:id`, ({ id }) => (!visoesLiberadas().includes(visao) ? ir(rotaInicial()) : paginaApresentacao(visao, {
-    id: `tela-${id}`, nome: 'Tela', periodo: false, render: (alvo) => renderTelaExtra(alvo, telasExtras.find((t) => t.id === id), visao),
+    id: `tela-${id}`, nome: 'Tela', render: (alvo) => renderTelaExtra(alvo, telasExtras.find((t) => t.id === id), visao),
   })));
 }
 rota('/admin/:secao', ({ secao }) => paginaAdmin(SECOES_ADMIN.find((s) => s.id === secao) ?? SECOES_ADMIN[0]));
@@ -122,10 +126,22 @@ function cabecalho(visao, abaAtual) {
       apresentacoes && visoesLiberadas().length > 1 ? h('div', { class: 'visao', role: 'group', 'aria-label': 'Apresentação' },
         h('a', { href: `#/obra/${mesmaAba('obra')}`, 'aria-current': String(visao === 'obra') }, 'Obra'),
         h('a', { href: `#/cliente/${mesmaAba('cliente')}`, 'aria-current': String(visao === 'cliente') }, 'Cliente')) : null,
+      visao === 'cliente' && estado.bruto && pode(u.papel, 'exportarPdf')
+        ? h('button', { class: 'btn inverse sm so-edicao', type: 'button', 'data-teste': 'exportar-pdf', onclick: exportarPdf }, icone('baixar', { tamanho: 16 }), 'Exportar PDF') : null,
       apresentacoes ? h('button', { class: 'btn inverse sm', type: 'button', title: 'Tela cheia', onclick: alternarApresentacao }, icone('telaCheia', { tamanho: 16 }), 'Apresentar') : null,
       apresentacoes && admin ? h('a', { class: 'btn inverse sm so-edicao', href: `#/admin/${admin.id}` }, icone('engrenagem', { tamanho: 16 }), 'Administração') : null,
       h('a', { class: 'usuario', href: '#/conta', style: { textDecoration: 'none' } }, h('b', {}, u.nome), h('span', {}, PAPEIS[u.papel]?.nome)),
       h('button', { class: 'btn inverse sm', type: 'button', onclick: sair, 'aria-label': 'Sair' }, icone('sair', { tamanho: 16 })))));
+}
+
+/** "Exportar PDF" da apresentação Cliente: seções = abas e telas extras do Cliente para a obra escolhida. */
+function exportarPdf() {
+  abrirExportarPdf({
+    secoesDaObra: (chave) => [
+      ...abasDaVisao('cliente', [chave]).filter((a) => !a.capa),
+      ...telasDaObra(telasExtras, [chave], 'cliente').map((t) => ({ id: `tela-${t.id}`, nome: t.titulo, render: (alvo) => renderTelaExtra(alvo, t, 'cliente') })),
+    ],
+  });
 }
 
 function alternarApresentacao() {
@@ -151,7 +167,7 @@ async function paginaApresentacao(visao, aba) {
   const conteudo = h('main', { class: `conteudo ${aba.capa ? 'cheio' : ''}`, id: 'conteudo' });
   const bloqueio = estadoDosDados();
   const base = estado.base(visao);
-  montar(raiz, cabecalho(visao, aba.id), base && !aba.capa ? barraFiltros({ mostrarPeriodo: aba.periodo !== false }) : null, conteudo);
+  montar(raiz, cabecalho(visao, aba.id), base && !aba.capa ? barraFiltros() : null, conteudo);
   if (estado.bruto?.aviso) conteudo.append(alerta('warning', 'Dados possivelmente desatualizados', estado.bruto.aviso));
   if (bloqueio || !base) return conteudo.append(bloqueio ?? carregando(8));
   if (!base.obras.length) return conteudo.append(alerta('info', 'Nenhuma obra liberada', 'Seu usuário ainda não tem obras liberadas. Fale com o Dev.'));
