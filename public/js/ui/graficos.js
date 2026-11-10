@@ -13,10 +13,10 @@ const fonteEixo = () => (window.innerHeight >= 1000 ? 13 : 12);
 
 /**
  * v27 — Gráficos com `fonteProporcional` (quadros do Resumo Geral): a fonte acompanha o tamanho do próprio
- * gráfico, entre 10 e 16 px, para o quadro redimensionado continuar legível e sem rótulos encavalados.
+ * gráfico, de 10 px até a fonte normal dos eixos (a de antes), para o quadro redimensionado continuar legível e sem rótulos encavalados.
  */
 const fonteDoGrafico = (chart) => (chart?.canvas?.dataset.fonteProporcional
-  ? Math.round(Math.min(16, Math.max(10, Math.min(chart.height / 14, chart.width / 45))) * 2) / 2
+  ? Math.round(Math.min(fonteEixo(), Math.max(10, Math.min(chart.height / 14, chart.width / 45))) * 2) / 2
   : fonteEixo());
 
 function opcoesBase({ percentual = true, max = null, minimoMax = null } = {}) {

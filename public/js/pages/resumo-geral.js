@@ -154,7 +154,8 @@ function ajustarAlturaATela(pagina) {
 
 /**
  * v27 — Fonte (px) dos quadros de valores: entre o mínimo legível e o máximo, a maior com que o conteúdo cabe.
- * Na impressão os limites são menores (a página A4 é mais densa que a tela).
+ * O máximo nunca passa da fonte normal do Resumo Geral (a de antes da v27, que acompanha a altura da tela; no PDF,
+ * a da página): o quadro só diminui a letra quando fica pequeno, não aumenta quando sobra espaço.
  */
 export const FONTE_QUADRO = Object.freeze({ tela: { min: 10, max: 24 }, impressao: { min: 9, max: 18 } });
 
@@ -197,6 +198,8 @@ export function ajustarQuadro(cartao, limites = FONTE_QUADRO.tela) {
   const conteudo = cartao.querySelector(':scope > .rg-conteudo');
   if (!conteudo || SEM_AJUSTE.has(cartao.dataset.quadro)) return true;
   const arranjos = ARRANJOS[cartao.dataset.quadro] ?? [''];
+  const normal = parseFloat(getComputedStyle(cartao).fontSize) || limites.max;
+  limites = { min: Math.min(limites.min, normal), max: Math.min(limites.max, normal) };
   let melhor = { arranjo: arranjos[0], fonte: null };
   for (const a of arranjos) {
     aplicarArranjo(conteudo, arranjos, a);

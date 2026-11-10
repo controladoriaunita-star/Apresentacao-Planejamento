@@ -13,15 +13,16 @@ Cada versão só é fechada com `npm run verificar` passando.
   Cliente) e a v26 (acesso por obra e por apresentação).
 - **Quadros que se adaptam ao próprio tamanho**: ao redimensionar um quadro em "Editar layout" (ao vivo, enquanto
   arrasta) ou ao mudar o tamanho da janela, cada quadro de valores usa a **maior fonte com que o conteúdo cabe**,
-  entre 10 e 24 px. Os rótulos quebram linha quando o quadro estreita; os valores nunca quebram nem são cortados.
+  de 10 px até a fonte normal do Resumo Geral (a de antes, que acompanha a altura da tela): o quadro diminui a
+  letra quando fica pequeno, mas não aumenta quando sobra espaço. Os rótulos quebram linha quando o quadro estreita; os valores nunca quebram nem são cortados.
   - Análise econômica escolhe entre 1, 2 ou 3 colunas e Custos por entre 4 em linha, 2 × 2 ou 1 coluna: fica o
     arranjo que permite a fonte maior.
   - CEF × Físico, INCC e NH-NU só ajustam a fonte; o velocímetro já acompanhava o quadro.
   - Quadro tão pequeno que nem na fonte mínima cabe: rola por dentro.
   - Gráficos (curva, barras e assertividade): a fonte dos eixos e dos rótulos acompanha o tamanho do gráfico
-    (10 a 16 px); em quadro estreito a legenda desce para baixo do título.
+    (de 10 px até o tamanho normal de antes, 12–13 px); em quadro estreito a legenda desce para baixo do título.
   - Substitui a regra anterior que passava a Análise econômica para 3 colunas quando não cabia na altura.
-- **PDF**: o Resumo Geral usa o mesmo ajuste no tamanho da página (fonte de 9 a 18 px); a página só é ampliada e
+- **PDF**: o Resumo Geral usa o mesmo ajuste no tamanho da página (fonte de 9 px até a normal da página, 13 px); a página só é ampliada e
   reduzida se algum quadro não couber nem na fonte mínima. Com o layout padrão sai sem redução.
 - Arquivos: `pages/resumo-geral.js` (`ajustarQuadros`), `pages/exportar-pdf.js`, `ui/graficos.js`
   (`fonteProporcional`, só nos gráficos do Resumo Geral), `css/paginas.css`, `css/impressao.css`. Nenhum cálculo mudou.

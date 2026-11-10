@@ -58,6 +58,7 @@
 /* Resumo Geral: a grade de 24 × 24 do Dev numa página inteira. Começa no tamanho da página (sem redução); o JS
    aumenta a área (e a redução) só até nenhum quadro ficar cortado. */
 .impressao .rg.rg-tela { height: 178mm; font-size: 13px; }
+.impressao .rg.rg-tela .rg-numero b { font-size: 2.6em; }
 /* (a altura da página impressa cai na regra de telas baixas do paginas.css: anula aqui) */
 .impressao .rg.rg-tela .custo-item small, .impressao .rg.rg-tela .rg-numero small { display: block; }
 .impressao .rg.rg-tela .rg-custos .card-titulo span { display: inline; }
