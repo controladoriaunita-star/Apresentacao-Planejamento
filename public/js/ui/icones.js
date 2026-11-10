@@ -6,6 +6,7 @@ import { svg } from '../core/dom.js';
 
 const CAMINHOS = {
   funil: ['M3 5h18l-7 8v6l-4 2v-8z'],
+  grade: ['M4 4h7v7H4z', 'M13 4h7v4h-7z', 'M13 10h7v10h-7z', 'M4 13h7v7H4z'],
   busca: ['M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14z', 'M20 20l-4-4'],
   seta: ['M6 9l6 6l6-6'],
   direita: ['M9 6l6 6l-6 6'],

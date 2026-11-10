@@ -155,51 +155,78 @@
 .rg-titulo { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
 .rg-titulo h1 { font-size: 22px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .rg-titulo h1 small { font-family: var(--font-sans); font-size: 13px; font-weight: 400; color: var(--muted); }
-.rg-corpo { display: grid; grid-template-columns: minmax(max-content, 24%) minmax(0, 1fr); gap: 12px; }
-.rg-esquerda, .rg-direita { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
-.rg-esquerda { min-width: 320px; }
-.rg-cartao { padding: 12px 18px; display: flex; flex-direction: column; min-height: 0; }
+/* Telas pequenas: um quadro abaixo do outro, com rolagem */
+.rg-corpo { display: flex; flex-direction: column; gap: 12px; }
+.rg-cartao { position: relative; padding: 12px 18px; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 .rg-cartao .card-titulo h3 { display: flex; align-items: center; gap: 8px; }
 .rg-cartao .card-titulo h3::before { content: ''; width: 4px; height: 1em; border-radius: 4px; background: var(--color-primary); }
 .rg-cartao .card-titulo { margin-bottom: 6px; }
-.rg-rodape { display: grid; grid-template-columns: minmax(min-content, 1.6fr) repeat(3, minmax(min-content, 1fr)); gap: 12px; }
 .grafico-area { position: relative; display: flex; flex-direction: column; gap: 6px; min-height: 0; } /* relative: a tabela acessível (sr-only) não estica a página */
 .grafico { position: relative; height: 260px; }
+.rg-editar { display: none; } /* edição de layout só com a grade (tela cheia) */
 
-/* Ocupando exatamente a altura livre da janela (classe colocada pelo JS quando a tela comporta) */
-.rg.rg-tela { overflow: hidden; font-size: clamp(11.5px, 1.5vh, 16px); }
+/* Ocupando exatamente a altura livre da janela (classe colocada pelo JS quando a tela comporta): grade de
+   24 × 24 células cobrindo toda a área; a posição de cada quadro vem do layout (domain/layout-resumo.js). */
+.rg.rg-tela { overflow: hidden; font-size: clamp(11.5px, 1.5vh, 16px); gap: 8px; }
 main.conteudo:has(.rg-tela) { padding-bottom: 16px; }
-.rg.rg-tela .rg-corpo { flex: 1; min-height: 0; }
-.rg.rg-tela .rg-esquerda { overflow: hidden; }
-.rg.rg-tela .rg-esquerda > .rg-cartao:first-child { flex: 0 0 auto; } /* CEF × Físico na altura natural; a análise econômica fica com o resto */
-.rg.rg-tela .rg-economica { flex: 1; overflow: auto; }
-.rg.rg-tela .rg-grafico { flex: 1; }
-.rg.rg-tela .grafico-area { flex: 1; }
-.rg.rg-tela .grafico { flex: 1; height: auto; min-height: 60px; }
-.rg.rg-tela .rg-rodape { flex: 0 0 auto; }
-.rg.rg-tela .card-titulo h3 { font-size: 1.08em; }
-/* Tela única: quadros da esquerda e do rodapé com espaçamento enxuto para sobrar altura aos gráficos */
-.rg.rg-tela, .rg.rg-tela .rg-corpo, .rg.rg-tela .rg-esquerda, .rg.rg-tela .rg-direita, .rg.rg-tela .rg-rodape { gap: 8px; }
-.rg.rg-tela .rg-esquerda .rg-cartao, .rg.rg-tela .rg-rodape .rg-cartao { padding: 8px 12px; }
+.rg.rg-tela .rg-editar { display: inline-flex; }
+.rg.rg-tela .rg-corpo {
+  flex: 1; min-height: 0; display: grid; gap: 8px;
+  grid-template-columns: repeat(24, minmax(0, 1fr)); grid-template-rows: repeat(24, minmax(0, 1fr));
+}
+.rg.rg-tela .rg-cartao { overflow: hidden; padding: 8px 12px; }
 .rg.rg-tela .rg-grafico { padding: 8px 14px 6px; }
 .rg.rg-tela .rg-cartao .card-titulo { margin-bottom: 4px; }
-/* Espaçamento vertical acompanha a altura da tela: enxuto em notebooks, mais arejado em telas altas */
-.rg.rg-tela .cef-fisico { border-spacing: 0 clamp(1px, 0.6vh - 4px, 5px); }
-.rg.rg-tela .cef-fisico td { padding: clamp(1px, 0.6vh - 4px, 5px) 0.6em; }
+.rg.rg-tela .card-titulo h3 { font-size: 1.08em; }
+.rg.rg-tela .grafico-area { flex: 1; }
+/* Legenda na linha do título (sobra altura para o gráfico); a tabela acessível fica presa ao quadro */
+.rg.rg-tela .rg-grafico .grafico-area { position: static; }
+.rg.rg-tela .rg-grafico .legenda { position: absolute; top: 8px; right: 14px; margin: 0; }
+.rg.rg-tela .grafico { flex: 1; height: auto; min-height: 40px; }
+/* CEF × Físico: a tabela ocupa a altura do quadro (linhas mais espaçadas quanto mais alto ele for) */
+.rg.rg-tela .rg-cef-conteudo { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.rg.rg-tela .cef-fisico { flex: 1; border-spacing: 0 2px; }
+.rg.rg-tela .cef-fisico td { padding: 0.1em 0.6em; }
 .rg.rg-tela .cef-fisico th { padding-bottom: 2px; }
-.rg.rg-tela .economia-grade div { padding: 0.12em 0; }
-/* Linhas da análise econômica dividem toda a altura do quadro (sem sobra vazia no pé) */
+/* Análise econômica: as linhas dividem toda a altura do quadro; rola por dentro se ficar pequeno */
+.rg.rg-tela .rg-economica { overflow: auto; }
 .rg.rg-tela .rg-economica .economia-grade { flex: 1 0 auto; grid-auto-rows: minmax(min-content, 1fr); }
-.rg.rg-tela .rg-economica .economia-grade div { display: flex; flex-direction: column; justify-content: center; }
+.rg.rg-tela .rg-economica .economia-grade div { display: flex; flex-direction: column; justify-content: center; padding: 0.12em 0; }
 .rg.rg-tela .economia-grade dt, .rg.rg-tela .economia-grade dd { line-height: 1.25; }
+/* Rodapé: conteúdo centralizado e esticado até o pé de cada quadro */
+.rg.rg-tela .rg-custos > div:last-child { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.rg.rg-tela .custo-item { padding: 0.15em 0.2em; justify-content: center; }
+.rg.rg-tela .rg-incc .lista-valores { flex: 1; align-content: space-evenly; }
 .rg.rg-tela .lista-valores dt, .rg.rg-tela .lista-valores dd { padding: 0.14em 0; }
 .rg.rg-tela .lista-valores dt { white-space: nowrap; padding-right: 8px; }
-.rg.rg-tela .custo-item { padding: 0.15em 0.2em; }
-.rg.rg-tela .rg-numero b { font-size: 1.9em; }
-/* Velocímetro ocupa todo o quadro (largura e altura da linha do rodapé) em qualquer tamanho de tela;
-   a altura mínima acompanha a tela para ele nunca ficar pequeno */
-.rg.rg-tela .velocimetro { position: relative; flex: 1 1 0; min-height: clamp(84px, 12vh, 150px); }
+.rg.rg-tela .rg-numero { flex: 1; justify-content: center; }
+.rg.rg-tela .rg-numero b { font-size: clamp(1.9em, 4vh, 3.2em); }
+/* Velocímetro ocupa todo o quadro (largura e altura) em qualquer tamanho de tela */
+.rg.rg-tela .velocimetro { position: relative; flex: 1 1 0; min-height: 0; }
 .rg.rg-tela .velocimetro svg { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; }
+
+/* Edição do layout (Dev): grade visível, quadros arrastáveis e alça de redimensionar no canto */
+.rg.editando .rg-corpo {
+  background-image:
+    linear-gradient(to right, var(--border-soft) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border-soft) 1px, transparent 1px);
+  background-size: calc((100% + 8px) / var(--grade-colunas, 24)) calc((100% + 8px) / var(--grade-linhas, 24));
+  border-radius: 12px; touch-action: none; user-select: none;
+}
+.rg.editando .rg-cartao { cursor: grab; outline: 2px dashed var(--color-primary); outline-offset: -2px; }
+.rg.editando .rg-cartao > :not(.rg-alca) { pointer-events: none; opacity: 0.55; }
+.rg.editando .rg-cartao.arrastando { cursor: grabbing; z-index: 2; box-shadow: var(--shadow-hover); }
+.rg.editando .rg-cartao.colide { outline-color: var(--error); background: var(--error-soft); }
+.rg.editando .rg-cartao:focus-visible { outline-style: solid; }
+.rg-edicao-nome {
+  position: absolute; top: 8px; right: 10px; z-index: 1; padding: 2px 10px; border-radius: 999px;
+  background: var(--color-primary); color: var(--color-primary-foreground); font-size: 12px; font-weight: 600; opacity: 1 !important;
+}
+.rg-alca {
+  position: absolute; right: 4px; bottom: 4px; z-index: 1; width: 18px; height: 18px; cursor: nwse-resize; opacity: 1 !important;
+  border-right: 3px solid var(--color-primary); border-bottom: 3px solid var(--color-primary); border-radius: 0 0 6px 0;
+}
+.rg-edicao-acoes { align-items: center; }
 
 .cef-fisico { width: 100%; border-collapse: separate; border-spacing: 0 2px; font-variant-numeric: tabular-nums; }
 .cef-fisico th { text-align: center; padding: 0 0 4px; }
@@ -219,9 +246,9 @@ main.conteudo:has(.rg-tela) { padding-bottom: 16px; }
 /* Telas baixas (notebooks 768 px): sem textos auxiliares no rodapé, mais altura para os gráficos */
 @media (max-height: 820px) {
   .rg.rg-tela .custo-item small, .rg.rg-tela .rg-numero small, .rg.rg-tela .rg-custos .card-titulo span { display: none; }
-  .rg.rg-tela .rg-cartao { padding: 10px 14px; }
-  .rg.rg-tela .economia-grade div { padding: 0.15em 0; }
-  .rg.rg-tela .rg-cartao .card-titulo { margin-bottom: 4px; }
+  .rg.rg-tela .cef-fisico { border-spacing: 0 1px; }
+  .rg.rg-tela .cef-fisico td { padding: 0 0.6em; }
+  .rg.rg-tela .selo-desvio { padding: 0.05em 0.6em; }
 }
 .economia-grade { display: grid; grid-template-columns: repeat(2, minmax(max-content, 1fr)); gap: 0 14px; margin: 0; }
 .compacto .economia-grade { grid-template-columns: repeat(3, minmax(max-content, 1fr)); gap: 0 10px; }
@@ -445,12 +472,10 @@ body.sem-rolagem { overflow: hidden; }
   .capa-obras .capa-titulo h1 { white-space: normal; }
   .galeria { grid-template-columns: 1fr; }
   .galeria-lateral { position: static; }
-  .rg-corpo { grid-template-columns: 1fr; }
-  .rg-rodape { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 760px) {
   .capa-conteudo { padding: 24px 16px; }
-  .capa-kpis, .rg-rodape, .blocos, .detalhe-grade { grid-template-columns: 1fr; }
+  .capa-kpis, .blocos, .detalhe-grade { grid-template-columns: 1fr; }
   .custos-por { grid-template-columns: repeat(2, 1fr); }
 }
 

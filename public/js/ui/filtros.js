@@ -1,7 +1,7 @@
 /**
  * Barra de filtros comum às abas, no estilo do AutoFiltro do Excel:
- * obras (várias, com pesquisa e agrupadas por cliente), período dos gráficos e mês de referência
- * (agrupados por ano).
+ * obras (várias, com pesquisa e agrupadas por cliente) e mês de referência (agrupado por ano). O intervalo dos
+ * gráficos do Resumo Geral não é escolhido: vai do 1º mês da obra até o mês seguinte ao 100% do planejado.
  */
 import { h } from '../core/dom.js';
 import { fmtDataHora, fmtMes } from '../core/formato.js';
@@ -22,9 +22,9 @@ export function itensDeObras(base) {
   return base.obras.map((o) => ({ valor: o.chave, rotulo: o.nome, grupo: o.cliente ?? 'Sem cliente' }));
 }
 
-export function barraFiltros({ mostrarPeriodo = true } = {}) {
+export function barraFiltros() {
   const base = estado.base('obra');
-  const { obras, de, ate, referencia } = estado.filtro;
+  const { obras, referencia } = estado.filtro;
   const meses = mesesDasObras(base, obras);
   const todosMeses = itensDeMes(meses.length ? intervaloMeses(meses[0], meses.at(-1)) : []);
 
@@ -33,8 +33,6 @@ export function barraFiltros({ mostrarPeriodo = true } = {}) {
       rotulo: 'Obras', itens: itensDeObras(base), selecionados: obras, multiplo: true, testeId: 'filtro-obras', largura: 340,
       aoAplicar: (valores) => estado.definirFiltro({ obras: valores }),
     }),
-    mostrarPeriodo ? filtroExcel({ rotulo: 'De', itens: todosMeses, selecionados: de, multiplo: false, largura: 200, aoAplicar: (v) => estado.definirFiltro({ de: v }) }) : null,
-    mostrarPeriodo ? filtroExcel({ rotulo: 'Até', itens: todosMeses, selecionados: ate, multiplo: false, largura: 200, aoAplicar: (v) => estado.definirFiltro({ ate: v }) }) : null,
     filtroExcel({
       rotulo: 'Mês de referência', itens: todosMeses, selecionados: referencia, multiplo: false, testeId: 'mes-referencia', largura: 220, destaque: true,
       aoAplicar: (v) => estado.definirFiltro({ referencia: v }),

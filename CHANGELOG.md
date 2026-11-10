@@ -5,7 +5,26 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v23 (em validação — ainda não publicada) |
+| Dev (local) | v24 (em validação — ainda não publicada) |
+
+## v24 — 10/11/2026 — Resumo Geral em grade ajustável pelo Dev, gráficos até o 100% + 1 mês
+
+- **Intervalo dos gráficos sem seleção**: saem os filtros "De" e "Até". Os gráficos vão do primeiro mês da obra até o
+  mês seguinte àquele em que o planejado atual chega a 100% (ex.: 100% em fevereiro → último mês março), nunca antes
+  do mês de referência nem depois do último mês da planilha.
+- **Rótulos de dados também na curva acumulada** (Realizado acima do ponto, Planejado atual abaixo; na vertical
+  quando os meses ficam próximos). As barras já tinham (v19).
+- **Todos os meses legíveis no eixo**: mês em duas linhas ("JAN" sobre "25"), sem pular meses; a legenda das
+  séries subiu para a linha do título e sobra mais altura para o gráfico.
+- **Tela toda coberta**: em tela cheia os quadros formam uma grade de 24 × 24 que ocupa a área inteira (sem espaço
+  vazio no rodapé); cada quadro estica o conteúdo até as bordas.
+- **Editar layout (Dev)**: botão no título do Resumo Geral. Arrastar move o quadro, a alça no canto o redimensiona,
+  tudo encaixado na grade (como os widgets da Apple); um quadro não cobre outro (fica vermelho e volta). Teclado:
+  setas movem, Shift + setas redimensionam. "Salvar para todas as apresentações" grava no servidor
+  (`PUT /api/layouts/resumo-geral`, armazém de documentos — sem migration no Supabase); "Restaurar padrão" volta ao
+  layout do app. Em telas pequenas os quadros ficam um abaixo do outro e a edição some.
+- Testes: grade (padrão cobre a tela sem sobreposição, limites, recusa de sobreposição), contrato da rota (só o Dev
+  salva; todos recebem no resumo) e tela (Dev redimensiona, salva, recarrega e restaura).
 
 ## v23 — 05/11/2026 — Segurança do Trabalho na Obra/Cliente, papel Segurança e imagens em qualquer formato
 

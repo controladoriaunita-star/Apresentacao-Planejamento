@@ -73,14 +73,17 @@ test('Resumo Geral — gráficos cortam o realizado no mês de referência', () 
   perto(assert, assertividade[0], 0.04 / (1 / 24), 'assertividade = realizado ÷ planejado do mês');
 });
 
-test('Resumo Geral — gráficos vão só até o último mês do replanejado', () => {
+test('Resumo Geral — gráficos vão do 1º mês da obra até o mês seguinte ao 100% do planejado, sem depender do filtro', () => {
   assert.equal(indiceFimDaSerie([0.5, 0.9, 1, 1, 1, null]), 2, 'primeiro mês do valor final');
   assert.equal(indiceFimDaSerie([null, null]), -1);
   const base = baseExemplo();
-  const beta = calcularResumoGeral(base, { obras: [BETA], de: '2025-01', ate: '2026-12', referencia: REF });
-  assert.equal(beta.graficos.meses.at(-1), '2026-08', 'Beta: replanejado chega a 100% em ago/26');
+  const beta = calcularResumoGeral(base, { obras: [BETA], de: '2026-01', ate: '2026-03', referencia: REF });
+  assert.equal(beta.graficos.meses[0], '2025-01', 'o período escolhido no filtro não vale mais');
+  assert.equal(beta.graficos.meses.at(-1), '2026-09', 'Beta: replanejado chega a 100% em ago/26 → até set/26');
   assert.equal(beta.graficos.curvaAcumulada.planejadoAtual.length, beta.graficos.meses.length);
-  const gama = calcularResumoGeral(base, { obras: [GAMA], de: '2025-01', ate: '2026-12', referencia: REF });
+  const alpha = calcularResumoGeral(base, { obras: [ALPHA], referencia: REF });
+  assert.equal(alpha.graficos.meses.at(-1), '2026-12', 'Alpha chega a 100% no último mês da planilha: não passa dele');
+  const gama = calcularResumoGeral(base, { obras: [GAMA], referencia: REF });
   assert.equal(gama.graficos.meses.at(-1), REF, 'nunca corta antes do mês de referência');
 });
 

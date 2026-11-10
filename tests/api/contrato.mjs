@@ -154,6 +154,24 @@ test('permissões: viewer só lê; planejamento edita conteúdo; só dev adminis
   assert.equal((await dev('GET', '/api/usuarios')).status, 200);
 });
 
+test('layout do Resumo Geral: só o dev salva, sem sobreposição, e vale para todos no resumo', async () => {
+  assert.equal((await viewer('GET', '/api/dados/resumo')).dados.layoutResumoGeral, null, 'sem layout salvo = padrão do app');
+  const layout = {
+    cef: { x: 1, y: 1, w: 6, h: 11 }, economica: { x: 1, y: 12, w: 6, h: 13 }, curva: { x: 7, y: 1, w: 18, h: 8 },
+    barras: { x: 7, y: 9, w: 18, h: 5 }, assertividade: { x: 7, y: 14, w: 18, h: 5 }, custos: { x: 7, y: 19, w: 7, h: 6 },
+    incc: { x: 14, y: 19, w: 4, h: 6 }, nhnu: { x: 18, y: 19, w: 3, h: 6 }, andamento: { x: 21, y: 19, w: 4, h: 6 },
+  };
+  assert.equal((await viewer('PUT', '/api/layouts/resumo-geral', { layout })).status, 403);
+  assert.equal((await planejamento('PUT', '/api/layouts/resumo-geral', { layout })).status, 403);
+  const sobreposto = await dev('PUT', '/api/layouts/resumo-geral', { layout: { ...layout, nhnu: layout.incc } });
+  assert.equal(sobreposto.status, 400);
+  assert.match(sobreposto.dados.erro, /INCC e NH-NU/);
+  const salvo = await dev('PUT', '/api/layouts/resumo-geral', { layout });
+  assert.equal(salvo.status, 200);
+  assert.deepEqual(salvo.dados.layout, layout);
+  assert.deepEqual((await viewer('GET', '/api/dados/resumo')).dados.layoutResumoGeral, layout, 'todos recebem o layout do dev');
+});
+
 test('cadastro de obra: salvar, atualizar pela chave e importar planilha', async () => {
   let r = await planejamento('PUT', '/api/obras/cadastro', { obra: 'Residencial Alpha', numeroUH: '200', areaEquivalente: '10.000,5', inicioObra: '15/01/2025' });
   assert.equal(r.status, 200, JSON.stringify(r.dados));

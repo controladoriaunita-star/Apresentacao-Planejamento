@@ -169,6 +169,34 @@ test('Resumo Geral cabe na tela sem barra de rolagem', async ({ page }) => {
   }
 });
 
+test('Resumo Geral: Dev redimensiona um quadro, salva para todos e restaura o padrão', async ({ page }) => {
+  await entrar(page, DEV);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/#/obra/resumo-geral');
+  await page.reload();
+  await expect(page.locator('.rg.rg-tela')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mês de referência' })).toBeVisible();
+  await expect(page.locator('.filtros').getByText('De', { exact: true })).toHaveCount(0); // sem intervalo por seleção
+  const nhnu = page.locator('[data-quadro="nhnu"]');
+  await expect(nhnu).toHaveCSS('grid-row-start', '19');
+
+  await page.locator('[data-teste="editar-layout"]').click();
+  await expect(page.locator('.rg.editando')).toBeVisible();
+  await nhnu.focus();
+  await page.keyboard.press('Shift+ArrowUp'); // altura 6 → 5
+  await page.keyboard.press('ArrowDown'); // desce uma linha: ocupa o espaço até o pé
+  await page.getByRole('button', { name: 'Salvar para todas as apresentações' }).click();
+  await expect(page.locator('.rg.editando')).toHaveCount(0);
+  await page.reload();
+  await expect(nhnu).toHaveCSS('grid-row-start', '20');
+
+  await page.locator('[data-teste="editar-layout"]').click();
+  await page.getByRole('button', { name: 'Restaurar padrão' }).click();
+  await page.getByRole('button', { name: 'Salvar para todas as apresentações' }).click();
+  await expect(page.locator('.rg.editando')).toHaveCount(0);
+  await expect(nhnu).toHaveCSS('grid-row-start', '19');
+});
+
 test('mudar o mês de referência recalcula o Resumo Geral', async ({ page }) => {
   await entrar(page, DEV);
   await page.goto('/#/obra/resumo-geral');

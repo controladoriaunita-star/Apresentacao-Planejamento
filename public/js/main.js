@@ -38,20 +38,20 @@ const raiz = document.getElementById('app');
 
 /**
  * Abas das apresentações, na ordem pedida.
- * `periodo: false` = sem intervalo dos gráficos no filtro; `capa: true` = sem barra de filtros e largura total.
+ * `capa: true` = sem barra de filtros e largura total.
  * `icone` e `descricao` aparecem nos atalhos da capa.
  * `cliente: 'opcional'` = na apresentação Cliente só aparece se alguma obra do filtro estiver marcada no
  * Cadastro de obras (campo em `opcaoCliente`); na Obra aparece sempre.
  */
 const ABAS = [
-  { id: 'inicio', nome: 'Início', render: renderInicio, periodo: false, capa: true, icone: 'casa' },
+  { id: 'inicio', nome: 'Início', render: renderInicio, capa: true, icone: 'casa' },
   { id: 'resumo-geral', nome: 'Resumo Geral', render: renderResumoGeral, icone: 'grafico', descricao: 'Curvas, CEF × físico e análise econômica' },
-  { id: 'resumo-fisico', nome: 'Resumo Físico', render: renderResumoFisico, periodo: false, icone: 'fisico', descricao: 'Avanço por atividade da EAP' },
-  { id: 'resumo-economico', nome: 'Resumo Econômico', render: renderResumoEconomico, periodo: false, icone: 'economico', descricao: 'IEC, custos e resultado por item' },
-  { id: 'tempo-caminho', nome: 'Tempo x Caminho', render: (a, c) => renderGaleria(a, c, 'txc'), periodo: false, icone: 'caminho', descricao: 'Linhas de balanço por torre' },
-  { id: 'fotos', nome: 'Acompanhamento Fotográfico', render: (a, c) => renderGaleria(a, c, 'foto'), periodo: false, icone: 'camera', descricao: 'Fotos do mês por local' },
+  { id: 'resumo-fisico', nome: 'Resumo Físico', render: renderResumoFisico, icone: 'fisico', descricao: 'Avanço por atividade da EAP' },
+  { id: 'resumo-economico', nome: 'Resumo Econômico', render: renderResumoEconomico, icone: 'economico', descricao: 'IEC, custos e resultado por item' },
+  { id: 'tempo-caminho', nome: 'Tempo x Caminho', render: (a, c) => renderGaleria(a, c, 'txc'), icone: 'caminho', descricao: 'Linhas de balanço por torre' },
+  { id: 'fotos', nome: 'Acompanhamento Fotográfico', render: (a, c) => renderGaleria(a, c, 'foto'), icone: 'camera', descricao: 'Fotos do mês por local' },
   // v22 — Segurança do Trabalho (dados e Dashboard Segurança: Administração → Segurança do Trabalho)
-  { id: 'seguranca-trabalho', nome: 'Segurança do Trabalho', render: renderSegurancaTrabalho, periodo: false, icone: 'alerta', descricao: 'Acidentes ocorridos no mês por tipo', cliente: 'opcional', opcaoCliente: 'segurancaCliente' },
+  { id: 'seguranca-trabalho', nome: 'Segurança do Trabalho', render: renderSegurancaTrabalho, icone: 'alerta', descricao: 'Acidentes ocorridos no mês por tipo', cliente: 'opcional', opcaoCliente: 'segurancaCliente' },
 ];
 
 const SECOES_ADMIN = [
@@ -92,7 +92,7 @@ for (const visao of ['obra', 'cliente']) {
     return paginaApresentacao(visao, encontrada ?? ABAS[0]);
   });
   rota(`/${visao}/tela/:id`, ({ id }) => paginaApresentacao(visao, {
-    id: `tela-${id}`, nome: 'Tela', periodo: false, render: (alvo) => renderTelaExtra(alvo, telasExtras.find((t) => t.id === id), visao),
+    id: `tela-${id}`, nome: 'Tela', render: (alvo) => renderTelaExtra(alvo, telasExtras.find((t) => t.id === id), visao),
   }));
 }
 rota('/admin/:secao', ({ secao }) => paginaAdmin(SECOES_ADMIN.find((s) => s.id === secao) ?? SECOES_ADMIN[0]));
@@ -144,7 +144,7 @@ async function paginaApresentacao(visao, aba) {
   const conteudo = h('main', { class: `conteudo ${aba.capa ? 'cheio' : ''}`, id: 'conteudo' });
   const bloqueio = estadoDosDados();
   const base = estado.base(visao);
-  montar(raiz, cabecalho(visao, aba.id), base && !aba.capa ? barraFiltros({ mostrarPeriodo: aba.periodo !== false }) : null, conteudo);
+  montar(raiz, cabecalho(visao, aba.id), base && !aba.capa ? barraFiltros() : null, conteudo);
   if (estado.bruto?.aviso) conteudo.append(alerta('warning', 'Dados possivelmente desatualizados', estado.bruto.aviso));
   if (bloqueio || !base) return conteudo.append(bloqueio ?? carregando(8));
   const alvo = h('div');

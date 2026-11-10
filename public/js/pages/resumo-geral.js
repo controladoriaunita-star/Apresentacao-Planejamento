@@ -1,18 +1,26 @@
 /**
- * Aba "Resumo Geral" — layout do Power BI: quadro CEF × Físico e Análise Econômica à esquerda,
- * três gráficos mês a mês à direita, e custos por unidade, INCC, NH-NU e velocímetro no rodapé.
+ * Aba "Resumo Geral" — layout do Power BI: quadro CEF × Físico e Análise Econômica, três gráficos mês a mês,
+ * custos por unidade, INCC, NH-NU e velocímetro. Em tela cheia os quadros ficam numa grade de 24 × 24 que
+ * cobre a tela toda; o Dev move e redimensiona os quadros ("Editar layout") e o layout vale para todas as
+ * apresentações (domain/layout-resumo.js, ui/editor-layout.js).
  */
 import { h, montar } from '../core/dom.js';
+import { api } from '../core/api.js';
+import { estado } from '../core/estado.js';
 import {
   classeSinal, fmtData, fmtIndice, fmtMes, fmtMoeda, fmtNumero, fmtPercentual, fmtVariacao, VAZIO,
 } from '../core/formato.js';
+import { LAYOUT_PADRAO, normalizarLayout, QUADROS } from '../domain/layout-resumo.js';
+import { pode } from '../domain/permissoes.js';
 import { calcularResumoGeral } from '../domain/resumo-geral.js';
-import { card, cardTitulo, seloCompetencia, vazio } from '../ui/componentes.js';
+import { card, cardTitulo, seloCompetencia, toast, vazio } from '../ui/componentes.js';
+import { aplicarLayout, editarLayout } from '../ui/editor-layout.js';
 import { grafico } from '../ui/graficos.js';
 import { velocimetro } from '../ui/velocimetro.js';
+import { icone } from '../ui/icones.js';
 import { abrirInfosObra } from './infos-obra.js';
 
-export function renderResumoGeral(alvo, { base, filtro }) {
+export function renderResumoGeral(alvo, { base, filtro, usuario }) {
   if (!filtro.obras.length) return montar(alvo, vazio('Selecione uma obra no filtro'));
   const r = calcularResumoGeral(base, filtro);
   const nomes = base.obras.filter((o) => filtro.obras.includes(o.chave)).map((o) => o.nome);
@@ -20,38 +28,69 @@ export function renderResumoGeral(alvo, { base, filtro }) {
   const curva = h('div', { class: 'grafico-area' });
   const barras = h('div', { class: 'grafico-area' });
   const assertividade = h('div', { class: 'grafico-area' });
-  const cartao = (titulo, conteudo, extra = null, classe = '') => card({ class: `rg-cartao ${classe}` }, cardTitulo(titulo, extra), conteudo);
+  const cartao = (id, titulo, conteudo, extra = null, classe = '') => card({ class: `rg-cartao ${classe}`, dataset: { quadro: id } }, titulo ? cardTitulo(titulo, extra) : null, conteudo);
+  const quadros = {
+    cef: cartao('cef', null, quadroCefFisico(r.painelFisico), null, 'rg-cef'),
+    economica: cartao('economica', 'Análise econômica', analiseEconomica(r.economico), h('span', { class: 'muted small' }, fmtMes(r.referencia)), 'rg-economica'),
+    curva: cartao('curva', 'Curva acumulada atual × original', curva, null, 'rg-grafico'),
+    barras: cartao('barras', 'Realizado × planejado (mês)', barras, null, 'rg-grafico'),
+    assertividade: cartao('assertividade', 'Assertividade', assertividade, null, 'rg-grafico'),
+    custos: cartao('custos', 'Custos por (R$)', custosPor(r.custosPor), h('span', { class: 'muted small' }, 'sem correção'), 'rg-custos'),
+    incc: cartao('incc', 'INCC', incc(r.incc), null, 'rg-incc'),
+    nhnu: cartao('nhnu', 'NH-NU', h('div', { class: 'rg-numero' }, h('b', { class: 'tab' }, fmtNumero(r.nhnu, 1)), h('small', { class: 'muted' }, 'Homens/mês × UH × realizado mês ÷ 100')), null, 'rg-nhnu'),
+    andamento: cartao('andamento', 'Andamento geral', velocimetro(r.andamento), null, 'rg-andamento'),
+  };
+  const corpo = h('div', { class: 'rg-corpo' }, QUADROS.map((q) => quadros[q.id]));
+  let layout = normalizarLayout(estado.bruto?.layoutResumoGeral ?? LAYOUT_PADRAO);
+  aplicarLayout(corpo, layout);
 
+  const acoes = h('div', { class: 'row' },
+    seloCompetencia(r.referencia, { compacto: true }),
+    nomes.length === 1 ? h('button', { class: 'btn secondary sm', type: 'button', onclick: () => abrirInfosObra(base, filtro.obras[0]) }, '+ Infos da obra') : null);
   const pagina = h('div', { class: 'rg' },
     h('div', { class: 'rg-titulo' },
       h('h1', {}, nomes.length === 1 ? nomes[0] : `${nomes.length} obras`,
         nomes.length > 1 ? h('small', {}, 'percentuais ponderados pelo orçamento; R$ somados') : null),
-      h('div', { class: 'row' },
-        seloCompetencia(r.referencia, { compacto: true }),
-        nomes.length === 1 ? h('button', { class: 'btn secondary sm', type: 'button', onclick: () => abrirInfosObra(base, filtro.obras[0]) }, '+ Infos da obra') : null)),
-    h('div', { class: 'rg-corpo' },
-      h('div', { class: 'rg-esquerda' },
-        card({ class: 'rg-cartao' }, quadroCefFisico(r.painelFisico)),
-        cartao('Análise econômica', analiseEconomica(r.economico), h('span', { class: 'muted small' }, fmtMes(r.referencia)), 'rg-economica')),
-      h('div', { class: 'rg-direita' },
-        cartao('Curva acumulada atual × original', curva, null, 'rg-grafico'),
-        cartao('Realizado × planejado (mês)', barras, null, 'rg-grafico'),
-        cartao('Assertividade', assertividade, null, 'rg-grafico'),
-        h('div', { class: 'rg-rodape' },
-          cartao('Custos por (R$)', custosPor(r.custosPor), h('span', { class: 'muted small' }, 'sem correção'), 'rg-custos'),
-          cartao('INCC', incc(r.incc)),
-          cartao('NH-NU', h('div', { class: 'rg-numero' }, h('b', { class: 'tab' }, fmtNumero(r.nhnu, 1)), h('small', { class: 'muted' }, 'Homens/mês × UH × realizado mês ÷ 100'))),
-          cartao('Andamento geral', velocimetro(r.andamento))))));
+      acoes),
+    corpo);
+
+  // Dev: "Editar layout" troca as ações do título pela barra de edição até salvar ou cancelar.
+  if (pode(usuario?.papel, 'administrar')) {
+    const botaoEditar = h('button', {
+      class: 'btn ghost sm so-edicao rg-editar', type: 'button', 'data-teste': 'editar-layout',
+      onclick: () => {
+        const barra = editarLayout({
+          pagina, corpo, layout,
+          aoMudar: ajustar,
+          aoSalvar: async (novo) => {
+            try {
+              const { layout: gravado } = await api.put('/layouts/resumo-geral', { layout: novo });
+              if (estado.bruto) estado.bruto.layoutResumoGeral = gravado;
+              toast('success', 'Layout salvo para todas as apresentações');
+              return true;
+            } catch (e) {
+              toast('error', 'Não foi possível salvar o layout', e.message);
+              return false;
+            }
+          },
+          aoTerminar: (final) => { layout = final; barra.replaceWith(acoes); },
+        });
+        acoes.replaceWith(barra);
+      },
+    }, icone('grade', { tamanho: 16 }), 'Editar layout');
+    acoes.prepend(botaoEditar);
+  }
+
   montar(alvo, pagina);
-  ajustarAlturaATela(pagina);
+  const ajustar = ajustarAlturaATela(pagina);
 
   const { meses } = r.graficos;
   grafico(curva, {
     tipo: 'line', meses, referencia: r.referencia,
     series: [
       { rotulo: 'Previsto original', valores: r.graficos.curvaAcumulada.previstoOriginal, cor: '--series-3', tracejada: true },
-      { rotulo: 'Realizado', valores: r.graficos.curvaAcumulada.realizado, cor: '--series-2', marcadores: true, linha: true },
-      { rotulo: 'Planejado atual', valores: r.graficos.curvaAcumulada.planejadoAtual, cor: '--series-1', linha: true },
+      { rotulo: 'Realizado', valores: r.graficos.curvaAcumulada.realizado, cor: '--series-2', marcadores: true, linha: true, rotulos: 'acima' },
+      { rotulo: 'Planejado atual', valores: r.graficos.curvaAcumulada.planejadoAtual, cor: '--series-1', linha: true, rotulos: 'abaixo' },
     ],
   });
   grafico(barras, {
@@ -68,8 +107,9 @@ export function renderResumoGeral(alvo, { base, filtro }) {
 }
 
 /**
- * A página ocupa exatamente a altura livre da janela (sem barra de rolagem): os gráficos dividem o
- * espaço que sobra. Em telas pequenas (largura < 1100 px ou altura < 620 px) volta ao fluxo normal com rolagem.
+ * A página ocupa exatamente a altura livre da janela (sem barra de rolagem) e a grade dos quadros cobre todo
+ * o espaço. Em telas pequenas (largura < 1100 px ou altura < 620 px) os quadros voltam a ficar um abaixo do
+ * outro, com rolagem (e sem a edição de layout).
  */
 function ajustarAlturaATela(pagina) {
   const ajustar = () => {
@@ -85,6 +125,7 @@ function ajustarAlturaATela(pagina) {
   window.addEventListener('resize', ajustar);
   requestAnimationFrame(ajustar);
   ajustar();
+  return ajustar;
 }
 
 /** Quadro CEF × Físico — mês de referência e mês seguinte. */
@@ -106,7 +147,7 @@ function quadroCefFisico(p) {
     ...linhas,
   ];
   const { atual, proximo } = p;
-  return h('div', {},
+  return h('div', { class: 'rg-cef-conteudo' },
     h('table', { class: 'cef-fisico', 'aria-label': 'Quadro CEF e Físico' },
       h('thead', {}, h('tr', {}, h('th', {}), h('th', {}),
         h('th', { scope: 'col' }, h('span', { class: 'pilula cef' }, 'CEF')),

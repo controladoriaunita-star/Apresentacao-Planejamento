@@ -47,8 +47,8 @@ function opcoesBase({ percentual = true, max = null, minimoMax = null } = {}) {
 
 /**
  * Cria (ou recria) um gráfico dentro de `alvo`.
- * Gráficos de barras trazem o rótulo de dados (valor) em cada barra.
- * @param {{tipo: 'line'|'bar', meses: string[], series: Array<{rotulo, valores, cor, tracejada?, marcadores?}>, max?: number, minimoMax?: number, referencia?: string}} def
+ * Gráficos de barras trazem o rótulo de dados (valor) em cada barra; nas linhas, as séries com `rotulos`.
+ * @param {{tipo: 'line'|'bar', meses: string[], series: Array<{rotulo, valores, cor, tracejada?, marcadores?, rotulos?: 'acima'|'abaixo'}>, max?: number, minimoMax?: number, referencia?: string}} def
  */
 export function grafico(alvo, def) {
   const Chart = window.Chart;
@@ -64,22 +64,25 @@ export function grafico(alvo, def) {
     return def.tipo === 'bar'
       ? { label: s.rotulo, data: s.valores, backgroundColor: cor, hoverBackgroundColor: cor, borderRadius: 6, borderSkipped: 'start', maxBarThickness: 26, categoryPercentage: 0.72, barPercentage: 0.88 }
       : {
-        label: s.rotulo, data: s.valores, borderColor: cor, backgroundColor: cor, borderWidth: s.tracejada ? 2 : 2.75, tension: 0.3, spanGaps: false,
+        label: s.rotulo, data: s.valores, borderColor: cor, backgroundColor: cor, borderWidth: s.tracejada ? 2 : 2.75, tension: 0.3, spanGaps: false, rotulos: s.rotulos ?? null,
         borderDash: s.tracejada ? [6, 5] : [], pointRadius: s.marcadores ? 3.5 : 0, pointHoverRadius: 6, pointBorderColor: token('--surface'), pointBorderWidth: 1.5,
       };
   });
 
   const opcoes = opcoesBase({ percentual: true, max: def.max, minimoMax: def.minimoMax });
+  opcoes.plugins.tooltip.callbacks.title = (itens) => fmtMes(def.meses[itens[0]?.dataIndex]);
   if (def.referencia) opcoes.plugins.linhaReferencia = { indice: def.meses.indexOf(def.referencia) };
-  if (def.tipo === 'bar') { // espaço para o rótulo da barra mais alta (na vertical ele é mais comprido)
+  const comRotulos = def.tipo === 'bar' || def.series.some((s) => s.rotulos);
+  if (comRotulos) { // espaço para o rótulo mais alto (na vertical ele é mais comprido)
     opcoes.layout = { padding: { top: 22 } };
     opcoes.scales.y.grace = '12%';
   }
   const chart = new Chart(tela, {
     type: def.tipo,
-    data: { labels: def.meses.map(fmtMes), datasets },
+    // Mês em duas linhas ("JAN" sobre "25"): metade da largura, todos os meses cabem sem inclinar.
+    data: { labels: def.meses.map((m) => fmtMes(m).split('/')), datasets },
     options: opcoes,
-    plugins: def.tipo === 'bar' ? [pluginReferencia, pluginRotulosBarras] : [pluginReferencia],
+    plugins: [pluginReferencia, def.tipo === 'bar' ? pluginRotulosBarras : pluginRotulosLinha],
   });
   instancias.set(alvo, chart);
   return chart;
@@ -134,6 +137,46 @@ const pluginRotulosBarras = {
           ctx.translate(barra.x, barra.y - 3);
           ctx.rotate(-Math.PI / 2);
           ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(texto, 0, 0);
+          ctx.restore();
+        }
+      });
+    });
+    ctx.restore();
+  },
+};
+
+/**
+ * Rótulo de dados das linhas com `rotulos: 'acima' | 'abaixo'` (série a série, para não se sobreporem):
+ * valor junto de cada ponto; na vertical quando os pontos estão mais próximos que o tamanho do texto.
+ */
+const pluginRotulosLinha = {
+  id: 'rotulosLinha',
+  afterDatasetsDraw(chart) {
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.font = `600 ${fonteEixo() - 2}px Inter, sans-serif`;
+    chart.data.datasets.forEach((ds, i) => {
+      const meta = chart.getDatasetMeta(i);
+      if (!ds.rotulos || meta.hidden) return;
+      const abaixo = ds.rotulos === 'abaixo';
+      const passo = meta.data.length > 1 ? Math.abs(meta.data[1].x - meta.data[0].x) : Infinity;
+      ctx.fillStyle = ds.borderColor;
+      meta.data.forEach((ponto, j) => {
+        const v = ds.data[j];
+        if (typeof v !== 'number') return;
+        const texto = fmtPercentual(v, 1);
+        const y = abaixo ? ponto.y + 6 : ponto.y - 6;
+        if (ctx.measureText(texto).width + 2 <= passo) {
+          ctx.textAlign = 'center';
+          ctx.textBaseline = abaixo ? 'top' : 'bottom';
+          ctx.fillText(texto, ponto.x, y);
+        } else {
+          ctx.save();
+          ctx.translate(ponto.x, y);
+          ctx.rotate(-Math.PI / 2);
+          ctx.textAlign = abaixo ? 'right' : 'left';
           ctx.textBaseline = 'middle';
           ctx.fillText(texto, 0, 0);
           ctx.restore();

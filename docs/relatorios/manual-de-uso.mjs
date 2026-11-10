@@ -52,7 +52,7 @@ cap('abas', 'Usando a apresentação', 'As abas', `
   <h3>Resumo Geral</h3>
   <p>Tudo em uma tela, sem rolagem: quadro CEF × Físico, análise econômica, curvas, realizado × planejado, assertividade, custos por unidade, INCC, NH-NU e andamento. "+ Infos da obra" abre a ficha completa da obra.</p>
   ${telaAnotada('resumo-geral', 'Resumo Geral', [
-    { n: 1, titulo: 'Filtros', texto: 'De/Até mudam os meses dos gráficos; o mês de referência muda os quadros.' },
+    { n: 1, titulo: 'Filtros', texto: 'Os gráficos vão do 1º mês da obra até o mês seguinte ao 100% do planejado; o mês de referência muda os quadros.' },
     { n: 2, titulo: 'CEF × Físico', texto: 'Selos verdes ▲ = adiantado, vermelhos ▼ = atrasado.' },
     { n: 3, titulo: 'Análise econômica', texto: 'Passe o mouse num valor compacto para ver o completo.' },
     { n: 4, titulo: 'Curva acumulada', texto: 'Passe o mouse no gráfico para ver os valores do mês.' },

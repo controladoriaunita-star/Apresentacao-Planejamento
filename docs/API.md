@@ -47,10 +47,11 @@ precisa reproduzir. Os cenários obrigatórios estão em `tests/api/contrato.mjs
 
 | Método | Caminho | Permissão | Resposta |
 |---|---|---|---|
-| GET | `/dados/resumo` | ver | `{ fonte, aviso, atualizadoEm, abas: { "BD_Infos Gerais", "BD_Orc", "BD_Econômico" }, cadastro[], incc[] }` |
+| GET | `/dados/resumo` | ver | `{ fonte, aviso, atualizadoEm, abas: { "BD_Infos Gerais", "BD_Orc", "BD_Econômico" }, cadastro[], incc[], layoutResumoGeral }` — `layoutResumoGeral` = layout salvo pelo Dev ou `null` (padrão do app) (v24) |
 | GET | `/dados/fisico?obra=<nome>` | ver | `{ colunas, linhas }` do BD_Físico por atividade só da obra (nome comparado sem acento/caixa) |
 | POST | `/dados/atualizar` | editarConteudo | relê as 4 abas no SharePoint → `{ ok, ...mesmo corpo de /dados/resumo }` (já relido na mesma instância) |
 | GET | `/saude` | pública | `{ ok, fonte }` |
+| PUT | `/layouts/resumo-geral` | administrar | `{ layout: { <quadro>: { x, y, w, h } } }` → `{ layout }`. Grade de 24 × 24 (`public/js/domain/layout-resumo.js`): valores ajustados aos limites, quadros sobrepostos → 400. Gravado no armazém de documentos (`DATA_DIR/layout-resumo-geral.json` ou Storage `sistema/` no Supabase), vale para todas as apresentações (v24) |
 
 Cada aba é a matriz crua do Graph: `{ colunas: string[], linhas: unknown[][] }` (datas como serial do Excel).
 **O servidor não calcula medidas** — os cálculos estão em `public/js/domain` e rodam no navegador.

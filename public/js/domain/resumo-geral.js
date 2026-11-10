@@ -2,7 +2,7 @@
  * Aba "Resumo Geral" — tradução das medidas DAX da página homônima do Power BI.
  * Cada bloco cita a medida original; divergências intencionais estão em docs/CALCULOS.md.
  */
-import { economicoDoMes, infoDoMes, inccDoMes, orcamentoGeral } from './base.js';
+import { economicoDoMes, infoDoMes, inccDoMes, mesesDasObras, orcamentoGeral } from './base.js';
 import { dividir, mediaPonderada, somar, subtrair } from './agregar.js';
 import { ITEM_INDIRETO } from './colunas.js';
 import { intervaloMeses } from './normalizar.js';
@@ -13,11 +13,12 @@ import {
 
 /**
  * @param {ReturnType<import('./base.js').criarBase>} base
- * @param {{obras: string[], de: string, ate: string, referencia: string}} filtro
+ * @param {{obras: string[], referencia: string}} filtro
  */
 export function calcularResumoGeral(base, filtro) {
   const { obras, referencia } = filtro;
-  const meses = intervaloMeses(filtro.de, filtro.ate);
+  const todos = mesesDasObras(base, obras);
+  const meses = todos.length ? intervaloMeses(todos[0], todos.at(-1)) : [];
   return {
     referencia,
     mesSeguinte: mesSeguinte(referencia),
@@ -32,15 +33,17 @@ export function calcularResumoGeral(base, filtro) {
 }
 
 /**
- * Curva acumulada, Realizado × Planejado (mês) e Assertividade, mês a mês — até o último mês do
- * replanejado atual (o mês em que ele chega ao valor final), nunca antes do mês de referência.
+ * Curva acumulada, Realizado × Planejado (mês) e Assertividade, mês a mês — do primeiro mês das obras até o
+ * mês seguinte àquele em que o planejado atual chega a 100% (o valor final da curva), nunca antes do mês de
+ * referência. O intervalo não depende de seleção no filtro.
  */
 function graficos(base, obras, meses, referencia) {
   const serie = (campo) => serieInfos(base, obras, meses, campo);
   const realizado = (campo) => cortarApos(serie(campo), meses, referencia);
   // As regras "sem repetição" rodam na série inteira; o corte no fim do replanejado vem depois.
   const replanAcm = serie('replanAcm');
-  const fim = Math.max(indiceFimDaSerie(replanAcm), meses.indexOf(referencia));
+  const chegada = indiceFimDaSerie(replanAcm);
+  const fim = Math.min(meses.length - 1, Math.max(chegada >= 0 ? chegada + 1 : -1, meses.indexOf(referencia)));
   const ate = (valores) => (fim >= 0 ? valores.slice(0, fim + 1) : valores);
   return {
     meses: ate(meses),

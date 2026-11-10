@@ -37,7 +37,7 @@ const TELAS = [
   },
   {
     nome: 'resumo-geral', hash: '#/obra/resumo-geral',
-    marcas: [[1, '.filtros'], [2, 'table.cef-fisico'], [3, '.rg-economica'], [4, '.rg-grafico', 0], [5, '.rg-grafico', 1], [6, '.rg-grafico', 2], [7, '.rg-custos'], [8, '.rg-rodape .rg-cartao', 1], [9, '.rg-rodape .rg-cartao', 2], [10, '.rg-rodape .rg-cartao', 3], [11, '.rg-titulo .btn']],
+    marcas: [[1, '.filtros'], [2, 'table.cef-fisico'], [3, '.rg-economica'], [4, '.rg-grafico', 0], [5, '.rg-grafico', 1], [6, '.rg-grafico', 2], [7, '.rg-custos'], [8, '.rg-incc'], [9, '.rg-nhnu'], [10, '.rg-andamento'], [11, '.rg-titulo .btn']],
   },
   {
     nome: 'resumo-fisico', hash: '#/obra/resumo-fisico',
