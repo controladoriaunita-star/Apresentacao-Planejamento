@@ -19,9 +19,15 @@ import { abrirFormMidia } from './admin-midias.js';
 
 const ICONE_TIPO = { txc: 'caminho', foto: 'camera' };
 
+/**
+ * Mês exibido (também no PDF): o de referência; se não houver imagens nele, o mais recente anterior
+ * (ou o mais recente). `meses` em ordem decrescente.
+ */
+export const mesExibido = (meses, referencia) => (meses.includes(referencia) ? referencia : meses.find((m) => m <= referencia) ?? meses[0]);
+
 export async function renderGaleria(alvo, ctx, tipo) {
   const { base, filtro, visao } = ctx;
-  const { obra, seletor } = obraUnica(base, () => renderGaleria(alvo, ctx, tipo));
+  const { obra, seletor } = obraUnica(base, () => renderGaleria(alvo, ctx, tipo), filtro);
   const def = TIPOS_MIDIA[tipo];
   if (!obra) return montar(alvo, vazio('Selecione uma obra no filtro'));
 
@@ -50,8 +56,7 @@ export async function renderGaleria(alvo, ctx, tipo) {
       podeEditar ? 'Use "Cadastrar" para enviar as imagens desta obra, por mês.' : 'O Planejamento ainda não cadastrou imagens para esta obra.')));
   }
 
-  // Mês inicial: o de referência; se não houver imagens nele, o mais recente anterior (ou o mais recente).
-  let mes = meses.includes(filtro.referencia) ? filtro.referencia : meses.find((m) => m <= filtro.referencia) ?? meses[0];
+  let mes = mesExibido(meses, filtro.referencia);
   let grupo = null;
   let indice = 0;
 

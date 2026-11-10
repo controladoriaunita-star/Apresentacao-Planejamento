@@ -41,12 +41,12 @@ test('Painel de obras: grupos expandem, colunas fixadas ficam na tela inicial e 
   // expandir o grupo mostra as demais colunas; o alfinete fixa a coluna, que fica ao recolher e após recarregar
   await grupos.getByRole('button', { name: 'Expandir Informações Gerais' }).click();
   await expect(coluna('Cidade')).toBeVisible();
-  await painel.getByRole('button', { name: 'Fixar Orçamento raso na tela inicial' }).click();
+  await painel.getByRole('button', { name: 'Fixar Orçamento raso (R$) na tela inicial' }).click();
   await grupos.getByRole('button', { name: 'Recolher Informações Gerais' }).click();
   await expect(coluna('Cidade')).toHaveCount(0);
   await page.reload();
   await expect(coluna('Orçamento raso')).toBeVisible();
-  await painel.getByRole('button', { name: 'Desafixar Orçamento raso na tela inicial' }).click();
+  await painel.getByRole('button', { name: 'Desafixar Orçamento raso (R$) na tela inicial' }).click();
   await expect(coluna('Orçamento raso')).toHaveCount(0);
   await page.getByRole('button', { name: 'Todas do cadastro' }).click();
   await painel.getByRole('link', { name: 'Torre Gama' }).click();
@@ -126,7 +126,7 @@ test('Resumo Econômico: item expande com detalhes e comentários', async ({ pag
   await expect(comentario).toBeHidden();
   await page.getByRole('button', { name: 'Detalhes de ESTRUTURA' }).click();
   await expect(comentario).toBeVisible();
-  await expect(page.locator('tr.detalhe:not(.oculto)').getByText('Saldos contratos', { exact: true })).toBeVisible();
+  await expect(page.locator('tr.detalhe:not(.oculto)').getByText('Saldos contratos (R$)', { exact: true })).toBeVisible();
 });
 
 test('filtro de obras estilo Excel: pesquisa e aplica só os resultados', async ({ page }) => {
@@ -167,6 +167,66 @@ test('Resumo Geral cabe na tela sem barra de rolagem', async ({ page }) => {
     const economica = await page.evaluate(() => { const e = document.querySelector('.rg-economica'); return e.scrollHeight - e.clientHeight; });
     expect(economica, `rolagem na análise econômica em ${tamanho.width}×${tamanho.height}`).toBeLessThanOrEqual(1);
   }
+});
+
+test('Resumo Geral: Dev redimensiona um quadro, salva para todos e restaura o padrão', async ({ page }) => {
+  await entrar(page, DEV);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/#/obra/resumo-geral');
+  await page.reload();
+  await expect(page.locator('.rg.rg-tela')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mês de referência' })).toBeVisible();
+  await expect(page.locator('.filtros').getByText('De', { exact: true })).toHaveCount(0); // sem intervalo por seleção
+  const nhnu = page.locator('[data-quadro="nhnu"]');
+  await expect(nhnu).toHaveCSS('grid-row-start', '19');
+
+  await page.locator('[data-teste="editar-layout"]').click();
+  await expect(page.locator('.rg.editando')).toBeVisible();
+  await nhnu.focus();
+  await page.keyboard.press('Shift+ArrowUp'); // altura 6 → 5
+  await page.keyboard.press('ArrowDown'); // desce uma linha: ocupa o espaço até o pé
+  await page.getByRole('button', { name: 'Salvar para todas as apresentações' }).click();
+  await expect(page.locator('.rg.editando')).toHaveCount(0);
+  await page.reload();
+  await expect(nhnu).toHaveCSS('grid-row-start', '20');
+
+  await page.locator('[data-teste="editar-layout"]').click();
+  await page.getByRole('button', { name: 'Restaurar padrão' }).click();
+  await page.getByRole('button', { name: 'Salvar para todas as apresentações' }).click();
+  await expect(page.locator('.rg.editando')).toHaveCount(0);
+  await expect(nhnu).toHaveCSS('grid-row-start', '19');
+});
+
+// v27: o conteúdo do quadro acompanha o tamanho dele (fonte e arranjo), sem nada cortado.
+test('Resumo Geral: quadro redimensionado ajusta fonte e colunas sem cortar valores', async ({ page }) => {
+  await entrar(page, DEV);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/#/obra/resumo-geral');
+  await page.reload();
+  await expect(page.locator('.rg.rg-tela')).toBeVisible();
+  const medir = () => page.evaluate(() => Object.fromEntries(['cef', 'economica', 'custos', 'incc', 'nhnu'].map((id) => {
+    const c = document.querySelector(`[data-quadro="${id}"]`);
+    const conteudo = c.querySelector('.rg-conteudo');
+    const cortado = c.scrollHeight > c.clientHeight + 1 || c.scrollWidth > c.clientWidth + 1;
+    return [id, { fonte: parseFloat(conteudo.style.fontSize), colunas: conteudo.className.match(/colunas-\d/)?.[0] ?? null, cortado }];
+  })));
+  const antes = await medir();
+  for (const [id, q] of Object.entries(antes)) {
+    expect(q.cortado, `${id} cortado`).toBe(false);
+    expect(q.fonte, `${id} com fonte ajustada`).toBeGreaterThanOrEqual(10);
+  }
+
+  // Dev estreita a Análise econômica (6 → 4 colunas da grade): fonte menor, arranjo trocado, nada cortado.
+  await page.locator('[data-teste="editar-layout"]').click();
+  await page.locator('[data-quadro="economica"]').focus();
+  await page.keyboard.press('Shift+ArrowLeft');
+  await page.keyboard.press('Shift+ArrowLeft');
+  await expect.poll(async () => (await medir()).economica.fonte).toBeLessThan(antes.economica.fonte);
+  const estreita = (await medir()).economica;
+  expect(estreita.cortado).toBe(false);
+  expect(estreita.colunas).not.toBe('colunas-3');
+  await page.getByRole('button', { name: 'Cancelar' }).click();
+  await expect.poll(async () => (await medir()).economica.fonte).toBe(antes.economica.fonte);
 });
 
 test('mudar o mês de referência recalcula o Resumo Geral', async ({ page }) => {

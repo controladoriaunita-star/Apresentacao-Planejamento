@@ -87,10 +87,16 @@ function painelDeObras(base, referencia) {
  * Capa da apresentação ao cliente: obra escolhida no seletor, com o avanço físico dela no mês
  * (colunas "- Cliente" da planilha). Nenhum dado de outras obras ou da empresa aparece.
  */
-function capaCliente(base, filtro, indicador) {
-  const obra = base.obras.find((o) => o.chave === filtro.obras[0]) ?? null;
-  const info = obra ? base.infos.get(obra.chave)?.get(filtro.referencia) ?? null : null;
+/** Obra, avanço do mês e desvio da capa do Cliente (também usados na capa do PDF). */
+export function dadosCapaCliente(base, chave, referencia) {
+  const obra = base.obras.find((o) => o.chave === chave) ?? null;
+  const info = obra ? base.infos.get(obra.chave)?.get(referencia) ?? null : null;
   const desvio = typeof info?.realizadoAcm === 'number' && typeof info?.replanAcm === 'number' ? info.realizadoAcm - info.replanAcm : null;
+  return { obra, info, desvio };
+}
+
+function capaCliente(base, filtro, indicador) {
+  const { obra, info, desvio } = dadosCapaCliente(base, filtro.obras[0], filtro.referencia);
   const seletorObra = filtroExcel({
     rotulo: 'Obra apresentada', multiplo: false, largura: 320, testeId: 'obra-capa',
     itens: base.obras.filter((o) => base.infos.has(o.chave)).map((o) => ({ valor: o.chave, rotulo: o.nome, grupo: o.cliente ?? 'Sem cliente' })),

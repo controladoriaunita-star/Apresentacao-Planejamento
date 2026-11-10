@@ -1,0 +1,118 @@
+/*
+ * Exportar PDF da apresentação Cliente (pages/exportar-pdf.js). O documento é montado fora da tela com a
+ * largura útil de uma A4 paisagem (297 × 210 mm, margens 14/10/13 mm → 277 × 183 mm) e impresso pelo
+ * navegador. As regras @page com obra, competência e nº da página são geradas no JS.
+ * Medidas fixas (mm/px, nunca vh/vw): o layout montado na tela é o mesmo que sai na impressão.
+ */
+.impressao {
+  position: absolute; left: -12000px; top: 0; width: 277mm;
+  background: var(--surface); color: var(--text); font-size: 12px;
+}
+.impressao, .impressao * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+/* Aviso enquanto o PDF é montado */
+.impressao-preparando { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: var(--overlay); }
+.impressao-preparando > div {
+  display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: center; padding: 18px 24px;
+  background: var(--surface); border-radius: var(--r-card); box-shadow: var(--shadow-overlay);
+}
+.impressao-preparando .spin { grid-row: span 2; color: var(--color-primary); width: 22px; height: 22px; }
+.impressao-preparando small { color: var(--muted); }
+
+/* Janela de opções */
+.exportar-secoes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; margin-top: 6px; }
+.exportar-secoes .check { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.exportar-secoes .check input { width: 16px; height: 16px; accent-color: var(--color-primary); }
+
+/* ── Seções: uma por página, sem nada interativo ────────────────────── */
+.impressao .imp-secao { break-before: page; }
+.impressao button, .impressao .filtro-excel, .impressao .so-edicao, .impressao input,
+.impressao .simulacao-area, .impressao .galeria-dica { display: none !important; }
+/* Competência e obra já estão no cabeçalho de toda página: sem o selo e sem o título repetido do Resumo Geral */
+.impressao [data-teste="competencia"], .impressao .imp-resumo-geral .rg-titulo { display: none !important; }
+/* Sem as setas de expandir, o espaço reservado a elas só desalinhava os itens */
+.impressao .arvore-espaco { display: none; }
+.impressao .card { box-shadow: none; border-color: var(--border); }
+.impressao .titulo-pagina { margin-bottom: 10px; }
+.impressao .titulo-pagina h1 { font-size: 22px; }
+.impressao .kpi .v { font-size: 16px; }
+.impressao .rg-cartao, .impressao .kpi, .impressao .seg-cartao, .impressao .comentario-caixa,
+.impressao .imp-figura-linha, .impressao .alert, .impressao tr { break-inside: avoid; }
+.impressao .titulo-pagina, .impressao .rg-titulo, .impressao h3 { break-after: avoid; }
+
+/* Tabelas: inteiras (sem rolagem), cabeçalho repetido a cada página; o JS reduz as largas para caber */
+.impressao .sheet, .impressao .resumo-tabela { overflow: visible; max-height: none !important; min-height: 0 !important; box-shadow: none; border-color: var(--border); }
+.impressao .sheet table { font-size: 11px; }
+.impressao .sheet th, .impressao .sheet td { padding: 5px 8px; }
+.impressao .sheet thead th, .impressao .sheet .first { position: static; }
+.impressao .sheet thead th { white-space: normal; } /* títulos em 2 linhas: tabela mais estreita, letra maior */
+.impressao .sheet .first { min-width: 170px; }
+.impressao .resumo-tabela thead th, .impressao .resumo-tabela thead tr.grupo th { font-size: 11px; }
+.impressao .sheet thead { display: table-header-group; }
+.impressao .sheet tr.nivel-2 td.first { padding-left: 28px; }
+.impressao .rodape-fixo { position: static; margin: 12px 0 0; padding: 0; background: none; border: 0; box-shadow: none; break-inside: avoid; }
+/* Resumo Físico e Econômico: a seção inteira numa página (largura e zoom calculados no JS) */
+.impressao .imp-resumo-fisico .sheet table, .impressao .imp-resumo-economico .sheet table { font-size: 13px; }
+.impressao .imp-resumo-fisico .resumo-tabela thead th, .impressao .imp-resumo-economico .resumo-tabela thead th { font-size: 12px; }
+
+/* Resumo Geral: a grade de 24 × 24 do Dev numa página inteira. Começa no tamanho da página (sem redução); o JS
+   aumenta a área (e a redução) só até nenhum quadro ficar cortado. */
+.impressao .rg.rg-tela { height: 178mm; font-size: 13px; }
+/* (a altura da página impressa cai na regra de telas baixas do paginas.css: anula aqui) */
+.impressao .rg.rg-tela .custo-item small, .impressao .rg.rg-tela .rg-numero small { display: block; }
+.impressao .rg.rg-tela .rg-custos .card-titulo span { display: inline; }
+/* Quadros de valores mais justos (linhas sem folga, rótulos sem quebrar): a grade precisa de menos redução */
+.impressao .rg.rg-tela .cef-fisico { border-spacing: 0 1px; line-height: 1.2; }
+.impressao .rg.rg-tela .cef-fisico td { padding: 0.05em 0.3em; }
+.impressao .rg.rg-tela .cef-fisico td.rot { padding-left: 4px; font-size: 0.85em; }
+.impressao .rg.rg-tela .rg-incc .lista-valores dt { font-size: 0.88em; padding-right: 6px; }
+.impressao .rg.rg-tela .selo-desvio { padding: 0.05em 0.5em; }
+.impressao .rg.rg-tela .economia-grade { gap: 0 10px; } /* colunas: arranjo escolhido pelo ajuste (v27) */
+.impressao .rg.rg-tela .economia-grade dt { font-size: 0.8em; white-space: normal; }
+.impressao .rg.rg-tela .economia-grade dt, .impressao .rg.rg-tela .economia-grade dd { line-height: 1.15; }
+
+/* Gráficos convertidos em imagem; Segurança do Trabalho com altura fixa */
+.impressao .imp-grafico { display: block; max-width: 100%; }
+.impressao .seg-grafico-mes { height: 105mm !important; }
+.impressao .vazio { padding: 12px 0; }
+.impressao .vazio img { height: 28px; }
+
+/* TxC (uma por página) e fotos (duas por página) */
+.impressao .imp-galeria { display: flex; flex-direction: column; gap: 8mm; }
+.impressao .imp-galeria-txc .imp-figura-linha + .imp-figura-linha,
+.impressao .imp-galeria-foto .imp-figura-linha + .imp-figura-linha { break-before: page; }
+.impressao .imp-figura-linha { display: flex; gap: 8mm; }
+.impressao .imp-figura { flex: 1 1 0; min-width: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.impressao .imp-figura img { width: 100%; height: 125mm; object-fit: contain; background: var(--ink-50); border-radius: 10px; }
+.impressao .imp-galeria-txc .imp-figura img { height: 135mm; }
+.impressao .imp-figura-topo { display: flex; align-items: baseline; gap: 10px; }
+.impressao .imp-figura-topo b { font-size: 14px; }
+.impressao .imp-figura figcaption p { white-space: pre-wrap; color: var(--ink-700); line-height: 1.45; }
+
+/* Telas extras: imagens inteiras numa página */
+.impressao .imp-tela .blocos img { max-height: 150mm; width: auto; max-width: 100%; margin: 0 auto; display: block; }
+
+/* ── Capa: página inteira, sem margem nem cabeçalho (@page capa) ────── */
+.impressao .imp-capa {
+  page: capa; position: relative; overflow: hidden; box-sizing: border-box; width: 297mm; height: 209mm;
+  padding: 16mm 20mm; display: flex; flex-direction: column; gap: 9mm;
+  background: radial-gradient(120% 90% at 85% 0%, var(--ink-700) 0%, var(--color-secondary) 55%); color: var(--surface);
+}
+.imp-capa-padrao { position: absolute; left: -10%; bottom: -4mm; width: 150%; max-width: none; opacity: 0.07; }
+.imp-capa-logo { position: relative; height: 13mm; width: auto; align-self: flex-start; }
+.imp-capa-titulo { position: relative; margin-top: 6mm; }
+.imp-capa-titulo h1 { font-family: var(--font-display); font-size: 40px; line-height: 1.08; letter-spacing: -0.02em; margin-top: 8px; color: var(--surface); }
+.imp-capa-titulo p { color: var(--vidro-texto); font-size: 17px; margin-top: 8px; }
+.imp-capa-kpis { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm; }
+.imp-capa-kpi { display: flex; flex-direction: column; gap: 4px; padding: 5mm 6mm; border-radius: var(--r-card); background: var(--vidro); border: 1px solid var(--vidro-borda); }
+.imp-capa-kpi span, .imp-capa-kpi small { color: var(--vidro-texto); font-size: 12px; }
+.imp-capa-kpi b { font-family: var(--font-display); font-size: 30px; font-weight: 600; color: var(--surface); }
+.imp-capa-sumario { position: relative; margin-top: auto; }
+.imp-capa-sumario span { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-primary); }
+.imp-capa-sumario ol { margin: 6px 0 0; padding-left: 18px; columns: 3; column-gap: 10mm; color: var(--vidro-texto); font-size: 13px; line-height: 1.7; }
+
+@media print {
+  body.imprimindo { background: var(--surface); }
+  body.imprimindo > :not(.impressao) { display: none !important; }
+  body.imprimindo > .impressao { position: static; left: auto; }
+}

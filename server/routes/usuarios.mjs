@@ -4,7 +4,17 @@
 import { validarSenha } from '../auth/senha.mjs';
 import { enderecoDoApp } from './auth.mjs';
 import { enviarJson, erro, lerJson } from '../http/respostas.mjs';
+import { normalizarAcesso } from '../../public/js/domain/acesso.js';
 import { papelValido } from '../../public/js/domain/permissoes.js';
+
+/** v26: obras e apresentações liberadas (só restringem o papel Viewer). Campo ausente fica como está. */
+function acessoDoCorpo(corpo) {
+  try {
+    return normalizarAcesso(corpo);
+  } catch (e) {
+    throw erro(400, e.message);
+  }
+}
 
 export function registrarUsuarios(rotas, { autenticacao }) {
   rotas.adicionar('GET', '/api/usuarios', { permissao: 'administrar' }, async ({ req, res }) => {
@@ -12,8 +22,9 @@ export function registrarUsuarios(rotas, { autenticacao }) {
   });
 
   rotas.adicionar('POST', '/api/usuarios', { permissao: 'administrar' }, async ({ req, res }) => {
-    const { nome, email, papel, senha } = await lerJson(req);
-    enviarJson(req, res, 201, await autenticacao.criar({ nome, email, papel, senha }, enderecoDoApp(req)));
+    const corpo = await lerJson(req);
+    const { nome, email, papel, senha } = corpo;
+    enviarJson(req, res, 201, await autenticacao.criar({ nome, email, papel, senha, ...acessoDoCorpo(corpo) }, enderecoDoApp(req)));
   });
 
   /** Reenvia o e-mail de acesso (convite ou link de nova senha). Só no Supabase. */
@@ -23,8 +34,9 @@ export function registrarUsuarios(rotas, { autenticacao }) {
   });
 
   rotas.adicionar('PUT', '/api/usuarios/:id', { permissao: 'administrar' }, async ({ req, res, params, usuario }) => {
-    const { nome, papel, ativo, senha } = await lerJson(req);
-    const campos = {};
+    const corpo = await lerJson(req);
+    const { nome, papel, ativo, senha } = corpo;
+    const campos = acessoDoCorpo(corpo);
     if (nome !== undefined) campos.nome = String(nome).trim();
     if (papel !== undefined) {
       if (!papelValido(papel)) throw erro(400, 'Papel inválido.');

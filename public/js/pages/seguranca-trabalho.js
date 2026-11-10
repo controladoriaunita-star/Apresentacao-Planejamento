@@ -30,7 +30,8 @@ export async function renderSegurancaTrabalho(alvo, contexto) {
   // Filtro geral mudou (ex.: outra obra no Resumo): a tela acompanha.
   const assinatura = `${visao}|${filtro.obras.join('|')}`;
   if (assinatura !== filtroVisto) { filtroVisto = assinatura; escolha = FILTRO; }
-  const modo = apresentando() ? FILTRO : escolha;
+  // Exportação em PDF (`impressao`): sempre a obra exportada, como no modo apresentação.
+  const modo = apresentando() || contexto.impressao ? FILTRO : escolha;
   const cliente = visao === 'cliente';
   const cadastros = (estado.bruto?.cadastro ?? []).filter((c) => c.id && (!cliente || c.segurancaCliente === 'sim'));
   const permitidas = new Set(cadastros.map((c) => c.chave));
@@ -63,7 +64,7 @@ export async function renderSegurancaTrabalho(alvo, contexto) {
       h('h1', {}, 'Segurança do Trabalho', h('small', {}, titulo)),
       h('div', { class: 'row' }, h('div', { class: 'so-edicao' }, seletor), seloCompetencia(filtro.referencia, { compacto: true }))),
     corpo));
-  acompanharTelaCheia(alvo, contexto);
+  if (!contexto.impressao) acompanharTelaCheia(alvo, contexto);
 
   const q = new URLSearchParams({ tamanho: 'todos', ordem: 'asc' });
   if (chaves) q.set('chaves', chaves.join(','));

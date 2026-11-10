@@ -65,7 +65,7 @@ export const INDICADORES_ECONOMICO = {
     ['totalAditivos', 'Total em aditivos', 'moeda'],
     ['aditivosSemAprovacao', 'Aditivos à aprovar', 'moeda'],
     ['custosForaContrato', 'Custos não incidentes', 'moeda'],
-    ['variacaoMesCusto', 'Variação de custo (mês)', 'moeda'],
+    ['variacaoMesCusto', 'Variação de Resultado (Sem correção)', 'moeda'],
   ],
 };
 

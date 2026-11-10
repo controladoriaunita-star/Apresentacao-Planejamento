@@ -9,6 +9,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { acessoDe } from '../public/js/domain/acesso.js';
 import { pode } from '../public/js/domain/permissoes.js';
 import { AutenticacaoLocal, AutenticacaoSupabase } from './auth/autenticacao.mjs';
 import { servirEstatico } from './http/estaticos.mjs';
@@ -63,7 +64,8 @@ export function criarApp(config, { fetchImpl } = {}) {
         if (!usuario) return enviarJson(req, res, 401, { erro: 'Faça login para continuar.' });
         if (!pode(usuario.papel, rota.permissao)) return enviarJson(req, res, 403, { erro: 'Seu perfil não tem permissão para esta ação.' });
       }
-      await rota.tratador({ req, res, url, params, usuario, deps });
+      // v26: `acesso` = obras e apresentações liberadas para o usuário (só restringe o papel Viewer).
+      await rota.tratador({ req, res, url, params, usuario, acesso: acessoDe(usuario), deps });
     } catch (e) {
       if (e instanceof ErroHttp) return enviarJson(req, res, e.status, { erro: e.message });
       console.error(`[erro] ${req.method} ${url.pathname}:`, e);
@@ -88,6 +90,7 @@ function dependenciasLocais(config, fetchImpl) {
     arquivos: new RepositorioArquivosLocal(config.dataDir),
     planilhas: new FontePlanilhas(config, fetchImpl, armazem),
     incc: new FonteIncc(config, fetchImpl, armazem),
+    armazem,
   };
 }
 
@@ -114,6 +117,7 @@ function dependenciasSupabase(config, fetchImpl) {
     arquivos: new RepositorioArquivosSupabase(cliente),
     planilhas: new FontePlanilhas(config, fetchImpl, armazem),
     incc: new FonteIncc(config, fetchImpl, armazem),
+    armazem,
   };
 }
 

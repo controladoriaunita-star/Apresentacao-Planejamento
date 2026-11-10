@@ -11,7 +11,15 @@ const instancias = new WeakMap();
 /** Tamanho das legendas dos eixos acompanha a altura da tela (mais legível em telões e Full HD). */
 const fonteEixo = () => (window.innerHeight >= 1000 ? 13 : 12);
 
-function opcoesBase({ percentual = true, max = null } = {}) {
+/**
+ * v27 — Gráficos com `fonteProporcional` (quadros do Resumo Geral): a fonte acompanha o tamanho do próprio
+ * gráfico, entre 10 e 16 px, para o quadro redimensionado continuar legível e sem rótulos encavalados.
+ */
+const fonteDoGrafico = (chart) => (chart?.canvas?.dataset.fonteProporcional
+  ? Math.round(Math.min(16, Math.max(10, Math.min(chart.height / 14, chart.width / 45))) * 2) / 2
+  : fonteEixo());
+
+function opcoesBase({ percentual = true, max = null, minimoMax = null } = {}) {
   const eixo = token('--chart-axis');
   return {
     responsive: true,
@@ -32,10 +40,11 @@ function opcoesBase({ percentual = true, max = null } = {}) {
       },
     },
     scales: {
-      x: { grid: { display: false }, border: { color: token('--chart-grid') }, ticks: { color: eixo, font: { family: 'Inter', size: fonteEixo(), weight: '500' }, maxRotation: 0, autoSkipPadding: 14 } },
+      x: { grid: { display: false }, border: { color: token('--chart-grid') }, ticks: { color: eixo, font: { family: 'Inter', size: fonteEixo() - 1, weight: '500' }, autoSkip: false, maxRotation: 90, minRotation: 0 } }, // todos os meses; inclinados quando não cabem
       y: {
         beginAtZero: true,
         max: max ?? undefined,
+        suggestedMax: minimoMax ?? undefined,
         grid: { color: token('--chart-grid'), drawTicks: false },
         border: { display: false, dash: [4, 4] },
         ticks: { color: eixo, font: { family: 'Inter', size: fonteEixo(), weight: '500' }, padding: 8, maxTicksLimit: 6, callback: (v) => (percentual ? fmtPercentual(v, 0) : v) },
@@ -46,7 +55,8 @@ function opcoesBase({ percentual = true, max = null } = {}) {
 
 /**
  * Cria (ou recria) um gráfico dentro de `alvo`.
- * @param {{tipo: 'line'|'bar', meses: string[], series: Array<{rotulo, valores, cor, tracejada?, marcadores?}>, max?: number, referencia?: string}} def
+ * Gráficos de barras trazem o rótulo de dados (valor) em cada barra; nas linhas, as séries com `rotulos`.
+ * @param {{tipo: 'line'|'bar', meses: string[], series: Array<{rotulo, valores, cor, tracejada?, marcadores?, rotulos?: 'acima'|'abaixo'}>, max?: number, minimoMax?: number, referencia?: string}} def
  */
 export function grafico(alvo, def) {
   const Chart = window.Chart;
@@ -54,6 +64,7 @@ export function grafico(alvo, def) {
   instancias.get(alvo)?.destroy();
 
   const tela = h('canvas', { role: 'img', 'aria-label': def.descricao ?? def.series.map((s) => s.rotulo).join(', ') });
+  if (def.fonteProporcional) tela.dataset.fonteProporcional = '1';
   const caixa = h('div', { class: `grafico ${def.alto ? 'alto' : ''}` }, tela);
   montar(alvo, ...[legenda(def.series), caixa, tabelaAcessivel(def)].filter(Boolean));
 
@@ -62,18 +73,30 @@ export function grafico(alvo, def) {
     return def.tipo === 'bar'
       ? { label: s.rotulo, data: s.valores, backgroundColor: cor, hoverBackgroundColor: cor, borderRadius: 6, borderSkipped: 'start', maxBarThickness: 26, categoryPercentage: 0.72, barPercentage: 0.88 }
       : {
-        label: s.rotulo, data: s.valores, borderColor: cor, backgroundColor: cor, borderWidth: s.tracejada ? 2 : 2.75, tension: 0.3, spanGaps: false,
+        label: s.rotulo, data: s.valores, borderColor: cor, backgroundColor: cor, borderWidth: s.tracejada ? 2 : 2.75, tension: 0.3, spanGaps: false, rotulos: s.rotulos ?? null,
         borderDash: s.tracejada ? [6, 5] : [], pointRadius: s.marcadores ? 3.5 : 0, pointHoverRadius: 6, pointBorderColor: token('--surface'), pointBorderWidth: 1.5,
       };
   });
 
-  const opcoes = opcoesBase({ percentual: true, max: def.max });
+  const opcoes = opcoesBase({ percentual: true, max: def.max, minimoMax: def.minimoMax });
+  if (def.fonteProporcional) {
+    const fonte = (delta) => (ctx) => ({ family: 'Inter', weight: '500', size: fonteDoGrafico(ctx.chart) + delta });
+    opcoes.scales.x.ticks.font = fonte(-1);
+    opcoes.scales.y.ticks.font = fonte(0);
+  }
+  opcoes.plugins.tooltip.callbacks.title = (itens) => fmtMes(def.meses[itens[0]?.dataIndex]);
   if (def.referencia) opcoes.plugins.linhaReferencia = { indice: def.meses.indexOf(def.referencia) };
+  const comRotulos = def.tipo === 'bar' || def.series.some((s) => s.rotulos);
+  if (comRotulos) { // espaço para o rótulo mais alto (na vertical ele é mais comprido)
+    opcoes.layout = { padding: { top: 22 } };
+    opcoes.scales.y.grace = '12%';
+  }
   const chart = new Chart(tela, {
     type: def.tipo,
-    data: { labels: def.meses.map(fmtMes), datasets },
+    // Mês em duas linhas ("JAN" sobre "25"): metade da largura, todos os meses cabem sem inclinar.
+    data: { labels: def.meses.map((m) => fmtMes(m).split('/')), datasets },
     options: opcoes,
-    plugins: [pluginReferencia],
+    plugins: [pluginReferencia, def.tipo === 'bar' ? pluginRotulosBarras : pluginRotulosLinha],
   });
   instancias.set(alvo, chart);
   return chart;
@@ -96,6 +119,84 @@ const pluginReferencia = {
     ctx.moveTo(x, top);
     ctx.lineTo(x, bottom);
     ctx.stroke();
+    ctx.restore();
+  },
+};
+
+/**
+ * Rótulo de dados das barras: valor acima de cada barra; quando a barra é mais estreita que o texto
+ * (muitos meses na tela), o rótulo fica na vertical.
+ */
+const pluginRotulosBarras = {
+  id: 'rotulosBarras',
+  afterDatasetsDraw(chart) {
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.font = `600 ${fonteDoGrafico(chart) - 2}px Inter, sans-serif`;
+    ctx.fillStyle = token('--ink-700');
+    chart.data.datasets.forEach((ds, i) => {
+      const meta = chart.getDatasetMeta(i);
+      if (meta.hidden) return;
+      meta.data.forEach((barra, j) => {
+        const v = ds.data[j];
+        if (typeof v !== 'number') return;
+        const texto = fmtPercentual(v, 1);
+        const largura = ctx.measureText(texto).width;
+        if (largura + 2 <= barra.width) {
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(texto, barra.x, barra.y - 3);
+        } else {
+          ctx.save();
+          ctx.translate(barra.x, barra.y - 3);
+          ctx.rotate(-Math.PI / 2);
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(texto, 0, 0);
+          ctx.restore();
+        }
+      });
+    });
+    ctx.restore();
+  },
+};
+
+/**
+ * Rótulo de dados das linhas com `rotulos: 'acima' | 'abaixo'` (série a série, para não se sobreporem):
+ * valor junto de cada ponto; na vertical quando os pontos estão mais próximos que o tamanho do texto.
+ */
+const pluginRotulosLinha = {
+  id: 'rotulosLinha',
+  afterDatasetsDraw(chart) {
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.font = `600 ${fonteDoGrafico(chart) - 2}px Inter, sans-serif`;
+    chart.data.datasets.forEach((ds, i) => {
+      const meta = chart.getDatasetMeta(i);
+      if (!ds.rotulos || meta.hidden) return;
+      const abaixo = ds.rotulos === 'abaixo';
+      const passo = meta.data.length > 1 ? Math.abs(meta.data[1].x - meta.data[0].x) : Infinity;
+      ctx.fillStyle = ds.borderColor;
+      meta.data.forEach((ponto, j) => {
+        const v = ds.data[j];
+        if (typeof v !== 'number') return;
+        const texto = fmtPercentual(v, 1);
+        const y = abaixo ? ponto.y + 6 : ponto.y - 6;
+        if (ctx.measureText(texto).width + 2 <= passo) {
+          ctx.textAlign = 'center';
+          ctx.textBaseline = abaixo ? 'top' : 'bottom';
+          ctx.fillText(texto, ponto.x, y);
+        } else {
+          ctx.save();
+          ctx.translate(ponto.x, y);
+          ctx.rotate(-Math.PI / 2);
+          ctx.textAlign = abaixo ? 'right' : 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(texto, 0, 0);
+          ctx.restore();
+        }
+      });
+    });
     ctx.restore();
   },
 };

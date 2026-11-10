@@ -5,6 +5,7 @@
  * Incorporador e Método construtivo saem sempre do Cadastro de obras (Cliente e Sistema estrutural),
  * juntados aqui pelo `obraId` — o acidente não guarda cópia.
  */
+import { podeVerSeguranca } from '../../public/js/domain/acesso.js';
 import {
   analisarImportacao, anosDosAcidentes, calcularIndicadores, dadosDaObra, pendenciasDaObra, SIGLAS_TIPO, validarAcidente,
 } from '../../public/js/domain/seguranca.js';
@@ -24,7 +25,7 @@ export function registrarSeguranca(rotas, { acidentes, cadastro }) {
   const cadastros = async () => (await cadastro.listar()).filter((c) => c.id);
 
   /** Obras pedidas por id do cadastro (`obras`) ou por chave do filtro das apresentações (`chaves`). */
-  function obrasDoFiltro(url, todas) {
+  function obrasDoFiltro(url, todas, acesso) {
     if (url.searchParams.has('obras')) {
       const ids = new Set(lista(url.searchParams.get('obras')));
       return todas.filter((c) => ids.has(c.id)).map((c) => c.id);
@@ -33,19 +34,22 @@ export function registrarSeguranca(rotas, { acidentes, cadastro }) {
       const chaves = new Set(lista(url.searchParams.get('chaves')));
       return todas.filter((c) => chaves.has(c.chave)).map((c) => c.id);
     }
-    return null; // todas
+    return acesso.restrito ? todas.map((c) => c.id) : null; // todas (as liberadas)
   }
+
+  /** v26: obras cujos acidentes o usuário pode ler (todas, salvo Viewer restrito por obra ou só com o Cliente). */
+  const cadastrosLiberados = async (acesso) => (await cadastros()).filter((c) => !acesso.restrito || podeVerSeguranca(c, acesso));
 
   const comObra = (porId) => ({ chaveDedup, ...a }) => ({ ...a, ...dadosDaObra(porId.get(a.obraId)) });
 
-  rotas.adicionar('GET', '/api/seguranca/acidentes', { permissao: 'verSeguranca' }, async ({ req, res, url }) => {
-    const todas = await cadastros();
+  rotas.adicionar('GET', '/api/seguranca/acidentes', { permissao: 'verSeguranca' }, async ({ req, res, url, acesso }) => {
+    const todas = await cadastrosLiberados(acesso);
     const p = url.searchParams;
     const todos = p.get('tamanho') === 'todos';
     const tamanho = todos ? LIMITE_APRESENTACAO : Math.min(TAMANHO_MAXIMO, Math.max(1, Number(p.get('tamanho')) || TAMANHO_PAGINA));
     const pagina = todos ? 1 : Math.max(1, Number(p.get('pagina')) || 1);
     const { itens, total } = await acidentes.consultar({
-      obraIds: obrasDoFiltro(url, todas),
+      obraIds: obrasDoFiltro(url, todas, acesso),
       de: dataOuNada(p.get('de')),
       ate: dataOuNada(p.get('ate')),
       tipos: lista(p.get('tipos')).filter((t) => SIGLAS_TIPO.includes(t)),
@@ -70,11 +74,11 @@ export function registrarSeguranca(rotas, { acidentes, cadastro }) {
   });
 
   /** Indicadores do Dashboard Segurança. `anos` = segmentador de ano (vazio = todos). */
-  rotas.adicionar('GET', '/api/seguranca/indicadores', { permissao: 'verSeguranca' }, async ({ req, res, url }) => {
-    const todas = await cadastros();
+  rotas.adicionar('GET', '/api/seguranca/indicadores', { permissao: 'verSeguranca' }, async ({ req, res, url, acesso }) => {
+    const todas = await cadastrosLiberados(acesso);
     const porId = new Map(todas.map((c) => [c.id, c]));
     const { itens } = await acidentes.consultar({
-      obraIds: obrasDoFiltro(url, todas),
+      obraIds: obrasDoFiltro(url, todas, acesso),
       ordem: 'asc',
       campos: ['obraId', 'data', 'tipo', 'faseObra', 'funcao', 'empresa', 'parteCorpo', 'diasAfastamento'],
     });
