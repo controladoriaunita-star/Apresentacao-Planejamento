@@ -11,6 +11,14 @@ const instancias = new WeakMap();
 /** Tamanho das legendas dos eixos acompanha a altura da tela (mais legível em telões e Full HD). */
 const fonteEixo = () => (window.innerHeight >= 1000 ? 13 : 12);
 
+/**
+ * v27 — Gráficos com `fonteProporcional` (quadros do Resumo Geral): a fonte acompanha o tamanho do próprio
+ * gráfico, entre 10 e 16 px, para o quadro redimensionado continuar legível e sem rótulos encavalados.
+ */
+const fonteDoGrafico = (chart) => (chart?.canvas?.dataset.fonteProporcional
+  ? Math.round(Math.min(16, Math.max(10, Math.min(chart.height / 14, chart.width / 45))) * 2) / 2
+  : fonteEixo());
+
 function opcoesBase({ percentual = true, max = null, minimoMax = null } = {}) {
   const eixo = token('--chart-axis');
   return {
@@ -56,6 +64,7 @@ export function grafico(alvo, def) {
   instancias.get(alvo)?.destroy();
 
   const tela = h('canvas', { role: 'img', 'aria-label': def.descricao ?? def.series.map((s) => s.rotulo).join(', ') });
+  if (def.fonteProporcional) tela.dataset.fonteProporcional = '1';
   const caixa = h('div', { class: `grafico ${def.alto ? 'alto' : ''}` }, tela);
   montar(alvo, ...[legenda(def.series), caixa, tabelaAcessivel(def)].filter(Boolean));
 
@@ -70,6 +79,11 @@ export function grafico(alvo, def) {
   });
 
   const opcoes = opcoesBase({ percentual: true, max: def.max, minimoMax: def.minimoMax });
+  if (def.fonteProporcional) {
+    const fonte = (delta) => (ctx) => ({ family: 'Inter', weight: '500', size: fonteDoGrafico(ctx.chart) + delta });
+    opcoes.scales.x.ticks.font = fonte(-1);
+    opcoes.scales.y.ticks.font = fonte(0);
+  }
   opcoes.plugins.tooltip.callbacks.title = (itens) => fmtMes(def.meses[itens[0]?.dataIndex]);
   if (def.referencia) opcoes.plugins.linhaReferencia = { indice: def.meses.indexOf(def.referencia) };
   const comRotulos = def.tipo === 'bar' || def.series.some((s) => s.rotulos);
@@ -118,7 +132,7 @@ const pluginRotulosBarras = {
   afterDatasetsDraw(chart) {
     const ctx = chart.ctx;
     ctx.save();
-    ctx.font = `600 ${fonteEixo() - 2}px Inter, sans-serif`;
+    ctx.font = `600 ${fonteDoGrafico(chart) - 2}px Inter, sans-serif`;
     ctx.fillStyle = token('--ink-700');
     chart.data.datasets.forEach((ds, i) => {
       const meta = chart.getDatasetMeta(i);
@@ -156,7 +170,7 @@ const pluginRotulosLinha = {
   afterDatasetsDraw(chart) {
     const ctx = chart.ctx;
     ctx.save();
-    ctx.font = `600 ${fonteEixo() - 2}px Inter, sans-serif`;
+    ctx.font = `600 ${fonteDoGrafico(chart) - 2}px Inter, sans-serif`;
     chart.data.datasets.forEach((ds, i) => {
       const meta = chart.getDatasetMeta(i);
       if (!ds.rotulos || meta.hidden) return;

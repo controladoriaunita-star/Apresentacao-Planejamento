@@ -197,6 +197,38 @@ test('Resumo Geral: Dev redimensiona um quadro, salva para todos e restaura o pa
   await expect(nhnu).toHaveCSS('grid-row-start', '19');
 });
 
+// v27: o conteúdo do quadro acompanha o tamanho dele (fonte e arranjo), sem nada cortado.
+test('Resumo Geral: quadro redimensionado ajusta fonte e colunas sem cortar valores', async ({ page }) => {
+  await entrar(page, DEV);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/#/obra/resumo-geral');
+  await page.reload();
+  await expect(page.locator('.rg.rg-tela')).toBeVisible();
+  const medir = () => page.evaluate(() => Object.fromEntries(['cef', 'economica', 'custos', 'incc', 'nhnu'].map((id) => {
+    const c = document.querySelector(`[data-quadro="${id}"]`);
+    const conteudo = c.querySelector('.rg-conteudo');
+    const cortado = c.scrollHeight > c.clientHeight + 1 || c.scrollWidth > c.clientWidth + 1;
+    return [id, { fonte: parseFloat(conteudo.style.fontSize), colunas: conteudo.className.match(/colunas-\d/)?.[0] ?? null, cortado }];
+  })));
+  const antes = await medir();
+  for (const [id, q] of Object.entries(antes)) {
+    expect(q.cortado, `${id} cortado`).toBe(false);
+    expect(q.fonte, `${id} com fonte ajustada`).toBeGreaterThanOrEqual(10);
+  }
+
+  // Dev estreita a Análise econômica (6 → 4 colunas da grade): fonte menor, arranjo trocado, nada cortado.
+  await page.locator('[data-teste="editar-layout"]').click();
+  await page.locator('[data-quadro="economica"]').focus();
+  await page.keyboard.press('Shift+ArrowLeft');
+  await page.keyboard.press('Shift+ArrowLeft');
+  await expect.poll(async () => (await medir()).economica.fonte).toBeLessThan(antes.economica.fonte);
+  const estreita = (await medir()).economica;
+  expect(estreita.cortado).toBe(false);
+  expect(estreita.colunas).not.toBe('colunas-3');
+  await page.getByRole('button', { name: 'Cancelar' }).click();
+  await expect.poll(async () => (await medir()).economica.fonte).toBe(antes.economica.fonte);
+});
+
 test('mudar o mês de referência recalcula o Resumo Geral', async ({ page }) => {
   await entrar(page, DEV);
   await page.goto('/#/obra/resumo-geral');

@@ -21,6 +21,7 @@ import { abrirModal, alerta, campo, toast } from '../ui/componentes.js';
 import { icone } from '../ui/icones.js';
 import { mesExibido } from './galeria.js';
 import { dadosCapaCliente } from './inicio.js';
+import { ajustarQuadros, FONTE_QUADRO } from './resumo-geral.js';
 
 const CAPA = { id: 'capa', nome: 'Capa' };
 const ESPERA_MAXIMA = 45000; // ms para planilhas, físico por atividade e imagens carregarem
@@ -202,23 +203,21 @@ function recolherTabelas(doc) {
 }
 
 /**
- * Resumo Geral numa página com a menor redução possível: a grade é montada no tamanho da página e a área cresce
- * (na proporção da página) só enquanto algum quadro de valores estiver cortado; depois o zoom a traz de volta
- * à largura da página. Os gráficos se ajustam a qualquer tamanho e não entram na conta.
+ * Resumo Geral numa página com a menor redução possível: a grade é montada no tamanho da página e cada quadro
+ * ajusta fonte e arranjo ao próprio tamanho (v27, como na tela). Só se algum quadro não couber nem na fonte
+ * mínima a área cresce (na proporção da página) e o zoom a traz de volta à largura da página. Os gráficos se
+ * ajustam a qualquer tamanho e não entram na conta.
  */
 function enquadrarResumoGeral(alvo) {
   const rg = alvo.querySelector('.rg.rg-tela');
   if (!rg) return;
-  const economica = rg.querySelector('.rg-economica');
   const cortado = (el) => el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
   let largura = Math.floor(PAGINA.largura);
   for (; largura <= 1800; largura += 40) {
     alvo.style.width = `${largura}px`;
     rg.style.height = `${Math.floor(largura * (PAGINA.altura / PAGINA.largura))}px`;
-    // Análise econômica: 3 colunas só quando 2 não cabem (como na tela).
-    economica?.classList.remove('compacto');
-    if (economica && cortado(economica)) economica.classList.add('compacto');
-    if (![...rg.querySelectorAll('.rg-cartao:not(.rg-grafico)')].some(cortado)) break;
+    const couberam = ajustarQuadros(rg, FONTE_QUADRO.impressao);
+    if (couberam && ![...rg.querySelectorAll('.rg-cartao:not(.rg-grafico)')].some(cortado)) break;
   }
   alvo.style.zoom = Math.min(1, PAGINA.largura / largura).toFixed(4);
   alvo.dataset.zoom = alvo.style.zoom;

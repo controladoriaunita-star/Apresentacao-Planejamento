@@ -200,7 +200,7 @@ main.conteudo:has(.rg-tela) { padding-bottom: 16px; }
 .rg.rg-tela .lista-valores dt, .rg.rg-tela .lista-valores dd { padding: 0.14em 0; }
 .rg.rg-tela .lista-valores dt { white-space: nowrap; padding-right: 8px; }
 .rg.rg-tela .rg-numero { flex: 1; justify-content: center; }
-.rg.rg-tela .rg-numero b { font-size: clamp(1.9em, 4vh, 3.2em); }
+.rg.rg-tela .rg-numero b { font-size: 2.4em; } /* v27: a fonte do quadro já acompanha o tamanho dele */
 /* Velocímetro ocupa todo o quadro (largura e altura) em qualquer tamanho de tela */
 .rg.rg-tela .velocimetro { position: relative; flex: 1 1 0; min-height: 0; }
 .rg.rg-tela .velocimetro svg { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; }
@@ -228,6 +228,25 @@ main.conteudo:has(.rg-tela) { padding-bottom: 16px; }
 }
 .rg-edicao-acoes { align-items: center; }
 
+/* v27 — Quadros responsivos: o JS (resumo-geral.js) escolhe a fonte de .rg-conteudo e o arranjo; aqui os
+   rótulos podem quebrar linha (os valores nunca) para o quadro estreito não cortar nada. */
+.rg.rg-tela .rg-cartao.apertado { overflow: auto; } /* nem na fonte mínima coube: rola por dentro */
+.rg.rg-tela .rg-conteudo .cef-fisico td.rot, .rg.rg-tela .rg-conteudo .lista-valores dt { white-space: normal; }
+.rg.rg-tela .rg-conteudo .cef-fisico td:not(.rot), .rg.rg-tela .rg-conteudo .lista-valores dd { white-space: nowrap; }
+.rg.rg-tela .economia-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.rg.rg-tela .economia-grade.colunas-1 { grid-template-columns: minmax(0, 1fr); }
+.rg.rg-tela .economia-grade.colunas-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 10px; }
+.rg.rg-tela .economia-grade dt { white-space: normal; }
+.rg.rg-tela .custos-por { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.rg.rg-tela .rg-conteudo.custos-2x2 .custos-por { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.rg.rg-tela .rg-conteudo.custos-1 .custos-por { grid-template-columns: minmax(0, 1fr); }
+.rg.rg-tela .custo-item small { white-space: normal; text-align: center; }
+/* Gráficos: em quadro estreito a legenda desce para baixo do título (não cobre o título) */
+.rg.rg-tela .rg-grafico { container-type: size; }
+@container (max-width: 520px) {
+  .rg.rg-tela .rg-grafico .legenda { position: static; gap: 4px 12px; }
+}
+
 .cef-fisico { width: 100%; border-collapse: separate; border-spacing: 0 2px; font-variant-numeric: tabular-nums; }
 .cef-fisico th { text-align: center; padding: 0 0 4px; }
 .pilula { display: inline-block; padding: 0.15em 0.9em; border-radius: 999px; font-family: var(--font-display); font-size: 0.95em; font-weight: 600; }
@@ -251,7 +270,6 @@ main.conteudo:has(.rg-tela) { padding-bottom: 16px; }
   .rg.rg-tela .selo-desvio { padding: 0.05em 0.6em; }
 }
 .economia-grade { display: grid; grid-template-columns: repeat(2, minmax(max-content, 1fr)); gap: 0 14px; margin: 0; }
-.compacto .economia-grade { grid-template-columns: repeat(3, minmax(max-content, 1fr)); gap: 0 10px; }
 .economia-grade div { padding: 0.25em 0; border-bottom: 1px solid var(--border-soft); }
 .economia-grade dt { font-size: 0.86em; color: var(--muted); white-space: nowrap; }
 .economia-grade dd { margin: 1px 0 0; font-weight: 700; font-size: 1.04em; color: var(--ink-900); font-variant-numeric: tabular-nums; white-space: nowrap; }

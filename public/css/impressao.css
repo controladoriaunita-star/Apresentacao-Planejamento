@@ -58,18 +58,16 @@
 /* Resumo Geral: a grade de 24 × 24 do Dev numa página inteira. Começa no tamanho da página (sem redução); o JS
    aumenta a área (e a redução) só até nenhum quadro ficar cortado. */
 .impressao .rg.rg-tela { height: 178mm; font-size: 13px; }
-.impressao .rg.rg-tela .rg-numero b { font-size: 2.6em; }
 /* (a altura da página impressa cai na regra de telas baixas do paginas.css: anula aqui) */
 .impressao .rg.rg-tela .custo-item small, .impressao .rg.rg-tela .rg-numero small { display: block; }
 .impressao .rg.rg-tela .rg-custos .card-titulo span { display: inline; }
 /* Quadros de valores mais justos (linhas sem folga, rótulos sem quebrar): a grade precisa de menos redução */
 .impressao .rg.rg-tela .cef-fisico { border-spacing: 0 1px; line-height: 1.2; }
 .impressao .rg.rg-tela .cef-fisico td { padding: 0.05em 0.3em; }
-.impressao .rg.rg-tela .cef-fisico td.rot { white-space: nowrap; padding-left: 4px; font-size: 0.85em; }
+.impressao .rg.rg-tela .cef-fisico td.rot { padding-left: 4px; font-size: 0.85em; }
 .impressao .rg.rg-tela .rg-incc .lista-valores dt { font-size: 0.88em; padding-right: 6px; }
 .impressao .rg.rg-tela .selo-desvio { padding: 0.05em 0.5em; }
-.impressao .rg.rg-tela .economia-grade { gap: 0 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.impressao .rg.rg-tela .compacto .economia-grade { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.impressao .rg.rg-tela .economia-grade { gap: 0 10px; } /* colunas: arranjo escolhido pelo ajuste (v27) */
 .impressao .rg.rg-tela .economia-grade dt { font-size: 0.8em; white-space: normal; }
 .impressao .rg.rg-tela .economia-grade dt, .impressao .rg.rg-tela .economia-grade dd { line-height: 1.15; }
 

@@ -3,6 +3,11 @@
  * custos por unidade, INCC, NH-NU e velocímetro. Em tela cheia os quadros ficam numa grade de 24 × 24 que
  * cobre a tela toda; o Dev move e redimensiona os quadros ("Editar layout") e o layout vale para todas as
  * apresentações (domain/layout-resumo.js, ui/editor-layout.js).
+ *
+ * v27 — Quadros responsivos: na grade, cada quadro de valores usa a maior fonte com que o conteúdo cabe no
+ * tamanho dele (rótulos quebram linha; Análise econômica em 1, 2 ou 3 colunas e Custos por em 4, 2 × 2 ou 1,
+ * o arranjo que permitir a fonte maior) e recalcula ao mudar de tamanho — inclusive enquanto o Dev redimensiona.
+ * Os gráficos ajustam a fonte dos eixos ao próprio tamanho. A exportação em PDF usa o mesmo ajuste.
  */
 import { h, montar } from '../core/dom.js';
 import { api } from '../core/api.js';
@@ -28,7 +33,10 @@ export function renderResumoGeral(alvo, { base, filtro, usuario }) {
   const curva = h('div', { class: 'grafico-area' });
   const barras = h('div', { class: 'grafico-area' });
   const assertividade = h('div', { class: 'grafico-area' });
-  const cartao = (id, titulo, conteudo, extra = null, classe = '') => card({ class: `rg-cartao ${classe}`, dataset: { quadro: id } }, titulo ? cardTitulo(titulo, extra) : null, conteudo);
+  const cartao = (id, titulo, conteudo, extra = null, classe = '') => {
+    conteudo.classList.add('rg-conteudo'); // v27: é a fonte deste bloco que se ajusta ao tamanho do quadro
+    return card({ class: `rg-cartao ${classe}`, dataset: { quadro: id } }, titulo ? cardTitulo(titulo, extra) : null, conteudo);
+  };
   const quadros = {
     cef: cartao('cef', null, quadroCefFisico(r.painelFisico), null, 'rg-cef'),
     economica: cartao('economica', 'Análise econômica', analiseEconomica(r.economico), h('span', { class: 'muted small' }, fmtMes(r.referencia)), 'rg-economica'),
@@ -86,7 +94,7 @@ export function renderResumoGeral(alvo, { base, filtro, usuario }) {
 
   const { meses } = r.graficos;
   grafico(curva, {
-    tipo: 'line', meses, referencia: r.referencia,
+    tipo: 'line', meses, referencia: r.referencia, fonteProporcional: true,
     series: [
       { rotulo: 'Previsto original', valores: r.graficos.curvaAcumulada.previstoOriginal, cor: '--series-3', tracejada: true },
       { rotulo: 'Realizado', valores: r.graficos.curvaAcumulada.realizado, cor: '--series-2', marcadores: true, linha: true, rotulos: 'acima' },
@@ -94,14 +102,14 @@ export function renderResumoGeral(alvo, { base, filtro, usuario }) {
     ],
   });
   grafico(barras, {
-    tipo: 'bar', meses, referencia: r.referencia,
+    tipo: 'bar', meses, referencia: r.referencia, fonteProporcional: true,
     series: [
       { rotulo: 'Realizado', valores: r.graficos.realizadoPlanejadoMes.realizado, cor: '--series-2' },
       { rotulo: 'Planejado atual', valores: r.graficos.realizadoPlanejadoMes.planejado, cor: '--series-1' },
     ],
   });
   grafico(assertividade, {
-    tipo: 'bar', meses, referencia: r.referencia, descricao: 'Assertividade mensal', minimoMax: 1, // eixo vai ao menos a 100%
+    tipo: 'bar', meses, referencia: r.referencia, descricao: 'Assertividade mensal', minimoMax: 1, fonteProporcional: true, // eixo vai ao menos a 100%
     series: [{ rotulo: 'Assertividade', valores: r.graficos.assertividade, cor: '--series-1' }],
   });
 }
@@ -112,27 +120,111 @@ export function renderResumoGeral(alvo, { base, filtro, usuario }) {
  * outro, com rolagem (e sem a edição de layout).
  */
 function ajustarAlturaATela(pagina) {
-  // Exportação em PDF: sempre a grade, com a altura de uma página A4 paisagem (css/impressao.css).
+  // Exportação em PDF: sempre a grade, com a altura de uma página A4 paisagem (css/impressao.css); a fonte dos
+  // quadros é ajustada pelo exportar-pdf.js (enquadrarResumoGeral), que conhece o tamanho final da página.
   if (pagina.closest('.impressao')) {
     pagina.classList.add('rg-tela');
-    const economica = pagina.querySelector('.rg-economica');
-    if (economica && economica.scrollHeight > economica.clientHeight + 1) economica.classList.add('compacto');
     return () => {};
   }
+  // v27: cada quadro reajusta a fonte quando muda de tamanho (janela, edição do layout).
+  const pendentes = new Set();
+  const observador = new ResizeObserver((entradas) => {
+    if (!pagina.isConnected) return observador.disconnect();
+    if (!pagina.classList.contains('rg-tela')) return;
+    for (const e of entradas) pendentes.add(e.target);
+    requestAnimationFrame(() => {
+      for (const c of pendentes) ajustarQuadro(c);
+      pendentes.clear();
+    });
+  });
+  for (const c of pagina.querySelectorAll('.rg-cartao')) observador.observe(c);
   const ajustar = () => {
     if (!pagina.isConnected) return window.removeEventListener('resize', ajustar);
     const cabe = window.innerWidth >= 1100 && window.innerHeight >= 620;
     pagina.classList.toggle('rg-tela', cabe);
     pagina.style.height = cabe ? `${Math.floor(window.innerHeight - pagina.getBoundingClientRect().top - 16)}px` : '';
-    // Se a análise econômica não couber na altura, os valores passam para 3 colunas (sem abreviar os R$).
-    const economica = pagina.querySelector('.rg-economica');
-    economica?.classList.remove('compacto');
-    if (cabe && economica && economica.scrollHeight > economica.clientHeight + 1) economica.classList.add('compacto');
+    if (cabe) ajustarQuadros(pagina);
+    else limparAjuste(pagina);
   };
   window.addEventListener('resize', ajustar);
   requestAnimationFrame(ajustar);
   ajustar();
   return ajustar;
+}
+
+/**
+ * v27 — Fonte (px) dos quadros de valores: entre o mínimo legível e o máximo, a maior com que o conteúdo cabe.
+ * Na impressão os limites são menores (a página A4 é mais densa que a tela).
+ */
+export const FONTE_QUADRO = Object.freeze({ tela: { min: 10, max: 24 }, impressao: { min: 9, max: 18 } });
+
+/** Arranjos alternativos por quadro (classe no conteúdo); o primeiro é o padrão, usado em caso de empate. */
+const ARRANJOS = {
+  economica: ['colunas-2', 'colunas-3', 'colunas-1'],
+  custos: ['', 'custos-2x2', 'custos-1'],
+};
+/** Quadros sem texto a ajustar: gráficos (ajustam a própria fonte) e o velocímetro (SVG que acompanha o quadro). */
+const SEM_AJUSTE = new Set(['curva', 'barras', 'assertividade', 'andamento']);
+
+const cortado = (el) => el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
+
+function aplicarArranjo(conteudo, arranjos, escolhido) {
+  for (const a of arranjos) if (a) conteudo.classList.toggle(a, a === escolhido);
+}
+
+/** Maior fonte em que nada do quadro fica cortado, ou null se nem a mínima couber. */
+function maiorFonte(cartao, conteudo, { min, max }) {
+  const cabe = (f) => {
+    conteudo.style.fontSize = `${f}px`;
+    return !cortado(cartao) && !cortado(conteudo);
+  };
+  if (!cabe(min)) return null;
+  let [menor, maior] = [min, max];
+  if (cabe(max)) return max;
+  while (maior - menor > 0.25) {
+    const meio = (menor + maior) / 2;
+    if (cabe(meio)) menor = meio;
+    else maior = meio;
+  }
+  return Math.floor(menor * 4) / 4;
+}
+
+/**
+ * Ajusta um quadro ao próprio tamanho (fonte e arranjo). Devolve false se nem na fonte mínima coube — aí o
+ * quadro ganha a classe `apertado` (na tela, rolagem por dentro; no PDF a página é ampliada até caber).
+ */
+export function ajustarQuadro(cartao, limites = FONTE_QUADRO.tela) {
+  const conteudo = cartao.querySelector(':scope > .rg-conteudo');
+  if (!conteudo || SEM_AJUSTE.has(cartao.dataset.quadro)) return true;
+  const arranjos = ARRANJOS[cartao.dataset.quadro] ?? [''];
+  let melhor = { arranjo: arranjos[0], fonte: null };
+  for (const a of arranjos) {
+    aplicarArranjo(conteudo, arranjos, a);
+    const fonte = maiorFonte(cartao, conteudo, limites);
+    if (fonte !== null && (melhor.fonte === null || fonte > melhor.fonte + 0.5)) melhor = { arranjo: a, fonte };
+  }
+  aplicarArranjo(conteudo, arranjos, melhor.arranjo);
+  conteudo.style.fontSize = `${melhor.fonte ?? limites.min}px`;
+  cartao.classList.toggle('apertado', melhor.fonte === null);
+  return melhor.fonte !== null;
+}
+
+/** Ajusta todos os quadros da página; devolve true se todos couberam. */
+export function ajustarQuadros(pagina, limites = FONTE_QUADRO.tela) {
+  let todos = true;
+  for (const c of pagina.querySelectorAll('.rg-cartao')) todos = ajustarQuadro(c, limites) && todos;
+  return todos;
+}
+
+/** Telas pequenas (um quadro abaixo do outro): volta à fonte e ao arranjo padrão. */
+function limparAjuste(pagina) {
+  for (const c of pagina.querySelectorAll('.rg-cartao')) {
+    c.classList.remove('apertado');
+    const conteudo = c.querySelector(':scope > .rg-conteudo');
+    if (!conteudo) continue;
+    conteudo.style.fontSize = '';
+    aplicarArranjo(conteudo, ARRANJOS[c.dataset.quadro] ?? [''], null);
+  }
 }
 
 /** Quadro CEF × Físico — mês de referência e mês seguinte. */
