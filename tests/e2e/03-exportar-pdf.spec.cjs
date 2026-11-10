@@ -50,6 +50,9 @@ test('Exportar PDF: monta as seções do Cliente da obra, gráficos em imagem e 
   await expect(doc.locator('canvas')).toHaveCount(0);
   expect(await doc.locator('img.imp-grafico').count()).toBeGreaterThanOrEqual(4); // 3 do Resumo Geral + Segurança
   await expect(doc.locator('button:visible')).toHaveCount(0);
+  // competência e obra só no cabeçalho da página: sem o selo nas seções e sem o título repetido no Resumo Geral
+  await expect(doc.locator('[data-teste="competencia"]:visible')).toHaveCount(0);
+  await expect(doc.locator('[data-secao="resumo-geral"] .rg-titulo')).toBeHidden();
   // Físico e Econômico como abrem na tela: só os itens principais
   await expect(doc.locator('[data-secao="resumo-fisico"] tr', { hasText: 'Estrutura/Viga/Lajes' })).toBeHidden();
   await expect(doc.locator('[data-secao="resumo-fisico"] tr', { hasText: 'Estrutura' }).first()).toBeVisible();
@@ -64,7 +67,7 @@ test('Exportar PDF: monta as seções do Cliente da obra, gráficos em imagem e 
   const mm = 96 / 25.4;
   for (const m of medidas) {
     expect(m.zoom, m.id).toBeGreaterThan(0.3);
-    expect(m.zoom, m.id).toBeLessThanOrEqual(1);
+    expect(m.zoom, m.id).toBeLessThanOrEqual(1.2); // tabela pequena pode ser ampliada para ocupar a página
     expect(m.largura, m.id).toBeLessThanOrEqual(277 * mm + 1);
     expect(m.altura, m.id).toBeLessThanOrEqual(183 * mm);
   }

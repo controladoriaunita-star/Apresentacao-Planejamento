@@ -17,7 +17,7 @@ import { h, montar, token } from '../core/dom.js';
 import { estado } from '../core/estado.js';
 import { fmtMes, fmtMesLongo, fmtPercentual, fmtVariacao } from '../core/formato.js';
 import { TIPOS_MIDIA, midiasDaVisao } from '../domain/conteudo.js';
-import { abrirModal, alerta, campo, seloCompetencia, toast } from '../ui/componentes.js';
+import { abrirModal, alerta, campo, toast } from '../ui/componentes.js';
 import { icone } from '../ui/icones.js';
 import { mesExibido } from './galeria.js';
 import { dadosCapaCliente } from './inicio.js';
@@ -172,8 +172,7 @@ async function galeriaImpressa(alvo, { base, filtro }, tipo) {
   montar(alvo,
     h('div', { class: 'titulo-pagina' },
       h('div', { class: 'titulo-com-competencia' },
-        h('div', {}, h('div', { class: 'eyebrow' }, def.nome), h('h1', {}, obra.nome)),
-        seloCompetencia(filtro.referencia))),
+        h('div', {}, h('div', { class: 'eyebrow' }, def.nome), h('h1', {}, obra.nome)))),
     mes !== filtro.referencia ? alerta('info', `Sem imagens em ${fmtMes(filtro.referencia)}`, `Imagens de ${fmtMesLongo(mes)}.`) : null,
     h('div', { class: `imp-galeria imp-galeria-${tipo}` }, linhas.map((linha) => h('div', { class: 'imp-figura-linha' }, linha.map((m) => {
       const grupo = m.grupo ?? 'Geral';
@@ -226,18 +225,35 @@ function enquadrarResumoGeral(alvo) {
 }
 
 /**
- * A seção inteira numa página: montada na largura natural da tabela (nunca menos que a página) e reduzida
- * (zoom) só o necessário para caber na largura e na altura da página.
+ * A seção inteira numa página, ocupando a página o máximo possível:
+ * 1. a largura de montagem cresce enquanto a altura for o limite (a tabela alarga, as descrições quebram menos
+ *    linhas e a redução diminui) e para quando a largura passa a limitar;
+ * 2. se ainda sobrar altura, as linhas da tabela ficam mais altas (até +24 px cada) para preencher a página;
+ * 3. o zoom final leva o bloco à largura/altura útil (pode ampliar até 1,2× uma tabela pequena).
  */
 function enquadrarEmUmaPagina(alvo) {
   const tabela = alvo.querySelector('.sheet > table');
   if (tabela) tabela.style.zoom = '';
   alvo.style.zoom = '';
-  alvo.style.width = '';
-  const natural = Math.max(PAGINA.largura, (tabela?.offsetWidth ?? 0) + 4);
-  alvo.style.width = `${Math.ceil(natural)}px`;
-  const fator = Math.min(1, PAGINA.largura / natural, PAGINA.altura / alvo.scrollHeight);
-  alvo.style.zoom = fator.toFixed(4);
+  const larguraReal = (w) => Math.max(w, (tabela?.offsetWidth ?? 0) + 4);
+  const fatorDe = (largura) => Math.min(1.2, PAGINA.largura / largura, PAGINA.altura / alvo.scrollHeight);
+  let melhor = null;
+  for (let w = Math.floor(PAGINA.largura); w <= 3200; w += 40) {
+    alvo.style.width = `${w}px`;
+    const largura = larguraReal(w);
+    const fator = fatorDe(largura);
+    if (!melhor || fator > melhor.fator + 0.0005) melhor = { largura, fator };
+    if (PAGINA.largura / largura <= PAGINA.altura / alvo.scrollHeight) break; // a largura passou a limitar
+  }
+  alvo.style.width = `${Math.ceil(melhor.largura)}px`;
+  const linhas = [...alvo.querySelectorAll('.sheet tbody tr')].filter((tr) => tr.offsetParent !== null);
+  const sobra = PAGINA.altura / fatorDe(melhor.largura) - alvo.scrollHeight;
+  if (linhas.length && sobra > 4) {
+    const extra = Math.min(sobra / linhas.length, 24);
+    const alturas = linhas.map((tr) => tr.getBoundingClientRect().height);
+    linhas.forEach((tr, i) => { tr.style.height = `${Math.floor(alturas[i] + extra)}px`; });
+  }
+  alvo.style.zoom = (fatorDe(melhor.largura) * 0.99).toFixed(4); // 1% de folga para arredondamentos da impressão
   alvo.dataset.zoom = alvo.style.zoom;
 }
 

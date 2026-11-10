@@ -24,7 +24,11 @@ Cada versão só é fechada com `npm run verificar` passando.
     O Resumo Geral usa o layout do Dev: a grade começa no tamanho da página e só cresce (e é reduzida) até nenhum
     quadro de valores ficar cortado; na impressão as linhas do CEF × Físico, da Análise econômica e do INCC ficam
     mais justas para precisar de menos redução. Físico e Econômico saem como abrem na tela (só os itens principais,
-    sem subitens nem detalhes) e são reduzidos só o necessário para caber na largura e na altura da página.
+    sem subitens nem detalhes) e ocupam a página: quando a altura é o limite, a tabela é alargada (descrições
+    quebram menos) até preencher também a largura; sobrando altura, as linhas ficam mais altas; tabela pequena
+    pode ser ampliada até 1,2×.
+  - **Sem o selo "Competência" nas seções** e sem o título repetido no Resumo Geral: obra e competência já estão no
+    cabeçalho de toda página (o Resumo Geral ganha a altura). Itens sem subitens não ficam mais recuados no Físico.
   - Nas demais tabelas (telas extras, Segurança) as largas são reduzidas para caber na largura, o cabeçalho se
     repete em cada página e nenhuma linha/quadro é cortado ao meio.
   - **TxC e fotos**: as imagens visíveis ao cliente do mês de referência (sem imagens no mês: o anterior mais recente,

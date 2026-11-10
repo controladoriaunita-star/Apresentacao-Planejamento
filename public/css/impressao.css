@@ -28,6 +28,10 @@
 .impressao .imp-secao { break-before: page; }
 .impressao button, .impressao .filtro-excel, .impressao .so-edicao, .impressao input,
 .impressao .simulacao-area, .impressao .galeria-dica { display: none !important; }
+/* Competência e obra já estão no cabeçalho de toda página: sem o selo e sem o título repetido do Resumo Geral */
+.impressao [data-teste="competencia"], .impressao .imp-resumo-geral .rg-titulo { display: none !important; }
+/* Sem as setas de expandir, o espaço reservado a elas só desalinhava os itens */
+.impressao .arvore-espaco { display: none; }
 .impressao .card { box-shadow: none; border-color: var(--border); }
 .impressao .titulo-pagina { margin-bottom: 10px; }
 .impressao .titulo-pagina h1 { font-size: 22px; }
