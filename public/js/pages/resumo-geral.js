@@ -5,7 +5,7 @@
  * apresentações (domain/layout-resumo.js, ui/editor-layout.js).
  *
  * v27 — Quadros responsivos: na grade, cada quadro de valores usa a maior fonte com que o conteúdo cabe no
- * tamanho dele (rótulos quebram linha; Análise econômica em 1, 2 ou 3 colunas e Custos por em 4, 2 × 2 ou 1,
+ * tamanho dele (rótulos quebram linha; Análise econômica em 1, 2 ou 3 colunas e Custos por em 2 × 2 ou 1 coluna,
  * o arranjo que permitir a fonte maior) e recalcula ao mudar de tamanho — inclusive enquanto o Dev redimensiona.
  * Os gráficos ajustam a fonte dos eixos ao próprio tamanho. A exportação em PDF usa o mesmo ajuste.
  */
@@ -148,6 +148,7 @@ function ajustarAlturaATela(pagina) {
   };
   window.addEventListener('resize', ajustar);
   requestAnimationFrame(ajustar);
+  document.fonts?.ready.then(ajustar); // as fontes da marca mudam a largura dos textos ao terminar de carregar
   ajustar();
   return ajustar;
 }
@@ -162,8 +163,12 @@ export const FONTE_QUADRO = Object.freeze({ tela: { min: 10, max: 24 }, impressa
 /** Arranjos alternativos por quadro (classe no conteúdo); o primeiro é o padrão, usado em caso de empate. */
 const ARRANJOS = {
   economica: ['colunas-2', 'colunas-3', 'colunas-1'],
-  custos: ['', 'custos-2x2', 'custos-1'],
+  custos: ['custos-2x2', 'custos-4', 'custos-1'],
 };
+/** Quadros com arranjo preferido: fica o primeiro que cabe (Custos por em quadrado sempre que couber). */
+const ARRANJO_PREFERIDO = new Set(['custos']);
+/** Caixas internas que também não podem cortar o valor (o número não pode sair da caixinha). */
+const CAIXAS = { custos: '.custo-item', economica: '.economia-grade > div', incc: 'dt, dd', nhnu: '.rg-numero' };
 /** Quadros sem texto a ajustar: gráficos (ajustam a própria fonte) e o velocímetro (SVG que acompanha o quadro). */
 const SEM_AJUSTE = new Set(['curva', 'barras', 'assertividade', 'andamento']);
 
@@ -175,9 +180,10 @@ function aplicarArranjo(conteudo, arranjos, escolhido) {
 
 /** Maior fonte em que nada do quadro fica cortado, ou null se nem a mínima couber. */
 function maiorFonte(cartao, conteudo, { min, max }) {
+  const caixas = CAIXAS[cartao.dataset.quadro] ? [...conteudo.querySelectorAll(CAIXAS[cartao.dataset.quadro])] : [];
   const cabe = (f) => {
     conteudo.style.fontSize = `${f}px`;
-    return !cortado(cartao) && !cortado(conteudo);
+    return !cortado(cartao) && !cortado(conteudo) && !caixas.some((c) => c.scrollWidth > c.clientWidth + 1);
   };
   if (!cabe(min)) return null;
   let [menor, maior] = [min, max];
@@ -192,7 +198,7 @@ function maiorFonte(cartao, conteudo, { min, max }) {
 
 /**
  * Ajusta um quadro ao próprio tamanho (fonte e arranjo). Devolve false se nem na fonte mínima coube — aí o
- * quadro ganha a classe `apertado` (na tela, rolagem por dentro; no PDF a página é ampliada até caber).
+ * quadro ganha a classe `apertado` (na tela fica na fonte mínima, sem rolagem; no PDF a página é ampliada).
  */
 export function ajustarQuadro(cartao, limites = FONTE_QUADRO.tela) {
   const conteudo = cartao.querySelector(':scope > .rg-conteudo');
@@ -205,6 +211,7 @@ export function ajustarQuadro(cartao, limites = FONTE_QUADRO.tela) {
     aplicarArranjo(conteudo, arranjos, a);
     const fonte = maiorFonte(cartao, conteudo, limites);
     if (fonte !== null && (melhor.fonte === null || fonte > melhor.fonte + 0.5)) melhor = { arranjo: a, fonte };
+    if (melhor.fonte !== null && ARRANJO_PREFERIDO.has(cartao.dataset.quadro)) break;
   }
   aplicarArranjo(conteudo, arranjos, melhor.arranjo);
   conteudo.style.fontSize = `${melhor.fonte ?? limites.min}px`;

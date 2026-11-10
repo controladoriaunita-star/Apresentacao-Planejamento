@@ -189,7 +189,7 @@ main.conteudo:has(.rg-tela) { padding-bottom: 16px; }
 .rg.rg-tela .cef-fisico td { padding: 0.1em 0.6em; }
 .rg.rg-tela .cef-fisico th { padding-bottom: 2px; }
 /* Análise econômica: as linhas dividem toda a altura do quadro; rola por dentro se ficar pequeno */
-.rg.rg-tela .rg-economica { overflow: auto; }
+.rg.rg-tela .rg-economica { overflow: hidden; } /* v27: sem rolagem — a fonte diminui até caber */
 .rg.rg-tela .rg-economica .economia-grade { flex: 1 0 auto; grid-auto-rows: minmax(min-content, 1fr); }
 .rg.rg-tela .rg-economica .economia-grade div { display: flex; flex-direction: column; justify-content: center; padding: 0.12em 0; }
 .rg.rg-tela .economia-grade dt, .rg.rg-tela .economia-grade dd { line-height: 1.25; }
@@ -230,15 +230,18 @@ main.conteudo:has(.rg-tela) { padding-bottom: 16px; }
 
 /* v27 — Quadros responsivos: o JS (resumo-geral.js) escolhe a fonte de .rg-conteudo e o arranjo; aqui os
    rótulos podem quebrar linha (os valores nunca) para o quadro estreito não cortar nada. */
-.rg.rg-tela .rg-cartao.apertado { overflow: auto; } /* nem na fonte mínima coube: rola por dentro */
 .rg.rg-tela .rg-conteudo .cef-fisico td.rot, .rg.rg-tela .rg-conteudo .lista-valores dt { white-space: normal; }
 .rg.rg-tela .rg-conteudo .cef-fisico td:not(.rot), .rg.rg-tela .rg-conteudo .lista-valores dd { white-space: nowrap; }
 .rg.rg-tela .economia-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .rg.rg-tela .economia-grade.colunas-1 { grid-template-columns: minmax(0, 1fr); }
 .rg.rg-tela .economia-grade.colunas-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 10px; }
 .rg.rg-tela .economia-grade dt { white-space: normal; }
-.rg.rg-tela .custos-por { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.rg.rg-tela .custo-item { min-width: 0; overflow: hidden; }
 .rg.rg-tela .rg-conteudo.custos-2x2 .custos-por { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.rg.rg-tela .rg-conteudo.custos-4 .custos-por { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+/* caixinhas em quadrado ocupando a altura do quadro */
+.rg.rg-tela .rg-custos .custos-por { flex: 1; grid-auto-rows: 1fr; }
+.rg.rg-tela .rg-custos .custo-item { justify-content: center; }
 .rg.rg-tela .rg-conteudo.custos-1 .custos-por { grid-template-columns: minmax(0, 1fr); }
 .rg.rg-tela .custo-item small { white-space: normal; text-align: center; }
 /* Gráficos: em quadro estreito a legenda desce para baixo do título (não cobre o título) */
