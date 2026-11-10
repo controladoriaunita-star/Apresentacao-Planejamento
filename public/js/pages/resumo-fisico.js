@@ -21,7 +21,7 @@ const simulacoes = new Map();
 
 export async function renderResumoFisico(alvo, ctx) {
   const { base, filtro, visao } = ctx;
-  const { obra, seletor } = obraUnica(base, () => renderResumoFisico(alvo, ctx));
+  const { obra, seletor } = obraUnica(base, () => renderResumoFisico(alvo, ctx), filtro);
   if (!obra) return montar(alvo, vazio('Selecione uma obra no filtro'));
 
   montar(alvo, cabecalho(obra, filtro.referencia, seletor),

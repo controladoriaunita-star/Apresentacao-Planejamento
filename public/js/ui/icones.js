@@ -11,6 +11,7 @@ const CAMINHOS = {
   seta: ['M6 9l6 6l6-6'],
   direita: ['M9 6l6 6l-6 6'],
   enviar: ['M12 16V4', 'M7 9l5-5l5 5', 'M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3'],
+  baixar: ['M12 4v12', 'M7 11l5 5l5-5', 'M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3'],
   imagem: ['M4 5h16v14H4z', 'M4 16l5-5l4 4l3-3l4 4', 'M15 9.5a1 1 0 1 0 0-.01'],
   planilha: ['M4 4h16v16H4z', 'M4 9h16', 'M4 14h16', 'M10 4v16'],
   texto: ['M5 6h14', 'M5 11h14', 'M5 16h9'],

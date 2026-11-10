@@ -5,7 +5,41 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v24 (em validação — ainda não publicada) |
+| Dev (local) | v25 (em validação — ainda não publicada) |
+
+## v25 — 10/11/2026 — Exportar PDF da apresentação Cliente
+
+- **Botão "Exportar PDF"** no topo da apresentação **Cliente** (só Dev e Planejamento — capacidade nova
+  `exportarPdf` em `domain/permissoes.js`; some no modo Apresentar). Abre uma janela com a **obra** (padrão: a da
+  capa do Cliente) e as **seções**, todas marcadas, na ordem das abas: Capa, Resumo Geral, Resumo Físico, Resumo
+  Econômico, Tempo x Caminho, Acompanhamento Fotográfico, Segurança do Trabalho (se a obra estiver marcada para o
+  Cliente) e as telas extras do Cliente daquela obra. Competência = mês de referência do filtro.
+- **Como sai**: o app monta o documento e abre a impressão do navegador — escolher **"Salvar como PDF"** (nome
+  sugerido: `Unità - <obra> - Apresentação ao cliente - <AAAA-MM>`). Nada é gerado no servidor (sem custo na Vercel).
+  - **A4 paisagem**, capa escura com logo, obra, cliente, os 3 indicadores da capa e o sumário (sem cabeçalho);
+    nas demais páginas, cabeçalho com obra · cliente e competência, rodapé com "gerado em" e **Página X de Y**.
+  - Cada seção começa numa página nova e mostra o mesmo conteúdo da tela do Cliente (mesma base e mesmas funções de
+    tela), sem botões nem filtros.
+  - **Resumo Geral, Resumo Físico e Resumo Econômico: uma página cada, inteiros, com a menor redução possível.**
+    O Resumo Geral usa o layout do Dev: a grade começa no tamanho da página e só cresce (e é reduzida) até nenhum
+    quadro de valores ficar cortado; na impressão as linhas do CEF × Físico, da Análise econômica e do INCC ficam
+    mais justas para precisar de menos redução. Físico e Econômico saem como abrem na tela (só os itens principais,
+    sem subitens nem detalhes) e são reduzidos só o necessário para caber na largura e na altura da página.
+  - Nas demais tabelas (telas extras, Segurança) as largas são reduzidas para caber na largura, o cabeçalho se
+    repete em cada página e nenhuma linha/quadro é cortado ao meio.
+  - **TxC e fotos**: as imagens visíveis ao cliente do mês de referência (sem imagens no mês: o anterior mais recente,
+    como na tela), por torre/local e com o comentário — TxC uma por página, fotos duas. Seção sem imagens fica fora.
+  - Gráficos convertidos em imagem de alta resolução (3×) antes de imprimir: nítidos no PDF.
+- Arquivos: `pages/exportar-pdf.js`, `css/impressao.css`. Ajustes pequenos para reutilizar as telas com a obra do PDF:
+  `obraUnica` aceita o filtro, `mesExibido` (galeria) e `dadosCapaCliente` (capa) exportados, Resumo Geral e
+  Segurança do Trabalho reconhecem a montagem para impressão. Nenhum cálculo mudou.
+- Testes: permissão (`tests/domain/permissoes.test.mjs`) e tela (`tests/e2e/03-exportar-pdf.spec.cjs`): botão só no
+  Cliente e não para o Viewer, seções da janela, documento com as seções na ordem, sem canvas/botões, Físico e
+  Econômico recolhidos, os três resumos dentro de uma página e nenhum quadro do Resumo Geral cortado, TxC com torre
+  e comentário, regras da página, PDF real gerado pelo Edge com uma página por seção ao
+  menos, e limpeza depois de imprimir.
+- Dica: se o navegador mostrar o próprio cabeçalho/rodapé (data, endereço), desmarcar "Cabeçalhos e rodapés" em
+  "Mais configurações" da janela de impressão.
 
 ## v24 — 10/11/2026 — Resumo Geral em grade ajustável pelo Dev, gráficos até o 100% + 1 mês
 

@@ -35,7 +35,7 @@ function faixas(colunas) {
 
 export function renderResumoEconomico(alvo, ctx) {
   const { base, filtro } = ctx;
-  const { obra, seletor } = obraUnica(base, () => renderResumoEconomico(alvo, ctx));
+  const { obra, seletor } = obraUnica(base, () => renderResumoEconomico(alvo, ctx), filtro);
   if (!obra) return montar(alvo, vazio('Selecione uma obra no filtro'));
   const r = calcularResumoEconomico(base, obra.chave, filtro.referencia);
 

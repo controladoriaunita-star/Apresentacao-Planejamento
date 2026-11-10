@@ -51,10 +51,13 @@ export function botaoAtualizarDados(classe = 'btn ghost sm') {
   }, `${classe} so-edicao`);
 }
 
-/** Nas abas de uma obra só (Físico, Econômico, TxC, Fotos): escolhe entre as obras filtradas. */
-export function obraUnica(base, aoTrocar) {
-  const obras = base.obras.filter((o) => estado.filtro.obras.includes(o.chave));
-  const atual = obras.find((o) => o.chave === estado.filtro.obraUnica) ?? obras[0] ?? null;
+/**
+ * Nas abas de uma obra só (Físico, Econômico, TxC, Fotos): escolhe entre as obras filtradas.
+ * `filtro`: o da tela (padrão) ou o da exportação em PDF, que fixa uma obra só.
+ */
+export function obraUnica(base, aoTrocar, filtro = estado.filtro) {
+  const obras = base.obras.filter((o) => filtro.obras.includes(o.chave));
+  const atual = obras.find((o) => o.chave === filtro.obraUnica) ?? obras[0] ?? null;
   const seletor = obras.length > 1
     ? filtroExcel({
       rotulo: 'Obra exibida', multiplo: false, largura: 300,

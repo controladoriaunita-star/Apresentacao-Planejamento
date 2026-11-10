@@ -22,6 +22,7 @@ import { renderAdminFontes } from './pages/admin-fontes.js';
 import { renderAdminMidias } from './pages/admin-midias.js';
 import { renderAdminSeguranca } from './pages/admin-seguranca.js';
 import { renderDashboardSeguranca } from './pages/dashboard-seguranca.js';
+import { abrirExportarPdf } from './pages/exportar-pdf.js';
 import { renderSegurancaTrabalho } from './pages/seguranca-trabalho.js';
 import { renderAdminTelas } from './pages/admin-telas.js';
 import { renderAdminUsuarios } from './pages/admin-usuarios.js';
@@ -70,10 +71,13 @@ let telasExtras = [];
 /** Telas extras que aparecem na apresentação `visao` para as obras filtradas. */
 const telasDaVisao = (visao) => (visao ? telasDaObra(telasExtras, estado.filtro.obras ?? [], visao) : []);
 
-/** Abas da apresentação `visao`: as opcionais do Cliente só entram se alguma obra do filtro estiver marcada. */
-function abasDaVisao(visao) {
+/**
+ * Abas da apresentação `visao`: as opcionais do Cliente só entram se alguma obra do filtro (ou de `obras`,
+ * na exportação em PDF) estiver marcada.
+ */
+function abasDaVisao(visao, obras = estado.filtro.obras) {
   if (visao !== 'cliente') return ABAS;
-  const filtradas = new Set(estado.filtro.obras ?? []);
+  const filtradas = new Set(obras ?? []);
   const marcadas = (campo) => (estado.bruto?.cadastro ?? []).some((c) => filtradas.has(c.chave) && c[campo] === 'sim');
   return ABAS.filter((a) => a.cliente !== 'opcional' || marcadas(a.opcaoCliente));
 }
@@ -115,10 +119,22 @@ function cabecalho(visao, abaAtual) {
       apresentacoes ? h('div', { class: 'visao', role: 'group', 'aria-label': 'Apresentação' },
         h('a', { href: `#/obra/${mesmaAba('obra')}`, 'aria-current': String(visao === 'obra') }, 'Obra'),
         h('a', { href: `#/cliente/${mesmaAba('cliente')}`, 'aria-current': String(visao === 'cliente') }, 'Cliente')) : null,
+      visao === 'cliente' && estado.bruto && pode(u.papel, 'exportarPdf')
+        ? h('button', { class: 'btn inverse sm so-edicao', type: 'button', 'data-teste': 'exportar-pdf', onclick: exportarPdf }, icone('baixar', { tamanho: 16 }), 'Exportar PDF') : null,
       apresentacoes ? h('button', { class: 'btn inverse sm', type: 'button', title: 'Tela cheia', onclick: alternarApresentacao }, icone('telaCheia', { tamanho: 16 }), 'Apresentar') : null,
       apresentacoes && admin ? h('a', { class: 'btn inverse sm so-edicao', href: `#/admin/${admin.id}` }, icone('engrenagem', { tamanho: 16 }), 'Administração') : null,
       h('a', { class: 'usuario', href: '#/conta', style: { textDecoration: 'none' } }, h('b', {}, u.nome), h('span', {}, PAPEIS[u.papel]?.nome)),
       h('button', { class: 'btn inverse sm', type: 'button', onclick: sair, 'aria-label': 'Sair' }, icone('sair', { tamanho: 16 })))));
+}
+
+/** "Exportar PDF" da apresentação Cliente: seções = abas e telas extras do Cliente para a obra escolhida. */
+function exportarPdf() {
+  abrirExportarPdf({
+    secoesDaObra: (chave) => [
+      ...abasDaVisao('cliente', [chave]).filter((a) => !a.capa),
+      ...telasDaObra(telasExtras, [chave], 'cliente').map((t) => ({ id: `tela-${t.id}`, nome: t.titulo, render: (alvo) => renderTelaExtra(alvo, t, 'cliente') })),
+    ],
+  });
 }
 
 function alternarApresentacao() {

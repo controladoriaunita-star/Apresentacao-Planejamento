@@ -112,6 +112,13 @@ export function renderResumoGeral(alvo, { base, filtro, usuario }) {
  * outro, com rolagem (e sem a edição de layout).
  */
 function ajustarAlturaATela(pagina) {
+  // Exportação em PDF: sempre a grade, com a altura de uma página A4 paisagem (css/impressao.css).
+  if (pagina.closest('.impressao')) {
+    pagina.classList.add('rg-tela');
+    const economica = pagina.querySelector('.rg-economica');
+    if (economica && economica.scrollHeight > economica.clientHeight + 1) economica.classList.add('compacto');
+    return () => {};
+  }
   const ajustar = () => {
     if (!pagina.isConnected) return window.removeEventListener('resize', ajustar);
     const cabe = window.innerWidth >= 1100 && window.innerHeight >= 620;
