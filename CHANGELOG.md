@@ -5,7 +5,12 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v27 (em validação — ainda não publicada) |
+| Dev (local) | v28 (em validação — ainda não publicada) |
+
+## v28 — 11/11/2026 — barra de rolagem no menu de abas
+
+- Com muitas abas/novas telas, o menu do topo passa a mostrar uma barra de rolagem horizontal fina em telas menores
+  (antes rolava com a barra oculta e as abas pareciam cortadas). Só `public/css/layout.css`.
 
 ## v27 — 10/11/2026 — quadros do Resumo Geral responsivos (tela e PDF)
 
