@@ -222,8 +222,9 @@ test('Resumo Geral: quadro redimensionado ajusta fonte e colunas sem cortar valo
   await page.keyboard.press('Shift+ArrowLeft');
   await page.keyboard.press('Shift+ArrowLeft');
   await expect.poll(async () => (await medir()).economica.fonte).toBeLessThan(antes.economica.fonte);
+  // v29: a fonte é recalculada para a página toda a cada passo do redimensionamento — espera assentar.
+  await expect.poll(async () => (await medir()).economica.cortado).toBe(false);
   const estreita = (await medir()).economica;
-  expect(estreita.cortado).toBe(false);
   expect(estreita.colunas).not.toBe('colunas-3');
   await page.getByRole('button', { name: 'Cancelar' }).click();
   await expect.poll(async () => (await medir()).economica.fonte).toBe(antes.economica.fonte);

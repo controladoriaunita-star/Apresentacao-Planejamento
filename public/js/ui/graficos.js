@@ -12,12 +12,26 @@ const instancias = new WeakMap();
 const fonteEixo = () => (window.innerHeight >= 1000 ? 13 : 12);
 
 /**
- * v27 — Gráficos com `fonteProporcional` (quadros do Resumo Geral): a fonte acompanha o tamanho do próprio
- * gráfico, entre 10 e 16 px, para o quadro redimensionado continuar legível e sem rótulos encavalados.
+ * v27 — Gráficos com `fonteProporcional` (quadros do Resumo Geral): a fonte acompanha o tamanho do gráfico,
+ * entre 10 e 16 px, para o quadro redimensionado continuar legível e sem rótulos encavalados.
+ * v29 — Todos esses gráficos da página usam a mesma fonte: a do menor deles (não um tamanho por gráfico).
  */
-const fonteDoGrafico = (chart) => (chart?.canvas?.dataset.fonteProporcional
-  ? Math.round(Math.min(16, Math.max(10, Math.min(chart.height / 14, chart.width / 45))) * 2) / 2
-  : fonteEixo());
+const fontePropria = (chart) => Math.round(Math.min(16, Math.max(10, Math.min(chart.height / 14, chart.width / 45))) * 2) / 2;
+let fonteComum = null;
+export function fonteDoGrafico(chart) {
+  if (!chart?.canvas?.dataset.fonteProporcional) return fonteEixo();
+  // v30 — Exportação em PDF: fonte fixada pelo exportar-pdf.js (a que deixa todos os meses lado a lado).
+  const fixa = Number(chart.canvas.dataset.fonteFixa);
+  if (fixa) return fixa;
+  const graficos = [...document.querySelectorAll('canvas[data-fonte-proporcional]')].map((c) => window.Chart?.getChart(c)).filter(Boolean);
+  const fonte = Math.min(fontePropria(chart), ...graficos.map(fontePropria));
+  // Mudou a fonte comum (ex.: um quadro foi redimensionado): redesenha os outros para acompanharem.
+  if (fonte !== fonteComum) {
+    fonteComum = fonte;
+    requestAnimationFrame(() => graficos.forEach((g) => g !== chart && g.canvas?.isConnected && g.update('none')));
+  }
+  return fonte;
+}
 
 function opcoesBase({ percentual = true, max = null, minimoMax = null } = {}) {
   const eixo = token('--chart-axis');
