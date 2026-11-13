@@ -149,6 +149,9 @@ function ajustarAlturaATela(pagina) {
   window.addEventListener('resize', ajustar);
   requestAnimationFrame(ajustar);
   ajustar();
+  // A fonte da marca (Inter) pode chegar depois da primeira medida: o texto cresce sem mudar o tamanho dos
+  // quadros (o observador não dispara) e algum ficava cortado. Mede de novo quando as fontes terminam de carregar.
+  document.fonts?.ready.then(() => pagina.isConnected && ajustar());
   return ajustar;
 }
 

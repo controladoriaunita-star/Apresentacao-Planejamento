@@ -5,7 +5,18 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v29 (em validação — ainda não publicada) |
+| Dev (local) | v30 (em validação — ainda não publicada) |
+
+## v30 — 13/11/2026 — gráficos do Resumo Geral no PDF sem rótulos encavalados
+
+- Exportar PDF: a página A4 é mais estreita que a tela, e na fonte da tela os meses dos gráficos do Resumo Geral
+  inclinavam e se sobrepunham ("24SET 24OUT…"), assim como os rótulos de valor. Agora, só no PDF, a fonte dos
+  três gráficos desce até todos os meses caberem lado a lado (mínimo 6,5 px; imagem em 3×, nítida) — a mesma
+  fonte nos três. A tela não muda.
+- Resumo Geral (tela e PDF): os quadros eram medidos antes de a fonte da marca (Inter) terminar de carregar; quando
+  ela chegava o texto crescia e um quadro podia ficar cortado (ex.: INCC no PDF). Agora a medida é refeita quando as
+  fontes terminam de carregar, e o PDF só mede depois disso.
+- Teste de tela do quadro redimensionado espera o ajuste assentar antes de conferir.
 
 ## v29 — 13/11/2026 — Resumo Geral com fonte única
 

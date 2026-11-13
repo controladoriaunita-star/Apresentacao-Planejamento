@@ -18,8 +18,11 @@ const fonteEixo = () => (window.innerHeight >= 1000 ? 13 : 12);
  */
 const fontePropria = (chart) => Math.round(Math.min(16, Math.max(10, Math.min(chart.height / 14, chart.width / 45))) * 2) / 2;
 let fonteComum = null;
-function fonteDoGrafico(chart) {
+export function fonteDoGrafico(chart) {
   if (!chart?.canvas?.dataset.fonteProporcional) return fonteEixo();
+  // v30 — Exportação em PDF: fonte fixada pelo exportar-pdf.js (a que deixa todos os meses lado a lado).
+  const fixa = Number(chart.canvas.dataset.fonteFixa);
+  if (fixa) return fixa;
   const graficos = [...document.querySelectorAll('canvas[data-fonte-proporcional]')].map((c) => window.Chart?.getChart(c)).filter(Boolean);
   const fonte = Math.min(fontePropria(chart), ...graficos.map(fontePropria));
   // Mudou a fonte comum (ex.: um quadro foi redimensionado): redesenha os outros para acompanharem.
