@@ -5,7 +5,15 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v27 (em validação — ainda não publicada) |
+| Dev (local) | v29 (em validação — ainda não publicada) |
+
+## v29 — 13/11/2026 — Resumo Geral com fonte única
+
+- Os quadros de valores (CEF × Físico, Análise econômica, Custos por, INCC, NH-NU) passam a usar todos a mesma
+  fonte — a maior com que todos cabem — em vez de cada quadro escolher a sua (v27). Os três gráficos também usam
+  uma fonte só (a do menor deles). Vale na tela e no PDF.
+- O ajuste passa a conferir também se um valor vaza da própria célula (ex.: "Custos por" com números grandes
+  encavalando), não só o quadro inteiro.
 
 ## v27 — 10/11/2026 — quadros do Resumo Geral responsivos (tela e PDF)
 
