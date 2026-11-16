@@ -5,7 +5,31 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v27 (em validação — ainda não publicada) |
+| Dev (local) | v28 (em validação — ainda não publicada) |
+
+## v28 — 16/11/2026 — colunas iguais nos resumos e ordem das abas
+
+- **Resumo Econômico**: ocultos por enquanto os indicadores do topo (Avanço, Custo lançado… % contratado) e o farol
+  "Repete o econômico / Competência real" (constante `MOSTRAR_TOPO` em `pages/resumo-economico.js`; o rodapé continua).
+- **Resumo Geral**: quadro **NH-NU** oculto por enquanto, na tela e no PDF (`QUADROS_OCULTOS` em
+  `domain/layout-resumo.js`). Quadro oculto não conta na sobreposição: em "Editar layout" os vizinhos podem
+  ocupar o espaço dele. O retângulo do NH-NU fica guardado; se ao voltar ele cobrir outro quadro, o layout
+  salvo volta ao padrão.
+- **Resumo Físico e Econômico**: todas as colunas de valores com a mesma largura (coluna Item/Serviço com largura
+  própria), títulos quebram linha e valores centralizados (`.colunas-iguais` em `css/paginas.css`). Abaixo da largura
+  mínima a tabela rola na horizontal; no Físico cabe inteira numa tela de 1920 px.
+- **Resumo Físico**: as colunas de **Pesos** (Peso atraso e Peso planejado) ficam sempre visíveis; o botão passa a
+  ser "Ocultar/Exibir projeção econômica".
+- **Ordem das abas do menu**: no Resumo Geral, com **"Editar layout"** ligado, o Dev arrasta as abas do menu superior
+  (inclusive as Novas telas) para mudar a ordem; teclado: Alt + ← / →. "Cancelar" desfaz, "Restaurar padrão" volta à
+  ordem do app e "Salvar para todas as apresentações" grava junto com o layout (vale para Obra e Cliente). Abas novas
+  entram no fim. Fora da edição as abas não arrastam.
+  - `PUT /api/layouts/abas` (só Dev) e `ordemAbas` em `GET /api/dados/resumo`; documento `ordem-abas` no armazém
+    (arquivo local ou Storage `sistema/` no Supabase — **sem migration**).
+  - Arquivos: `domain/ordem-abas.js` (puro, testado), `ui/ordenar-abas.js`, `main.js`, `pages/resumo-geral.js`,
+    `ui/editor-layout.js` (`aoRestaurarPadrao`), `server/routes/dados.mjs`, `css/layout.css`. Nenhum cálculo mudou.
+- Testes: `tests/domain/ordem-abas.test.mjs`, contrato da rota nova e teste de tela do arrastar; o teste do rodapé
+  congelado usa janela de 500 px (sem os indicadores do topo a página cabe em 600 px).
 
 ## v27 — 10/11/2026 — quadros do Resumo Geral responsivos (tela e PDF)
 

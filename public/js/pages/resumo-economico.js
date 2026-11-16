@@ -17,6 +17,12 @@ import { icone } from '../ui/icones.js';
 /** Itens expandidos (lembrados ao trocar de mês/obra). */
 const expandidos = new Set();
 
+/**
+ * v28 — Ocultos por enquanto (pedido do usuário): os indicadores do topo e o farol "Repete o econômico".
+ * O código continua aqui; basta voltar a constante para true para exibi-los de novo.
+ */
+const MOSTRAR_TOPO = false;
+
 /** Colunas "IEC Obra" e "IEC s/ correção" ficam em vermelho acima de 1 (custo acima do orçado). */
 const CAMPOS_IEC = new Set(['iec', 'iecSemCorrecao']);
 const classeIec = (campo, v) => (CAMPOS_IEC.has(campo) && typeof v === 'number' && v > 1 ? 'iec-acima' : '');
@@ -69,7 +75,7 @@ export function renderResumoEconomico(alvo, ctx) {
     h('div', { class: 'titulo-com-competencia' },
       h('div', {}, h('div', { class: 'eyebrow' }, 'Resumo econômico'), h('h1', {}, obra.nome)),
       seloCompetencia(filtro.referencia),
-      farolEconomico(validarEconomico(base, obra.chave, filtro.referencia))),
+      MOSTRAR_TOPO ? farolEconomico(validarEconomico(base, obra.chave, filtro.referencia)) : null),
     h('div', { class: 'row' },
       r.linhas.length ? h('div', { class: 'row' },
         h('button', { class: 'btn ghost sm', type: 'button', onclick: () => r.linhas.forEach((l) => alternar(l.item, true)) }, icone('expandir', { tamanho: 16 }), 'Expandir tudo'),
@@ -93,8 +99,8 @@ export function renderResumoEconomico(alvo, ctx) {
 
   montar(alvo,
     titulo,
-    indicadores(INDICADORES_ECONOMICO.topo),
-    h('div', { class: 'sheet resumo-tabela', style: { margin: '16px 0' } }, h('table', {},
+    MOSTRAR_TOPO ? indicadores(INDICADORES_ECONOMICO.topo) : null,
+    h('div', { class: 'sheet resumo-tabela colunas-iguais', style: { margin: '16px 0' } }, h('table', { style: `--colunas: ${COLUNAS_ECONOMICO.length}` },
       h('thead', {},
         h('tr', { class: 'grupo' },
           h('th', { class: 'first', rowspan: 2 }, 'Item'),

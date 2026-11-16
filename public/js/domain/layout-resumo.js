@@ -22,6 +22,14 @@ export const QUADROS = Object.freeze([
 ]);
 
 /**
+ * v28 — Quadros ocultos por enquanto (pedido do usuário): não aparecem no Resumo Geral nem no PDF e não contam
+ * na sobreposição, então os outros quadros podem ocupar o espaço deles. O retângulo continua guardado no layout;
+ * se ao voltar ele cobrir outro quadro, o layout salvo volta ao padrão (ver normalizarLayout).
+ */
+export const QUADROS_OCULTOS = Object.freeze(['nhnu']);
+export const visivel = (id) => !QUADROS_OCULTOS.includes(id);
+
+/**
  * Layout padrão: CEF × Físico e análise econômica à esquerda, até o pé da tela; três gráficos e o rodapé
  * (custos, INCC, NH-NU e velocímetro) à direita. {x, y} = coluna/linha inicial (1…24); {w, h} = largura/altura.
  */
@@ -54,10 +62,11 @@ export function ajustarRetangulo(r, padrao) {
 
 export const sobrepoe = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
-/** Pares de quadros que se sobrepõem (lista vazia = layout válido). */
+/** Pares de quadros visíveis que se sobrepõem (lista vazia = layout válido). */
 export function sobreposicoes(layout) {
   const pares = [];
-  QUADROS.forEach((a, i) => QUADROS.slice(i + 1).forEach((b) => {
+  const visiveis = QUADROS.filter((q) => visivel(q.id));
+  visiveis.forEach((a, i) => visiveis.slice(i + 1).forEach((b) => {
     if (sobrepoe(layout[a.id], layout[b.id])) pares.push([a.id, b.id]);
   }));
   return pares;

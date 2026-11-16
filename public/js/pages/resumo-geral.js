@@ -15,11 +15,12 @@ import { estado } from '../core/estado.js';
 import {
   classeSinal, fmtData, fmtIndice, fmtMes, fmtMoeda, fmtNumero, fmtPercentual, fmtVariacao, VAZIO,
 } from '../core/formato.js';
-import { LAYOUT_PADRAO, normalizarLayout, QUADROS } from '../domain/layout-resumo.js';
+import { LAYOUT_PADRAO, normalizarLayout, QUADROS, visivel } from '../domain/layout-resumo.js';
 import { pode } from '../domain/permissoes.js';
 import { calcularResumoGeral } from '../domain/resumo-geral.js';
 import { card, cardTitulo, seloCompetencia, toast, vazio } from '../ui/componentes.js';
 import { aplicarLayout, editarLayout } from '../ui/editor-layout.js';
+import { editarOrdemAbas } from '../ui/ordenar-abas.js';
 import { grafico } from '../ui/graficos.js';
 import { velocimetro } from '../ui/velocimetro.js';
 import { icone } from '../ui/icones.js';
@@ -48,7 +49,7 @@ export function renderResumoGeral(alvo, { base, filtro, usuario }) {
     nhnu: cartao('nhnu', 'NH-NU', h('div', { class: 'rg-numero' }, h('b', { class: 'tab' }, fmtNumero(r.nhnu, 1)), h('small', { class: 'muted' }, 'Homens/mês × UH × realizado mês ÷ 100')), null, 'rg-nhnu'),
     andamento: cartao('andamento', 'Andamento geral', velocimetro(r.andamento), null, 'rg-andamento'),
   };
-  const corpo = h('div', { class: 'rg-corpo' }, QUADROS.map((q) => quadros[q.id]));
+  const corpo = h('div', { class: 'rg-corpo' }, QUADROS.filter((q) => visivel(q.id)).map((q) => quadros[q.id]) /* v28: QUADROS_OCULTOS em domain/layout-resumo.js */);
   let layout = normalizarLayout(estado.bruto?.layoutResumoGeral ?? LAYOUT_PADRAO);
   aplicarLayout(corpo, layout);
 
@@ -63,25 +64,41 @@ export function renderResumoGeral(alvo, { base, filtro, usuario }) {
     corpo);
 
   // Dev: "Editar layout" troca as ações do título pela barra de edição até salvar ou cancelar.
+  // v28: com a edição ligada, as abas do menu superior também podem ser arrastadas para mudar a ordem.
   if (pode(usuario?.papel, 'administrar')) {
     const botaoEditar = h('button', {
       class: 'btn ghost sm so-edicao rg-editar', type: 'button', 'data-teste': 'editar-layout',
       onclick: () => {
+        const menu = document.querySelector('nav[aria-label="Abas da apresentação"]');
+        const abas = menu ? editarOrdemAbas(menu) : null;
+        const ordemOriginal = abas?.ordem() ?? [];
+        let salvou = false;
         const barra = editarLayout({
           pagina, corpo, layout,
           aoMudar: ajustar,
+          aoRestaurarPadrao: () => abas?.restaurarPadrao(),
           aoSalvar: async (novo) => {
             try {
               const { layout: gravado } = await api.put('/layouts/resumo-geral', { layout: novo });
               if (estado.bruto) estado.bruto.layoutResumoGeral = gravado;
+              if (abas) {
+                const { ordem } = await api.put('/layouts/abas', { ordem: abas.ordem() });
+                if (estado.bruto) estado.bruto.ordemAbas = ordem;
+              }
               toast('success', 'Layout salvo para todas as apresentações');
+              salvou = true;
               return true;
             } catch (e) {
               toast('error', 'Não foi possível salvar o layout', e.message);
               return false;
             }
           },
-          aoTerminar: (final) => { layout = final; barra.replaceWith(acoes); },
+          aoTerminar: (final) => {
+            if (abas && !salvou) abas.restaurar(ordemOriginal); // cancelou: o menu volta à ordem de antes
+            abas?.terminar();
+            layout = final;
+            barra.replaceWith(acoes);
+          },
         });
         acoes.replaceWith(barra);
       },

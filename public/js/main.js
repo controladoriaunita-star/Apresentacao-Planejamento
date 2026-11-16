@@ -17,6 +17,7 @@ import { estado } from './core/estado.js';
 import { caminhoAtual, ir, resolver, rota } from './core/roteador.js';
 import { acessoDe } from './domain/acesso.js';
 import { telasDaObra } from './domain/conteudo.js';
+import { ordenarAbas } from './domain/ordem-abas.js';
 import { PAPEIS, pode } from './domain/permissoes.js';
 import { alerta, carregando, toast } from './ui/componentes.js';
 import { barraFiltros } from './ui/filtros.js';
@@ -117,11 +118,20 @@ function cabecalho(visao, abaAtual) {
   const admin = secoesPermitidas()[0];
   const link = (href, texto, atual) => h('a', { href: `#${href}`, 'aria-current': atual ? 'page' : null }, texto);
   const mesmaAba = (v) => (abasDaVisao(v).some((a) => a.id === abaAtual) ? abaAtual : 'inicio');
+  // v28: abas e telas extras na ordem salva pelo Dev (Resumo Geral → "Editar layout"); `data-aba` e
+  // `data-natural` servem à edição da ordem (ui/ordenar-abas.js).
+  const abasDoMenu = visao ? [
+    ...abasDaVisao(visao).map((a) => ({ id: a.id, href: `/${visao}/${a.id}`, texto: a.nome, atual: a.id === abaAtual })),
+    ...telas.map((t) => ({ id: `tela-${t.id}`, href: `/${visao}/tela/${t.id}`, texto: t.titulo, atual: abaAtual === `tela-${t.id}` })),
+  ].map((a, i) => ({ ...a, natural: i })) : [];
   return h('header', { class: 'app-header' }, h('div', { class: 'in' },
     h('a', { href: `#${rotaInicial()}`, 'aria-label': 'Início' }, h('img', { class: 'logo', src: 'assets/brand/logo-unita-white.png', alt: 'Unità Engenharia' })),
     visao ? h('nav', { 'aria-label': 'Abas da apresentação' },
-      abasDaVisao(visao).map((a) => link(`/${visao}/${a.id}`, a.nome, a.id === abaAtual)),
-      telas.map((t) => link(`/${visao}/tela/${t.id}`, t.titulo, abaAtual === `tela-${t.id}`))) : h('nav', {}),
+      ordenarAbas(abasDoMenu, estado.bruto?.ordemAbas).map((a) => {
+        const el = link(a.href, a.texto, a.atual);
+        Object.assign(el.dataset, { aba: a.id, natural: a.natural });
+        return el;
+      })) : h('nav', {}),
     h('div', { class: 'direita' },
       apresentacoes && visoesLiberadas().length > 1 ? h('div', { class: 'visao', role: 'group', 'aria-label': 'Apresentação' },
         h('a', { href: `#/obra/${mesmaAba('obra')}`, 'aria-current': String(visao === 'obra') }, 'Obra'),
