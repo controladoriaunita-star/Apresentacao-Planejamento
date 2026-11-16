@@ -153,6 +153,18 @@ test('Resumo Geral (v28): o espaço do NH-NU oculto fica livre para os vizinhos 
   await expect(incc).toHaveCSS('grid-column-end', 'span 4');
 });
 
+test('Resumo Econômico (v28): colunas "Sem correção" só na Obra; no Cliente ficam ocultas', async ({ page }) => {
+  await entrar(page, DEV);
+  const tabela = page.locator('.resumo-tabela table');
+  await page.goto('/#/obra/resumo-economico');
+  await expect(tabela.locator('th', { hasText: 'Sem correção' })).toBeVisible();
+  await expect(tabela.locator('th', { hasText: 'IEC s/ correção' })).toBeVisible();
+  await page.goto('/#/cliente/resumo-economico');
+  await expect(tabela.locator('th', { hasText: 'Contratação' })).toBeVisible();
+  await expect(tabela.locator('th', { hasText: /correção/ })).toHaveCount(0);
+  await expect(tabela.locator('tr.total td')).toHaveCount(8); // Item + 7 colunas
+});
+
 test('Resumo Econômico: caixas do rodapé ficam congeladas no pé da tela', async ({ page }) => {
   await entrar(page, DEV);
   // v28: sem os indicadores do topo a página cabe em 600 px; 500 px mantém o conteúdo maior que a tela.

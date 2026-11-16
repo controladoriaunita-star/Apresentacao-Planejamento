@@ -11,6 +11,9 @@ Cada versão só é fechada com `npm run verificar` passando.
 
 - **Resumo Econômico**: ocultos por enquanto os indicadores do topo (Avanço, Custo lançado… % contratado) e o farol
   "Repete o econômico / Competência real" (constante `MOSTRAR_TOPO` em `pages/resumo-economico.js`; o rodapé continua).
+- **Resumo Econômico — apresentação Cliente**: colunas do grupo **Sem correção** (Resultado s/ correção e IEC s/
+  correção) ocultas por enquanto, na tela e no PDF; as outras 7 dividem a largura (`GRUPOS_OCULTOS_CLIENTE` em
+  `pages/resumo-economico.js`). Na Obra continuam todas.
 - **Resumo Geral**: quadro **NH-NU** oculto por enquanto, na tela e no PDF (`QUADROS_OCULTOS` em
   `domain/layout-resumo.js`). Quadro oculto não conta na sobreposição: em "Editar layout" os vizinhos podem
   ocupar o espaço dele. O retângulo do NH-NU fica guardado; se ao voltar ele cobrir outro quadro, o layout

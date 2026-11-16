@@ -23,6 +23,13 @@ const expandidos = new Set();
  */
 const MOSTRAR_TOPO = false;
 
+/**
+ * v28 — Na apresentação Cliente as colunas "Sem correção" ficam ocultas por enquanto (pedido do usuário);
+ * as demais dividem a largura entre si (.colunas-iguais). Na Obra aparecem todas.
+ */
+const GRUPOS_OCULTOS_CLIENTE = new Set(['Sem correção']);
+const colunasDaVisao = (visao) => (visao === 'cliente' ? COLUNAS_ECONOMICO.filter((c) => !GRUPOS_OCULTOS_CLIENTE.has(c.grupo)) : COLUNAS_ECONOMICO);
+
 /** Colunas "IEC Obra" e "IEC s/ correção" ficam em vermelho acima de 1 (custo acima do orçado). */
 const CAMPOS_IEC = new Set(['iec', 'iecSemCorrecao']);
 const classeIec = (campo, v) => (CAMPOS_IEC.has(campo) && typeof v === 'number' && v > 1 ? 'iec-acima' : '');
@@ -44,6 +51,7 @@ export function renderResumoEconomico(alvo, ctx) {
   const { obra, seletor } = obraUnica(base, () => renderResumoEconomico(alvo, ctx), filtro);
   if (!obra) return montar(alvo, vazio('Selecione uma obra no filtro'));
   const r = calcularResumoEconomico(base, obra.chave, filtro.referencia);
+  const colunas = colunasDaVisao(ctx.visao);
 
   const linhasCorpo = new Map();
   const alternar = (item, abrir) => {
@@ -60,13 +68,13 @@ export function renderResumoEconomico(alvo, ctx) {
       class: `arvore-seta ${aberto ? 'aberta' : ''}`, type: 'button', 'aria-expanded': String(aberto),
       'aria-label': `Detalhes de ${l.descricao ?? l.item}`, onclick: () => alternar(l.item, !expandidos.has(l.item)),
     }, icone('direita', { tamanho: 14 }));
-    const detalhe = h('tr', { class: `detalhe ${aberto ? '' : 'oculto'}` }, h('td', { colspan: COLUNAS_ECONOMICO.length + 1 }, painelDetalhe(l)));
+    const detalhe = h('tr', { class: `detalhe ${aberto ? '' : 'oculto'}` }, h('td', { colspan: colunas.length + 1 }, painelDetalhe(l)));
     linhasCorpo.set(l.item, { botao, detalhe });
     return [
       h('tr', { class: 'nivel-1' },
         h('td', { class: 'first' }, botao, h('span', { class: 'cod' }, l.item), l.descricao ?? '',
           l.comentarios.length ? marcadorComentario(() => alternar(l.item, true), l.comentarios.length) : null),
-        COLUNAS_ECONOMICO.map((c) => h('td', {}, valor(l, c)))),
+        colunas.map((c) => h('td', {}, valor(l, c)))),
       detalhe,
     ];
   };
@@ -100,14 +108,14 @@ export function renderResumoEconomico(alvo, ctx) {
   montar(alvo,
     titulo,
     MOSTRAR_TOPO ? indicadores(INDICADORES_ECONOMICO.topo) : null,
-    h('div', { class: 'sheet resumo-tabela colunas-iguais', style: { margin: '16px 0' } }, h('table', { style: `--colunas: ${COLUNAS_ECONOMICO.length}` },
+    h('div', { class: 'sheet resumo-tabela colunas-iguais', style: { margin: '16px 0' } }, h('table', { style: `--colunas: ${colunas.length}` },
       h('thead', {},
         h('tr', { class: 'grupo' },
           h('th', { class: 'first', rowspan: 2 }, 'Item'),
-          faixas(COLUNAS_ECONOMICO).map((f) => h('th', { colspan: f.span }, f.grupo))),
-        h('tr', {}, COLUNAS_ECONOMICO.map((c) => h('th', {}, tituloComUnidade(c.titulo, c.tipo))))),
+          faixas(colunas).map((f) => h('th', { colspan: f.span }, f.grupo))),
+        h('tr', {}, colunas.map((c) => h('th', {}, tituloComUnidade(c.titulo, c.tipo))))),
       h('tbody', {},
-        r.geral ? h('tr', { class: 'total' }, h('td', { class: 'first' }, h('span', { class: 'arvore-espaco' }), obra.nome), COLUNAS_ECONOMICO.map((c) => h('td', {}, valor(r.geral, c)))) : null,
+        r.geral ? h('tr', { class: 'total' }, h('td', { class: 'first' }, h('span', { class: 'arvore-espaco' }), obra.nome), colunas.map((c) => h('td', {}, valor(r.geral, c)))) : null,
         r.linhas.flatMap(linhaItem)))),
     // Rodapé congelado: fica sempre visível no pé da tela enquanto a página ou a tabela rolam.
     h('div', { class: 'rodape-fixo', 'data-teste': 'rodape-economico' }, indicadores(INDICADORES_ECONOMICO.rodape)));
