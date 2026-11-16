@@ -15,7 +15,7 @@ import { estado } from '../core/estado.js';
 import {
   classeSinal, fmtData, fmtIndice, fmtMes, fmtMoeda, fmtNumero, fmtPercentual, fmtVariacao, VAZIO,
 } from '../core/formato.js';
-import { LAYOUT_IMPRESSAO, LAYOUT_PADRAO, normalizarLayout, QUADROS, visivel } from '../domain/layout-resumo.js';
+import { LAYOUT_PADRAO, normalizarLayout, QUADROS, visivel } from '../domain/layout-resumo.js';
 import { pode } from '../domain/permissoes.js';
 import { calcularResumoGeral } from '../domain/resumo-geral.js';
 import { card, cardTitulo, seloCompetencia, toast, vazio } from '../ui/componentes.js';
@@ -27,7 +27,7 @@ import { velocimetro } from '../ui/velocimetro.js';
 import { icone } from '../ui/icones.js';
 import { abrirInfosObra } from './infos-obra.js';
 
-export function renderResumoGeral(alvo, { base, filtro, usuario, impressao = false }) {
+export function renderResumoGeral(alvo, { base, filtro, usuario }) {
   if (!filtro.obras.length) return montar(alvo, vazio('Selecione uma obra no filtro'));
   const r = calcularResumoGeral(base, filtro);
   const nomes = base.obras.filter((o) => filtro.obras.includes(o.chave)).map((o) => o.nome);
@@ -81,7 +81,7 @@ export function renderResumoGeral(alvo, { base, filtro, usuario, impressao = fal
   };
   const corpo = h('div', { class: 'rg-corpo' }, QUADROS.filter((q) => visivel(q.id)).map((q) => quadros[q.id]) /* v28: QUADROS_OCULTOS em domain/layout-resumo.js */);
   let layout = normalizarLayout(estado.bruto?.layoutResumoGeral ?? LAYOUT_PADRAO);
-  aplicarLayout(corpo, impressao ? LAYOUT_IMPRESSAO : layout); // v28: o PDF tem disposição própria para a A4
+  aplicarLayout(corpo, layout); // v30: o PDF sai com o mesmo layout da tela (o do "Editar layout")
 
   const acoes = h('div', { class: 'row' },
     seloCompetencia(r.referencia, { compacto: true }),
@@ -174,8 +174,12 @@ function ajustarAlturaATela(pagina) {
     // pouco, mas gráficos e valores continuam legíveis. Do 1366×768 para cima continua cabendo sem rolagem.
     const livre = Math.floor(window.innerHeight - pagina.getBoundingClientRect().top - 16);
     pagina.style.height = cabe ? `${Math.max(livre, ALTURA_MINIMA_GRADE)}px` : '';
-    if (cabe) ajustarQuadros(pagina);
-    else limparAjuste(pagina);
+    if (cabe) {
+      ajustarQuadros(pagina);
+      // v30: guarda a proporção da grade como ela aparece na tela — o PDF sai com a mesma (sem esticar na vertical)
+      const corpo = pagina.querySelector('.rg-corpo');
+      if (corpo?.clientHeight) proporcaoVista = corpo.clientWidth / corpo.clientHeight;
+    } else limparAjuste(pagina);
   };
   window.addEventListener('resize', ajustar);
   requestAnimationFrame(ajustar);
@@ -192,8 +196,28 @@ function ajustarAlturaATela(pagina) {
 /** v29 — Altura mínima (px) da grade do Resumo Geral na tela. */
 const ALTURA_MINIMA_GRADE = 500;
 
+/** v30 — Proporção (largura ÷ altura) da grade na última vez que o Resumo Geral apareceu na tela. */
+let proporcaoVista = null;
+
+/**
+ * v30 — Proporção da grade do Resumo Geral na tela de quem está usando o app: a medida da última vez que ele
+ * apareceu ou, se ainda não apareceu nesta sessão, a estimada para a janela atual (mesma conta da tela:
+ * largura útil × altura livre abaixo do cabeçalho, da barra de filtros e do título). O PDF usa essa proporção
+ * para os quadros saírem como na tela — com a da folha A4 (mais alta), ficavam esticados na vertical.
+ */
+export function proporcaoNaTela() {
+  if (proporcaoVista) return proporcaoVista;
+  const cabecalho = document.querySelector('.app-header')?.offsetHeight ?? 56;
+  const filtros = document.querySelector('.filtros')?.offsetHeight ?? 69;
+  const TITULO_E_MARGENS = 20 + 16 + 58; // padding do conteúdo, folga do pé e linha do título com o espaço da grade
+  const largura = window.innerWidth - 48;
+  const altura = Math.max(ALTURA_MINIMA_GRADE, window.innerHeight - cabecalho - filtros - TITULO_E_MARGENS);
+  return largura / altura;
+}
+
 // v29: máximo da tela 18 px — com a fonte global, títulos e gráficos usam o mesmo tamanho dos valores.
-export const FONTE_QUADRO = Object.freeze({ tela: { min: 10, max: 18 }, impressao: { min: 9, max: 18 } });
+// v30: `folga` (PDF) — sobra de espaço para o texto que, reduzido com a página, quebra um pouco diferente.
+export const FONTE_QUADRO = Object.freeze({ tela: { min: 10, max: 18 }, impressao: { min: 9, max: 18, folga: 0.94 } });
 
 /** Arranjos alternativos por quadro (classe no conteúdo); o primeiro é o padrão, usado em caso de empate. */
 const ARRANJOS = {
@@ -264,8 +288,12 @@ function arranjoNaFonte({ cartao, conteudo, arranjos }, f) {
  */
 export function ajustarQuadros(pagina, limites = FONTE_QUADRO.tela) {
   const quadros = quadrosDeValores(pagina);
+  // v30: com `folga` (PDF), tudo precisa caber numa fonte um pouco maior (÷ folga) e a fonte usada é essa × folga,
+  // no mesmo arranjo — sobra espaço para o texto que, reduzido com a página, quebra um pouco diferente.
+  const folga = limites.folga ?? 1;
+  const busca = { min: limites.min / folga, max: limites.max / folga };
   const definir = (f) => (f === null ? pagina.style.removeProperty('--fonte-rg') : pagina.style.setProperty('--fonte-rg', `${f}px`));
-  const menorDosMaiores = () => Math.min(limites.max, ...quadros.map((q) => maiorFonteDoQuadro(q, limites) ?? limites.min));
+  const menorDosMaiores = () => Math.min(busca.max, ...quadros.map((q) => maiorFonteDoQuadro(q, busca) ?? busca.min));
   // 1ª estimativa com os títulos no tamanho padrão; 2ª com os títulos já na fonte estimada (eles ocupam espaço).
   definir(null);
   let fonte = menorDosMaiores();
@@ -273,15 +301,19 @@ export function ajustarQuadros(pagina, limites = FONTE_QUADRO.tela) {
   fonte = menorDosMaiores();
   // Confirma com tudo na mesma fonte (títulos inclusive); se algo não couber, desce de 0,25 em 0,25 px.
   const todosCabem = (f) => { definir(f); return quadros.every((q) => arranjoNaFonte(q, f) !== null); };
-  while (fonte > limites.min && !todosCabem(fonte)) fonte = Math.max(limites.min, fonte - 0.25);
+  while (fonte > busca.min && !todosCabem(fonte)) fonte = Math.max(busca.min, fonte - 0.25);
   definir(fonte);
+  const arranjos = quadros.map((q) => arranjoNaFonte(q, fonte));
+  const final = folga < 1 ? Math.max(limites.min, Math.floor(fonte * folga * 4) / 4) : fonte;
+  definir(final);
   let todos = true;
-  for (const q of quadros) {
-    const coube = arranjoNaFonte(q, fonte) !== null;
-    if (!coube) aplicarArranjo(q.conteudo, q.arranjos, q.arranjos[0]);
+  quadros.forEach((q, i) => {
+    aplicarArranjo(q.conteudo, q.arranjos, arranjos[i] ?? q.arranjos[0]);
+    q.conteudo.style.fontSize = `${final}px`;
+    const coube = arranjos[i] !== null && quadroCabe(q.cartao, q.conteudo);
     q.cartao.classList.toggle('apertado', !coube);
     todos = todos && coube;
-  }
+  });
   // Gráficos acompanham a fonte global (redesenho sem animação).
   for (const canvas of pagina.querySelectorAll('canvas')) window.Chart?.getChart(canvas)?.update('none');
   return todos;
@@ -338,7 +370,7 @@ function quadroCefFisico(p) {
           linha('Previsto (rep1) acm', proximo.cef.previsto, proximo.fisico.previsto),
           linha('Desvio', proximo.cef.desvio, proximo.fisico.desvio, true),
         ]))),
-    p.temCef ? null : h('p', { class: 'muted small', style: { marginTop: '6px' } }, 'Obra sem curva CEF: valores CEF zerados.'));
+    p.temCef ? null : h('p', { class: 'muted small rg-nota', style: { marginTop: '6px' } }, 'Obra sem curva CEF: valores CEF zerados.'));
 }
 
 function analiseEconomica(e) {
@@ -366,7 +398,7 @@ function custosPor(c) {
   return h('div', {},
     h('div', { class: 'custos-por' },
       item('UH', 'por unidade', c.uh), item('AE', 'por m² equivalente', c.ae), item('AP', 'por m² privativo', c.ap), item('AC', 'por m² construído', c.ac)),
-    c.uh === null && c.ae === null ? h('p', { class: 'muted small', style: { marginTop: '8px' } }, 'Preencha Nº de UH e áreas no cadastro da obra.') : null);
+    c.uh === null && c.ae === null ? h('p', { class: 'muted small rg-nota', style: { marginTop: '8px' } }, 'Preencha Nº de UH e áreas no cadastro da obra.') : null);
 }
 
 function incc(i) {

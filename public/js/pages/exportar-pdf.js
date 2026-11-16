@@ -21,7 +21,7 @@ import { abrirModal, alerta, campo, toast } from '../ui/componentes.js';
 import { icone } from '../ui/icones.js';
 import { mesExibido } from './galeria.js';
 import { dadosCapaCliente } from './inicio.js';
-import { ajustarQuadros, FONTE_QUADRO } from './resumo-geral.js';
+import { ajustarQuadros, FONTE_QUADRO, proporcaoNaTela } from './resumo-geral.js';
 
 const CAPA = { id: 'capa', nome: 'Capa' };
 const ESPERA_MAXIMA = 45000; // ms para planilhas, físico por atividade e imagens carregarem
@@ -97,6 +97,7 @@ async function gerarPdf({ base, chave, referencia, comCapa, secoes }) {
     h('div', {}, h('span', { class: 'spin' }), h('b', {}, 'Montando o PDF…'), h('small', {}, `${obra.nome} · ${fmtMesLongo(referencia)}`)));
   document.body.append(doc, aviso);
   document.body.classList.add('imprimindo');
+  let alturaGeralMm = null; // v30: altura do Resumo Geral montado (mm) — define a folha própria dele
 
   try {
     const incluidas = [];
@@ -119,8 +120,15 @@ async function gerarPdf({ base, chave, referencia, comCapa, secoes }) {
     await Promise.race([document.fonts?.ready, pausa(5000)]);
     recolherTabelas(doc);
     const geral = doc.querySelector('[data-secao="resumo-geral"] > div');
-    if (geral) enquadrarResumoGeral(geral);
+    const montagemGeral = geral ? enquadrarResumoGeral(geral) : null;
+    // v30: os gráficos viram imagem ANTES da redução do Resumo Geral — reduzidos depois, encolhiam duas vezes e
+    // ocupavam só parte do quadro.
     graficosComoImagem(doc);
+    if (montagemGeral) {
+      geral.style.zoom = montagemGeral.zoom;
+      geral.dataset.zoom = montagemGeral.zoom;
+      alturaGeralMm = montagemGeral.alturaMm;
+    }
     ajustarTabelasALargura(doc);
     for (const id of UMA_PAGINA) {
       const alvo = doc.querySelector(`[data-secao="${id}"] > div`);
@@ -136,7 +144,7 @@ async function gerarPdf({ base, chave, referencia, comCapa, secoes }) {
     aviso.remove();
     emAndamento = false;
   }
-  imprimir(doc, obra, referencia);
+  imprimir(doc, obra, referencia, alturaGeralMm);
 }
 
 // ── Seções ─────────────────────────────────────────────────────────────
@@ -204,25 +212,38 @@ function recolherTabelas(doc) {
   for (const area of doc.querySelectorAll('.simulacao-area')) area.replaceChildren();
 }
 
+/** v30 — Limites da proporção do Resumo Geral no PDF: nunca mais alto que a folha; nunca uma faixa fina demais. */
+const PROPORCAO_PDF = Object.freeze({ min: PAGINA.largura / PAGINA.altura, max: 3 });
+/** Maior largura de montagem do Resumo Geral (px) antes da redução para a página. */
+const LARGURA_MAXIMA_GERAL = 2600;
+
 /**
- * Resumo Geral numa página com a menor redução possível: a grade é montada no tamanho da página e cada quadro
- * ajusta fonte e arranjo ao próprio tamanho (v27, como na tela). Só se algum quadro não couber nem na fonte
- * mínima a área cresce (na proporção da página) e o zoom a traz de volta à largura da página. Os gráficos se
- * ajustam a qualquer tamanho e não entram na conta.
+ * Resumo Geral numa página com a menor redução possível. v30: a grade tem a mesma proporção da tela
+ * (proporcaoNaTela) — ocupa a largura da página e a altura que tinha na tela, sem esticar na vertical; a folha
+ * dessa página tem a altura exata da grade (regrasPagina, `@page resumo-geral`). Cada quadro ajusta a fonte ao
+ * próprio tamanho (fonte global, como na tela); se algum não couber nem na fonte mínima, a área cresce (6% por
+ * vez, mantendo a proporção) e o zoom a traz de volta à largura da página. Os gráficos se ajustam a qualquer
+ * tamanho e não entram na conta. Devolve { zoom, alturaMm } — o zoom é aplicado por gerarPdf depois de
+ * converter os gráficos em imagem; alturaMm é a altura final da grade na página.
  */
 function enquadrarResumoGeral(alvo) {
   const rg = alvo.querySelector('.rg.rg-tela');
-  if (!rg) return;
+  if (!rg) return null;
+  const proporcao = Math.min(PROPORCAO_PDF.max, Math.max(PROPORCAO_PDF.min, proporcaoNaTela()));
   const cortado = (el) => el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
   let largura = Math.floor(PAGINA.largura);
-  for (; largura <= 1800; largura += 40) {
+  for (;;) {
     alvo.style.width = `${largura}px`;
-    rg.style.height = `${Math.floor(largura * (PAGINA.altura / PAGINA.largura))}px`;
+    rg.style.height = `${Math.floor(largura / proporcao)}px`;
     const couberam = ajustarQuadros(rg, FONTE_QUADRO.impressao);
     if (couberam && ![...rg.querySelectorAll('.rg-cartao:not(.rg-grafico)')].some(cortado)) break;
+    if (largura >= LARGURA_MAXIMA_GERAL) break;
+    largura = Math.min(LARGURA_MAXIMA_GERAL, Math.round(largura * 1.06));
   }
-  alvo.style.zoom = Math.min(1, PAGINA.largura / largura).toFixed(4);
-  alvo.dataset.zoom = alvo.style.zoom;
+  rg.dataset.proporcao = proporcao.toFixed(3);
+  // A redução é calculada com a largura realmente montada (a última testada).
+  const zoom = Math.min(1, PAGINA.largura / largura).toFixed(4);
+  return { zoom, alturaMm: (Math.floor(largura / proporcao) * Number(zoom)) / PX_POR_MM };
 }
 
 /**
@@ -258,25 +279,38 @@ function enquadrarEmUmaPagina(alvo) {
   alvo.dataset.zoom = alvo.style.zoom;
 }
 
-/** Cada gráfico Chart.js vira uma imagem no mesmo tamanho, desenhada em 3× (nítida na impressão). */
+/**
+ * Cada gráfico Chart.js vira uma imagem do tamanho do seu quadro, desenhada em 3× (nítida na impressão).
+ * v30: o gráfico é redesenhado numa cópia já no tamanho final do quadro (sem animação e sem responsividade) —
+ * redimensionar o gráfico existente não pegava o tamanho do Resumo Geral montado maior para o PDF, e ele saía
+ * ocupando só parte do quadro.
+ */
 function graficosComoImagem(doc) {
   const Chart = window.Chart;
   if (!Chart) return;
   for (const canvas of doc.querySelectorAll('canvas')) {
     const chart = Chart.getChart(canvas);
     if (!chart) continue;
-    chart.stop();
-    chart.options.animation = false;
-    chart.options.devicePixelRatio = 3;
-    chart.resize();
-    chart.update('none');
-    // Tamanho em px de CSS que o Chart.js deu ao canvas (sem o zoom do Resumo Geral, que vale para a imagem também).
-    const img = h('img', {
-      class: 'imp-grafico', src: chart.toBase64Image('image/png', 1), alt: canvas.getAttribute('aria-label') ?? '',
-      style: { width: canvas.style.width, height: canvas.style.height },
-    });
+    const caixa = canvas.parentElement;
+    const largura = caixa?.clientWidth || chart.width;
+    const altura = caixa?.clientHeight || chart.height;
+    const { type, data, options, plugins } = chart.config;
     chart.destroy();
-    canvas.replaceWith(img);
+    const copia = canvas.cloneNode(false); // mesmos atributos (dataset da fonte proporcional, aria-label)
+    copia.removeAttribute('style');
+    copia.width = largura;
+    copia.height = altura;
+    canvas.replaceWith(copia);
+    const final = new Chart(copia, {
+      type, data, plugins,
+      options: { ...options, responsive: false, maintainAspectRatio: false, animation: false, devicePixelRatio: 3 },
+    });
+    const img = h('img', {
+      class: 'imp-grafico', src: final.toBase64Image('image/png', 1), alt: copia.getAttribute('aria-label') ?? '',
+      style: { width: `${largura}px`, height: `${altura}px` },
+    });
+    final.destroy();
+    copia.replaceWith(img);
   }
 }
 
@@ -300,16 +334,28 @@ async function esperarImagens(doc) {
 /** Texto para `content:` de uma regra CSS. */
 const textoCss = (s) => `"${String(s).replace(/[\\"]/g, '\\$&').replace(/[\r\n]+/g, ' ')}"`;
 
-/** Cabeçalho e rodapé de cada página (margens da @page); a capa não tem margem nem cabeçalho. */
-function regrasPagina(obra, referencia) {
+/** Margens das páginas (mm): cabeçalho em cima, rodapé embaixo. A área útil da A4 paisagem é PAGINA. */
+const MARGEM_MM = Object.freeze({ topo: 14, lados: 10, pe: 13 });
+/** Folga (mm) na altura da folha do Resumo Geral, para arredondamentos não empurrarem nada para outra página. */
+const FOLGA_FOLHA_GERAL_MM = 2;
+
+/**
+ * Cabeçalho e rodapé de cada página (margens da @page); a capa não tem margem nem cabeçalho.
+ * v30: o Resumo Geral tem folha própria (`@page resumo-geral`): mesma largura da A4 paisagem e a altura exata da
+ * grade + margens — ocupa a folha inteira sem esticar os quadros. As outras páginas continuam A4 paisagem.
+ */
+function regrasPagina(obra, referencia, alturaGeralMm = null) {
   const competencia = fmtMesLongo(referencia);
   const caixa = (conteudo, cor, peso = 500) => `content: ${conteudo}; font-family: Inter, sans-serif; font-size: 8.5pt; font-weight: ${peso}; color: ${cor};`;
   const tinta = token('--ink-600');
   const laranja = token('--color-primary');
   const hoje = new Date().toLocaleDateString('pt-BR');
+  const folhaGeral = alturaGeralMm
+    ? `\n@page resumo-geral { size: 297mm ${(MARGEM_MM.topo + MARGEM_MM.pe + alturaGeralMm + FOLGA_FOLHA_GERAL_MM).toFixed(1)}mm; }`
+    : '';
   return `@page {
   size: A4 landscape;
-  margin: 14mm 10mm 13mm;
+  margin: ${MARGEM_MM.topo}mm ${MARGEM_MM.lados}mm ${MARGEM_MM.pe}mm;
   @top-left { ${caixa(textoCss(`${obra.nome}${obra.cliente ? ` · ${obra.cliente}` : ''}`), tinta, 600)} }
   @top-right { ${caixa(textoCss(`Competência: ${competencia.charAt(0).toUpperCase()}${competencia.slice(1)}`), laranja, 600)} }
   @bottom-left { ${caixa(textoCss(`Unità Engenharia · Apresentação ao cliente · gerado em ${hoje}`), tinta)} }
@@ -318,14 +364,14 @@ function regrasPagina(obra, referencia) {
 @page capa {
   margin: 0;
   @top-left { content: none; } @top-right { content: none; } @bottom-left { content: none; } @bottom-right { content: none; }
-}`;
+}${folhaGeral}`;
 }
 
-function imprimir(doc, obra, referencia) {
+function imprimir(doc, obra, referencia, alturaGeralMm = null) {
   const tituloAnterior = document.title;
   // O título vira o nome sugerido do arquivo em "Salvar como PDF".
   document.title = `Unità - ${obra.nome} - Apresentação ao cliente - ${referencia}`;
-  const estilo = h('style', { id: 'impressao-pagina' }, regrasPagina(obra, referencia));
+  const estilo = h('style', { id: 'impressao-pagina' }, regrasPagina(obra, referencia, alturaGeralMm));
   document.head.append(estilo);
   window.addEventListener('afterprint', () => {
     doc.remove();
