@@ -115,6 +115,8 @@ async function gerarPdf({ base, chave, referencia, comCapa, secoes }) {
     }
     if (comCapa) doc.prepend(capa(base, filtro, incluidas));
     await esperarCarregamentos(doc);
+    // v28: medir só com as fontes da página carregadas — medido antes, o texto crescia ao trocar a fonte e cortava quadros.
+    await Promise.race([document.fonts?.ready, pausa(5000)]);
     recolherTabelas(doc);
     const geral = doc.querySelector('[data-secao="resumo-geral"] > div');
     if (geral) enquadrarResumoGeral(geral);

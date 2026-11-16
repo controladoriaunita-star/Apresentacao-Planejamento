@@ -22,6 +22,14 @@ export const QUADROS = Object.freeze([
 ]);
 
 /**
+ * v28 — Quadros ocultos por enquanto (pedido do usuário): não aparecem no Resumo Geral nem no PDF e não contam
+ * na sobreposição, então os outros quadros podem ocupar o espaço deles. O retângulo continua guardado no layout;
+ * se ao voltar ele cobrir outro quadro, o layout salvo volta ao padrão (ver normalizarLayout).
+ */
+export const QUADROS_OCULTOS = Object.freeze(['nhnu']);
+export const visivel = (id) => !QUADROS_OCULTOS.includes(id);
+
+/**
  * Layout padrão: CEF × Físico e análise econômica à esquerda, até o pé da tela; três gráficos e o rodapé
  * (custos, INCC, NH-NU e velocímetro) à direita. {x, y} = coluna/linha inicial (1…24); {w, h} = largura/altura.
  */
@@ -35,6 +43,24 @@ export const LAYOUT_PADRAO = Object.freeze({
   incc: { x: 14, y: 19, w: 4, h: 6 },
   nhnu: { x: 18, y: 19, w: 3, h: 6 },
   andamento: { x: 21, y: 19, w: 4, h: 6 },
+});
+
+/**
+ * v28 — Disposição própria do PDF (folha A4 paisagem, mais baixa que a tela): não segue o layout do Dev.
+ * Valores à esquerda (CEF × Físico e Análise econômica), os três gráficos empilhados e largos à direita e,
+ * embaixo deles, a faixa Custos por · INCC · Andamento geral.
+ * NH-NU está oculto (QUADROS_OCULTOS) e por isso divide o retângulo do INCC; ao voltar, precisa de um lugar.
+ */
+export const LAYOUT_IMPRESSAO = Object.freeze({
+  cef: { x: 1, y: 1, w: 7, h: 10 },
+  economica: { x: 1, y: 11, w: 7, h: 14 },
+  curva: { x: 8, y: 1, w: 17, h: 7 },
+  barras: { x: 8, y: 8, w: 17, h: 6 },
+  assertividade: { x: 8, y: 14, w: 17, h: 6 },
+  custos: { x: 8, y: 20, w: 8, h: 5 },
+  incc: { x: 16, y: 20, w: 5, h: 5 },
+  nhnu: { x: 16, y: 20, w: 5, h: 5 },
+  andamento: { x: 21, y: 20, w: 4, h: 5 },
 });
 
 const inteiro = (v, padrao) => (Number.isInteger(v) ? v : padrao);
@@ -54,10 +80,11 @@ export function ajustarRetangulo(r, padrao) {
 
 export const sobrepoe = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
-/** Pares de quadros que se sobrepõem (lista vazia = layout válido). */
+/** Pares de quadros visíveis que se sobrepõem (lista vazia = layout válido). */
 export function sobreposicoes(layout) {
   const pares = [];
-  QUADROS.forEach((a, i) => QUADROS.slice(i + 1).forEach((b) => {
+  const visiveis = QUADROS.filter((q) => visivel(q.id));
+  visiveis.forEach((a, i) => visiveis.slice(i + 1).forEach((b) => {
     if (sobrepoe(layout[a.id], layout[b.id])) pares.push([a.id, b.id]);
   }));
   return pares;

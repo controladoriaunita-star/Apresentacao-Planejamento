@@ -7,11 +7,17 @@ import { filtrarMatriz } from '../../public/js/domain/acesso.js';
 import { ABAS } from '../../public/js/domain/colunas.js';
 import { associarObrasConhecidas, cadastrosDePlanilha, normalizarCadastro } from '../../public/js/domain/cadastro-obra.js';
 import { normalizarLayout } from '../../public/js/domain/layout-resumo.js';
+import { normalizarNomes } from '../../public/js/domain/nomes-colunas.js';
+import { normalizarOrdemAbas } from '../../public/js/domain/ordem-abas.js';
 import { chaveObra } from '../../public/js/domain/normalizar.js';
 import { enviarJson, erro, lerJson } from '../http/respostas.mjs';
 
 /** Documento do armazém com o layout do Resumo Geral definido pelo Dev (vale para todas as apresentações). */
 const DOC_LAYOUT = 'layout-resumo-geral';
+/** v28 — Documento com a ordem das abas do menu superior (vale para todas as apresentações). */
+const DOC_ORDEM_ABAS = 'ordem-abas';
+/** v29 — Documento com os nomes das colunas do Resumo Físico e Econômico definidos pelo Dev. */
+const DOC_NOMES_COLUNAS = 'nomes-colunas';
 
 export function registrarDados(rotas, { planilhas, incc, cadastro, acidentes, armazem, config }) {
   /** Abas do resumo + cadastro + INCC (o que a apresentação carrega ao abrir). */
@@ -34,6 +40,8 @@ export function registrarDados(rotas, { planilhas, incc, cadastro, acidentes, ar
       cadastro: (await cadastro.listar()).filter((c) => acesso.obra(c.chave)),
       incc: (await incc.listar()).itens.map(({ mes, indice }) => ({ mes, indice })),
       layoutResumoGeral: (await armazem.ler(DOC_LAYOUT).catch(() => null))?.layout ?? null,
+      ordemAbas: (await armazem.ler(DOC_ORDEM_ABAS).catch(() => null))?.ordem ?? null,
+      nomesColunas: (await armazem.ler(DOC_NOMES_COLUNAS).catch(() => null))?.nomes ?? {},
     };
   }
 
@@ -66,6 +74,24 @@ export function registrarDados(rotas, { planilhas, incc, cadastro, acidentes, ar
     }
     await armazem.gravar(DOC_LAYOUT, { layout: normalizado, atualizadoEm: new Date().toISOString(), por: usuario.email });
     enviarJson(req, res, 200, { layout: normalizado });
+  });
+
+  /** v28 — Ordem das abas do menu superior: só o Dev define (Resumo Geral → "Editar layout"). */
+  rotas.adicionar('PUT', '/api/layouts/abas', { permissao: 'administrar' }, async ({ req, res, usuario }) => {
+    const { ordem } = await lerJson(req);
+    if (!Array.isArray(ordem)) throw erro(400, 'Informe a ordem das abas (lista de ids).');
+    const normalizada = normalizarOrdemAbas(ordem);
+    await armazem.gravar(DOC_ORDEM_ABAS, { ordem: normalizada, atualizadoEm: new Date().toISOString(), por: usuario.email });
+    enviarJson(req, res, 200, { ordem: normalizada });
+  });
+
+  /** v29 — Nomes das colunas do Resumo Físico e Econômico: só o Dev define (vale para Obra, Cliente e PDF). */
+  rotas.adicionar('PUT', '/api/layouts/nomes-colunas', { permissao: 'administrar' }, async ({ req, res, usuario }) => {
+    const { nomes } = await lerJson(req);
+    if (!nomes || typeof nomes !== 'object' || Array.isArray(nomes)) throw erro(400, 'Informe os nomes das colunas.');
+    const normalizados = normalizarNomes(nomes);
+    await armazem.gravar(DOC_NOMES_COLUNAS, { nomes: normalizados, atualizadoEm: new Date().toISOString(), por: usuario.email });
+    enviarJson(req, res, 200, { nomes: normalizados });
   });
 
   rotas.adicionar('GET', '/api/incc', { permissao: 'ver' }, async ({ req, res }) => {

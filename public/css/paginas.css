@@ -2,7 +2,7 @@
 
 /* ── Início: capa do app ───────────────────────────────────────────── */
 .capa {
-  position: relative; overflow: hidden; min-height: calc(100dvh - var(--header-h) - 2px);
+  position: relative; overflow: hidden; min-height: calc(100dvh - var(--topo-h) - 2px);
   background: radial-gradient(120% 90% at 85% 0%, var(--ink-700) 0%, var(--color-secondary) 55%);
   color: var(--surface); display: flex;
 }
@@ -49,7 +49,7 @@
 
 /* Capa da visão Obra: altura da tela; título, indicadores compactos e mês numa faixa só no topo, e o
    Painel de obras ocupa toda a altura que sobra (a tabela rola por dentro). */
-.capa-obras { height: calc(100dvh - var(--header-h) - 2px); min-height: 560px; }
+.capa-obras { height: calc(100dvh - var(--topo-h) - 2px); min-height: 560px; }
 .capa-obras .capa-conteudo { width: 100%; height: 100%; padding: 14px 16px 16px; gap: 14px; }
 .capa-cabecalho { display: grid; grid-template-columns: auto minmax(min-content, 1fr) auto; align-items: center; gap: 12px 28px; }
 .capa-mes { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
@@ -58,7 +58,7 @@
 .capa-obras .capa-titulo p { margin-top: 2px; font-size: 14px; }
 .capa-obras .capa-kpis { gap: 10px; }
 .capa-obras .capa-kpi { padding: 10px 14px; gap: 2px; border-radius: 12px; }
-.capa-obras .capa-kpi-rotulo, .capa-obras .capa-kpi-detalhe { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.capa-obras .capa-kpi-rotulo, .capa-obras .capa-kpi-detalhe { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .capa-obras .capa-kpi-rotulo { font-size: 12px; }
 .capa-obras .capa-kpi-valor { font-size: clamp(20px, 2.8vh, 26px); }
 .capa-obras .capa-kpi-valor.nome { font-size: 16px; line-height: 1.25; }
@@ -136,7 +136,7 @@
 .painel-obras { --po-grupo-h: 26px; }
 .painel-obras thead th.po-faixa {
   box-sizing: border-box; height: var(--po-grupo-h); padding: 0 12px; text-align: center; white-space: nowrap; border-bottom: 0;
-  font-size: 10.5px; letter-spacing: 0.08em; color: var(--color-primary); background: var(--color-primary-soft);
+  font-size: 11px; letter-spacing: 0.08em; color: var(--color-primary); background: var(--color-primary-soft);
 }
 .painel-obras thead tr + tr th { top: var(--po-grupo-h); }
 
@@ -157,17 +157,53 @@
 .rg-titulo h1 small { font-family: var(--font-sans); font-size: 13px; font-weight: 400; color: var(--muted); }
 /* Telas pequenas: um quadro abaixo do outro, com rolagem */
 .rg-corpo { display: flex; flex-direction: column; gap: 12px; }
+/* v29: sem a grade (tela estreita) e com espaço para 2 colunas: valores lado a lado, gráficos na largura toda */
+@media (min-width: 761px) {
+  .rg:not(.rg-tela) .rg-corpo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .rg:not(.rg-tela) .rg-grafico { grid-column: 1 / -1; }
+}
 .rg-cartao { position: relative; padding: 12px 18px; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 .rg-cartao .card-titulo h3 { display: flex; align-items: center; gap: 8px; }
 .rg-cartao .card-titulo h3::before { content: ''; width: 4px; height: 1em; border-radius: 4px; background: var(--color-primary); }
 .rg-cartao .card-titulo { margin-bottom: 6px; }
+/* v29 — Botão "Detalhe" dos gráficos, ao lado do título (some no PDF e na edição do layout) */
+.rg-detalhe {
+  display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; padding: 2px 9px; border: 1px solid var(--border);
+  border-radius: 999px; background: var(--surface); color: var(--ink-700); font: 600 max(11px, 0.72em)/1.4 var(--font-sans); cursor: pointer;
+}
+.rg-detalhe:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.rg.editando .rg-detalhe, .impressao .rg-detalhe { display: none; }
+
+/* v29 — Detalhe do gráfico: tela cheia, tabela dos meses à esquerda (rola na vertical) e o gráfico à direita */
+.detalhe-grafico { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; gap: 14px; padding: clamp(12px, 2vw, 24px); background: var(--bg); }
+.detalhe-grafico-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.detalhe-grafico-topo h2 { font-size: clamp(18px, 1.6vw, 24px); }
+.detalhe-grafico-corpo { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(240px, max-content) minmax(0, 1fr); gap: 16px; }
+/* a tabela mostra todas as séries (largura do conteúdo, até 45% da tela; títulos quebram linha) */
+.detalhe-grafico-tabela { max-height: 100%; max-width: 45vw; }
+.detalhe-grafico-tabela table { width: auto; min-width: 100%; }
+.detalhe-grafico-tabela th, .detalhe-grafico-tabela td { padding: 8px 12px; }
+.detalhe-grafico-tabela thead th { white-space: normal; vertical-align: bottom; min-width: 76px; }
+.detalhe-grafico-tabela th.esq, .detalhe-grafico-tabela td.esq { text-align: left; }
+.detalhe-grafico-tabela tr.referencia td { background: var(--color-primary-soft); font-weight: 700; }
+.detalhe-grafico-tabela td small { margin-left: 6px; font-size: 11px; font-weight: 600; color: var(--color-primary); text-transform: uppercase; letter-spacing: 0.05em; }
+.detalhe-grafico-cartao { min-height: 0; display: flex; flex-direction: column; padding: 16px; }
+.detalhe-grafico-area { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.detalhe-grafico-area .grafico { flex: 1; height: auto; min-height: 240px; }
+@media (max-width: 900px) {
+  .detalhe-grafico { overflow: auto; }
+  .detalhe-grafico-corpo { display: flex; flex-direction: column-reverse; }
+  .detalhe-grafico-cartao { height: 60vh; flex-shrink: 0; }
+  .detalhe-grafico-tabela { max-height: none; max-width: none; }
+}
 .grafico-area { position: relative; display: flex; flex-direction: column; gap: 6px; min-height: 0; } /* relative: a tabela acessível (sr-only) não estica a página */
 .grafico { position: relative; height: 260px; }
 .rg-editar { display: none; } /* edição de layout só com a grade (tela cheia) */
 
 /* Ocupando exatamente a altura livre da janela (classe colocada pelo JS quando a tela comporta): grade de
    24 × 24 células cobrindo toda a área; a posição de cada quadro vem do layout (domain/layout-resumo.js). */
-.rg.rg-tela { overflow: hidden; font-size: clamp(11.5px, 1.5vh, 16px); gap: 8px; }
+/* v29: --fonte-rg = fonte global da tela, calculada no JS (ajustarQuadros): quadros, títulos e gráficos iguais */
+.rg.rg-tela { overflow: hidden; font-size: var(--fonte-rg, clamp(11.5px, 1.5vh, 16px)); gap: 8px; }
 main.conteudo:has(.rg-tela) { padding-bottom: 16px; }
 .rg.rg-tela .rg-editar { display: inline-flex; }
 .rg.rg-tela .rg-corpo {
@@ -195,7 +231,7 @@ main.conteudo:has(.rg-tela) { padding-bottom: 16px; }
 .rg.rg-tela .economia-grade dt, .rg.rg-tela .economia-grade dd { line-height: 1.25; }
 /* Rodapé: conteúdo centralizado e esticado até o pé de cada quadro */
 .rg.rg-tela .rg-custos > div:last-child { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-.rg.rg-tela .custo-item { padding: 0.15em 0.2em; justify-content: center; }
+.rg.rg-tela .custo-item { padding: 0.15em 0.2em; justify-content: center; min-width: 0; overflow: hidden; } /* v29: o valor nunca sai do fundo */
 .rg.rg-tela .rg-incc .lista-valores { flex: 1; align-content: space-evenly; }
 .rg.rg-tela .lista-valores dt, .rg.rg-tela .lista-valores dd { padding: 0.14em 0; }
 .rg.rg-tela .lista-valores dt { white-space: nowrap; padding-right: 8px; }
@@ -249,10 +285,10 @@ main.conteudo:has(.rg-tela) { padding-bottom: 16px; }
 
 .cef-fisico { width: 100%; border-collapse: separate; border-spacing: 0 2px; font-variant-numeric: tabular-nums; }
 .cef-fisico th { text-align: center; padding: 0 0 4px; }
-.pilula { display: inline-block; padding: 0.15em 0.9em; border-radius: 999px; font-family: var(--font-display); font-size: 0.95em; font-weight: 600; }
+.pilula { display: inline-block; padding: 0.15em 0.9em; border-radius: 999px; font-family: var(--font-display); font-size: max(10px, 0.95em); font-weight: 600; }
 .pilula.cef { background: var(--color-primary-soft); color: var(--color-primary); }
 .pilula.fisico { background: var(--ink-100); color: var(--color-secondary); }
-.cef-fisico th.grupo { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 0.8em; font-family: var(--font-sans); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-primary); background: var(--color-primary-soft); border-radius: 8px; width: 24px; padding: 4px 0; }
+.cef-fisico th.grupo { writing-mode: vertical-rl; transform: rotate(180deg); font-size: max(11px, 0.8em); font-family: var(--font-sans); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-primary); background: var(--color-primary-soft); border-radius: 8px; width: 24px; padding: 4px 0; }
 .cef-fisico td { padding: 0.2em 0.6em; text-align: center; background: var(--ink-50); border-radius: 8px; font-weight: 600; font-size: 1.02em; }
 .cef-fisico td.rot { background: none; text-align: left; font-weight: 500; color: var(--ink-600); padding-left: 8px; }
 .cef-fisico tr.desvio td:not(.rot) { background: none; padding: 0.15em 0.2em; }
@@ -271,13 +307,13 @@ main.conteudo:has(.rg-tela) { padding-bottom: 16px; }
 }
 .economia-grade { display: grid; grid-template-columns: repeat(2, minmax(max-content, 1fr)); gap: 0 14px; margin: 0; }
 .economia-grade div { padding: 0.25em 0; border-bottom: 1px solid var(--border-soft); }
-.economia-grade dt { font-size: 0.86em; color: var(--muted); white-space: nowrap; }
+.economia-grade dt { font-size: max(10px, 0.86em); color: var(--muted); white-space: nowrap; } /* v29: nunca abaixo de 10 px */
 .economia-grade dd { margin: 1px 0 0; font-weight: 700; font-size: 1.04em; color: var(--ink-900); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .custos-por { display: grid; grid-template-columns: repeat(4, minmax(min-content, 1fr)); gap: 8px; text-align: center; }
 .custo-item { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 0.3em 0.2em; border-radius: 10px; background: var(--ink-50); }
-.custo-item .sigla { font-family: var(--font-display); font-weight: 700; font-size: 0.85em; color: var(--color-primary); }
+.custo-item .sigla { font-family: var(--font-display); font-weight: 700; font-size: max(10px, 0.85em); color: var(--color-primary); }
 .custo-item b { font-size: 1.12em; font-weight: 700; white-space: nowrap; }
-.custo-item small { font-size: 0.78em; color: var(--muted); }
+.custo-item small { font-size: max(10px, 0.78em); color: var(--muted); }
 .rg-numero { display: flex; flex-direction: column; gap: 4px; }
 .rg-numero b { font-family: var(--font-display); font-size: 2.3em; color: var(--color-secondary); font-weight: 600; line-height: 1.1; white-space: nowrap; }
 .rg .lista-valores dd { white-space: nowrap; }
@@ -297,12 +333,33 @@ main.conteudo:has(.rg-tela) { padding-bottom: 16px; }
 }
 main.conteudo:has(.rodape-fixo) .resumo-tabela { max-height: calc(100dvh - 400px); min-height: 220px; }
 /* A página ocupa toda a altura livre: com pouca tabela o rodapé continua colado ao pé da tela */
-main.conteudo:has(.rodape-fixo) { min-height: calc(100dvh - var(--header-h) - 72px); display: flex; flex-direction: column; }
+main.conteudo:has(.rodape-fixo) { min-height: calc(100dvh - var(--topo-h) - 72px); display: flex; flex-direction: column; }
 main.conteudo:has(.rodape-fixo) > div:last-child { flex: 1; display: flex; flex-direction: column; }
 .rodape-fixo { margin-top: auto !important; }
 .btn-comentario { display: inline-flex; align-items: center; gap: 4px; border: 0; background: var(--color-primary-soft); color: var(--color-primary); border-radius: 999px; font-size: 11px; font-weight: 600; padding: 2px 10px; cursor: pointer; margin-left: 8px; vertical-align: middle; }
 .btn-comentario:hover { background: var(--color-primary); color: var(--color-primary-foreground); }
 .sheet.sem-extras .extra { display: none; }
+
+/*
+ * v28 — Resumo Físico / Econômico: todas as colunas de valores com a mesma largura (layout fixo: a coluna
+ * Item/Serviço tem largura própria e o resto da tabela é dividido por igual), títulos quebram linha e os
+ * valores ficam centralizados. Abaixo da largura mínima a tabela rola na horizontal.
+ */
+.colunas-iguais { --largura-item: 300px; --largura-coluna: 96px; }
+/* Resumo Físico: 17 colunas — coluna Serviço e mínimo por coluna menores para caber numa tela de 1920 px */
+.colunas-iguais.compacta { --largura-item: 250px; --largura-coluna: 84px; }
+.colunas-iguais table { table-layout: fixed; min-width: calc(var(--largura-item) + var(--colunas) * var(--largura-coluna)); }
+.colunas-iguais.sem-extras table { min-width: calc(var(--largura-item) + var(--colunas-sem-extras) * var(--largura-coluna)); }
+.colunas-iguais th.first, .colunas-iguais td.first { width: var(--largura-item); min-width: 0; }
+.colunas-iguais th:not(.first), .colunas-iguais tbody tr:not(.detalhe) td:not(.first) { padding-left: 4px; padding-right: 4px; text-align: center; }
+.colunas-iguais thead tr + tr th { white-space: normal; vertical-align: bottom; line-height: 1.25; hyphens: auto; }
+.colunas-iguais thead tr.grupo th:not(.first) { white-space: normal; line-height: 1.25; }
+/* até 1600 px: letra um pouco menor; abaixo da largura mínima a tabela rola dentro do quadro (Serviço fica fixo),
+   e os valores nunca encostam uns nos outros. Ocultar a projeção econômica faz a tabela caber em 1440 px. */
+@media (max-width: 1600px) {
+  .colunas-iguais.compacta { --largura-item: 200px; --largura-coluna: 82px; }
+  .colunas-iguais.compacta table, .colunas-iguais.compacta thead th { font-size: 12.5px; }
+}
 
 /* Simulação "sem atividades" no Resumo Físico: caixas e linha simulada só aparecem com `.simulando` */
 .sheet .retirar, .sheet tr.simulada { display: none; }
@@ -368,11 +425,12 @@ main.conteudo:has(.rodape-fixo) > div:last-child { flex: 1; display: flex; flex-
 .galeria { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
 .galeria-principal { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .galeria-palco {
-  position: relative; display: grid; place-items: center; min-height: 360px; height: calc(100dvh - 380px);
+  position: relative; display: grid; place-items: center; min-height: 280px; height: calc(100dvh - 380px);
   background: var(--color-secondary); border-radius: var(--r-card); overflow: hidden; box-shadow: var(--shadow-card);
 }
 .galeria-principal:has(.miniaturas:not(.oculto)) .galeria-palco { height: calc(100dvh - 470px); }
-.galeria-palco > img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+/* v29: a imagem ocupa o palco inteiro ajustada (contain): sempre aparece inteira, sem cortes */
+.galeria-palco > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: scale-down; display: block; } /* inteira e nunca maior que o tamanho real */
 .galeria-palco-topo { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; pointer-events: none; }
 .galeria-contagem, .galeria-ampliar { pointer-events: auto; background: var(--vidro); color: var(--surface); border: 1px solid var(--vidro-borda); backdrop-filter: blur(6px); border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 600; }
 .galeria-ampliar { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
@@ -386,7 +444,7 @@ main.conteudo:has(.rodape-fixo) > div:last-child { flex: 1; display: flex; flex-
 .galeria-seta.esquerda { left: 14px; }
 .galeria-seta.esquerda svg { transform: rotate(180deg); }
 .galeria-seta.direita { right: 14px; }
-.galeria-lateral { padding: 20px; display: flex; flex-direction: column; gap: 18px; position: sticky; top: calc(var(--header-h) + 12px); }
+.galeria-lateral { padding: 20px; display: flex; flex-direction: column; gap: 18px; position: sticky; top: calc(var(--topo-h) + 12px); }
 .galeria-info h3 { font-size: 20px; margin-top: 2px; }
 .galeria-comentario { border-left: 3px solid var(--color-primary); padding-left: 14px; }
 .galeria-comentario p:last-child { white-space: pre-wrap; color: var(--ink-800); line-height: 1.6; margin-top: 4px; }
@@ -397,11 +455,17 @@ main.conteudo:has(.rodape-fixo) > div:last-child { flex: 1; display: flex; flex-
 .miniaturas button[aria-current='true'] { border-color: var(--color-primary); opacity: 1; }
 .miniaturas img { height: 70px; width: 110px; object-fit: cover; border-radius: 10px; display: block; }
 
-.visor { position: fixed; inset: 0; z-index: 80; background: var(--visor); display: grid; place-items: center; padding: 56px 24px 88px; }
-.visor > img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; }
+.visor { position: fixed; inset: 0; z-index: 80; background: var(--visor); display: grid; place-items: center; padding: 64px 24px 88px; }
+/* v29: área da imagem ajustada à tela; com zoom a imagem cresce e a área rola (arrastar move) */
+.visor-area { position: absolute; inset: 64px 24px 88px; overflow: hidden; display: grid; place-items: center; }
+.visor-area img { width: 100%; height: 100%; object-fit: scale-down; cursor: zoom-in; user-select: none; }
+.visor.com-zoom .visor-area { overflow: auto; place-items: start; cursor: grab; }
+.visor.com-zoom .visor-area.arrastando { cursor: grabbing; }
+.visor.com-zoom .visor-area img { height: auto; width: 250%; cursor: zoom-out; }
+.visor .galeria-seta { z-index: 2; }
+.visor-topo { position: absolute; top: 14px; left: 18px; right: 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .visor-legenda { position: absolute; left: 24px; right: 24px; bottom: 20px; color: var(--surface); text-align: center; display: flex; flex-direction: column; gap: 4px; }
 .visor-legenda span { color: var(--vidro-texto); white-space: pre-wrap; }
-.visor-fechar { position: absolute; top: 14px; right: 18px; }
 
 /* ── Telas do cliente ──────────────────────────────────────────────── */
 .blocos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
@@ -494,10 +558,17 @@ body.sem-rolagem { overflow: hidden; }
   .capa-obras { height: auto; }
   .capa-obras .sheet.painel-obras { max-height: 66vh; }
   .capa-obras .capa-titulo h1 { white-space: normal; }
+}
+@media (max-width: 1200px) {
+  .galeria { grid-template-columns: minmax(0, 1fr) 260px; }
+}
+@media (max-width: 900px) {
   .galeria { grid-template-columns: 1fr; }
   .galeria-lateral { position: static; }
 }
 @media (max-width: 760px) {
+  /* no celular o rodapé não fica congelado: empilhado, cobriria a tabela inteira */
+  .rodape-fixo { position: static; margin: 16px 0 0; padding: 0; background: none; border: 0; box-shadow: none; }
   .capa-conteudo { padding: 24px 16px; }
   .capa-kpis, .blocos, .detalhe-grade { grid-template-columns: 1fr; }
   .custos-por { grid-template-columns: repeat(2, 1fr); }
@@ -602,7 +673,7 @@ body.sem-rolagem { overflow: hidden; }
 .seg-marca.seg-cpt { background: var(--acidente-cpt); }
 .seg-marca.seg-trj { background: var(--acidente-trj); }
 .seg-marca.seg-ft { background: var(--acidente-ft); }
-.seg-grafico-mes { display: flex; flex-direction: column; }
+.seg-grafico-mes { display: flex; flex-direction: column; position: relative; }
 .seg-grafico-mes .grafico-area { flex: 1; min-height: 0; }
 .seg-grafico-mes .grafico { flex: 1; height: auto; min-height: 240px; }
 
