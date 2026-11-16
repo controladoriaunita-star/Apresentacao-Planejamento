@@ -18,7 +18,11 @@ Cada versão só é fechada com `npm run verificar` passando.
 - PDF com a **proporção da tela**: a grade saía com a proporção da folha A4 (≈ 1,56 : 1), mais alta que a tela
   (≈ 2 a 2,5 : 1), e tudo ficava esticado na vertical. Agora usa a proporção que o Resumo Geral teve na tela (a da
   última vez que apareceu; sem isso, a estimada para a janela atual — `proporcaoNaTela` em `pages/resumo-geral.js`):
-  ocupa a largura da página e sobra espaço embaixo quando a tela é mais larga que a folha.
+  ocupa a largura da página.
+- **Folha própria para o Resumo Geral**: a página dele tem a largura da A4 paisagem (297 mm) e a altura exata da
+  grade + margens (`@page resumo-geral`, gerada em `regrasPagina`) — ocupa a folha inteira sem esticar os
+  quadros e sem sobra embaixo. As outras páginas continuam A4 paisagem (o Chrome/Edge gera PDF com folhas de
+  tamanhos diferentes).
 - PDF sem quadros cortados depois da redução da página: o ajuste da fonte deixa ~6% de folga (o texto reduzido
   quebra um pouco diferente), e as notas pequenas e os complementos dos títulos acompanham a fonte global. A
   redução passou a ser calculada com a largura realmente montada.

@@ -26,6 +26,8 @@
 
 /* ── Seções: uma por página, sem nada interativo ────────────────────── */
 .impressao .imp-secao { break-before: page; }
+/* v30: o Resumo Geral sai numa folha própria, com a altura exata da grade (@page resumo-geral, gerada no JS) */
+.impressao .imp-resumo-geral { page: resumo-geral; }
 .impressao button, .impressao .filtro-excel, .impressao .so-edicao, .impressao input,
 .impressao .simulacao-area, .impressao .galeria-dica { display: none !important; }
 /* Competência e obra já estão no cabeçalho de toda página: sem o selo e sem o título repetido do Resumo Geral */

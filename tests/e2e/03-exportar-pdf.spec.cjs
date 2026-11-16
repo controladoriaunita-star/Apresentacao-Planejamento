@@ -118,6 +118,15 @@ test('Exportar PDF: monta as seções do Cliente da obra, gráficos em imagem e 
   const pdf = await page.pdf({ preferCSSPageSize: true, printBackground: true });
   const paginas = (pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) ?? []).length;
   expect(paginas).toBeGreaterThanOrEqual(7);
+  // v30: o Resumo Geral tem folha própria — largura da A4 paisagem e altura da grade + margens (14 + 13 mm) + 2 mm
+  const ptPorMm = 72 / 25.4;
+  const folhas = (pdf.toString('latin1').match(/\/MediaBox\s*\[[^\]]*\]/g) ?? []).map((m) => m.match(/[\d.]+/g).slice(2).map((v) => Number(v) / ptPorMm));
+  const folhaGeral = folhas.filter(([, altura]) => altura < 208);
+  expect(folhaGeral, JSON.stringify(folhas)).toHaveLength(1);
+  expect(folhaGeral[0][0]).toBeCloseTo(297, 0);
+  const alturaGeralMm = medidas.find((m) => m.id === 'resumo-geral').altura / mm;
+  expect(Math.abs(folhaGeral[0][1] - (14 + 13 + 2 + alturaGeralMm)), `folha ${folhaGeral[0][1].toFixed(1)} mm × grade ${alturaGeralMm.toFixed(1)} mm`).toBeLessThan(1.5);
+  expect(folhas.filter(([largura, altura]) => Math.abs(largura - 297) < 1 && Math.abs(altura - 210) < 1).length).toBe(folhas.length - 1); // as demais, A4 paisagem
 
   // Depois de imprimir (ou cancelar), o documento some e o título volta.
   await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
