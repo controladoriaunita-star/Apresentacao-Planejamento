@@ -119,8 +119,11 @@ async function gerarPdf({ base, chave, referencia, comCapa, secoes }) {
     await Promise.race([document.fonts?.ready, pausa(5000)]);
     recolherTabelas(doc);
     const geral = doc.querySelector('[data-secao="resumo-geral"] > div');
-    if (geral) enquadrarResumoGeral(geral);
+    const zoomGeral = geral ? enquadrarResumoGeral(geral) : 1;
+    // v30: os gráficos viram imagem ANTES da redução do Resumo Geral — reduzidos depois, encolhiam duas vezes e
+    // ocupavam só parte do quadro.
     graficosComoImagem(doc);
+    if (geral) { geral.style.zoom = zoomGeral; geral.dataset.zoom = zoomGeral; }
     ajustarTabelasALargura(doc);
     for (const id of UMA_PAGINA) {
       const alvo = doc.querySelector(`[data-secao="${id}"] > div`);
@@ -208,7 +211,7 @@ function recolherTabelas(doc) {
  * Resumo Geral numa página com a menor redução possível: a grade é montada no tamanho da página e cada quadro
  * ajusta fonte e arranjo ao próprio tamanho (v27, como na tela). Só se algum quadro não couber nem na fonte
  * mínima a área cresce (na proporção da página) e o zoom a traz de volta à largura da página. Os gráficos se
- * ajustam a qualquer tamanho e não entram na conta.
+ * ajustam a qualquer tamanho e não entram na conta. Devolve o zoom (aplicado por gerarPdf).
  */
 function enquadrarResumoGeral(alvo) {
   const rg = alvo.querySelector('.rg.rg-tela');
@@ -221,8 +224,8 @@ function enquadrarResumoGeral(alvo) {
     const couberam = ajustarQuadros(rg, FONTE_QUADRO.impressao);
     if (couberam && ![...rg.querySelectorAll('.rg-cartao:not(.rg-grafico)')].some(cortado)) break;
   }
-  alvo.style.zoom = Math.min(1, PAGINA.largura / largura).toFixed(4);
-  alvo.dataset.zoom = alvo.style.zoom;
+  // Devolve a redução; quem chama aplica depois de converter os gráficos em imagem (no tamanho de montagem).
+  return Math.min(1, PAGINA.largura / largura).toFixed(4);
 }
 
 /**
@@ -258,25 +261,38 @@ function enquadrarEmUmaPagina(alvo) {
   alvo.dataset.zoom = alvo.style.zoom;
 }
 
-/** Cada gráfico Chart.js vira uma imagem no mesmo tamanho, desenhada em 3× (nítida na impressão). */
+/**
+ * Cada gráfico Chart.js vira uma imagem do tamanho do seu quadro, desenhada em 3× (nítida na impressão).
+ * v30: o gráfico é redesenhado numa cópia já no tamanho final do quadro (sem animação e sem responsividade) —
+ * redimensionar o gráfico existente não pegava o tamanho do Resumo Geral montado maior para o PDF, e ele saía
+ * ocupando só parte do quadro.
+ */
 function graficosComoImagem(doc) {
   const Chart = window.Chart;
   if (!Chart) return;
   for (const canvas of doc.querySelectorAll('canvas')) {
     const chart = Chart.getChart(canvas);
     if (!chart) continue;
-    chart.stop();
-    chart.options.animation = false;
-    chart.options.devicePixelRatio = 3;
-    chart.resize();
-    chart.update('none');
-    // Tamanho em px de CSS que o Chart.js deu ao canvas (sem o zoom do Resumo Geral, que vale para a imagem também).
-    const img = h('img', {
-      class: 'imp-grafico', src: chart.toBase64Image('image/png', 1), alt: canvas.getAttribute('aria-label') ?? '',
-      style: { width: canvas.style.width, height: canvas.style.height },
-    });
+    const caixa = canvas.parentElement;
+    const largura = caixa?.clientWidth || chart.width;
+    const altura = caixa?.clientHeight || chart.height;
+    const { type, data, options, plugins } = chart.config;
     chart.destroy();
-    canvas.replaceWith(img);
+    const copia = canvas.cloneNode(false); // mesmos atributos (dataset da fonte proporcional, aria-label)
+    copia.removeAttribute('style');
+    copia.width = largura;
+    copia.height = altura;
+    canvas.replaceWith(copia);
+    const final = new Chart(copia, {
+      type, data, plugins,
+      options: { ...options, responsive: false, maintainAspectRatio: false, animation: false, devicePixelRatio: 3 },
+    });
+    const img = h('img', {
+      class: 'imp-grafico', src: final.toBase64Image('image/png', 1), alt: copia.getAttribute('aria-label') ?? '',
+      style: { width: `${largura}px`, height: `${altura}px` },
+    });
+    final.destroy();
+    copia.replaceWith(img);
   }
 }
 

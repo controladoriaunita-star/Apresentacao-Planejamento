@@ -12,7 +12,11 @@ Cada versão só é fechada com `npm run verificar` passando.
 - O PDF do Resumo Geral volta a sair **exatamente com o layout desenhado em "Editar layout"** (mesmas posições e
   tamanhos na grade de 24 × 24, na página A4 paisagem). Sai a disposição própria da A4 da v28 (`LAYOUT_IMPRESSAO`).
   Continuam valendo os ajustes de gráficos (meses sem inclinar, eixo até o maior valor + 15%) e a fonte global.
-- Teste do PDF: confere que cada quadro sai na mesma posição da grade do layout salvo.
+- PDF: os gráficos do Resumo Geral ocupavam só parte do quadro (cerca de 2/3) quando o layout tem colunas estreitas
+  — a página é montada maior e reduzida para caber na A4, e o gráfico ficava com o tamanho de antes. Agora cada
+  gráfico é redesenhado já no tamanho final do quadro antes de virar imagem, e a redução é aplicada depois.
+- Teste do PDF: confere que cada quadro sai na mesma posição da grade do layout salvo e que cada gráfico ocupa o
+  quadro inteiro.
 
 ## v29 — 16/11/2026 — Detalhe dos gráficos, galeria, nomes de colunas e comentários (Dev) e responsividade
 

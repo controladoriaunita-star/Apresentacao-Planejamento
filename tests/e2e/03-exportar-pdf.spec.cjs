@@ -88,6 +88,10 @@ test('Exportar PDF: monta as seções do Cliente da obra, gráficos em imagem e 
     const e = getComputedStyle(c);
     return [c.dataset.quadro, [e.gridRowStart, e.gridColumnStart, e.gridRowEnd, e.gridColumnEnd].join(' ')];
   })));
+  // v30: cada gráfico (imagem) ocupa a largura inteira do seu quadro
+  const graficos = await doc.locator('[data-secao="resumo-geral"] img.imp-grafico').evaluateAll((is) => is.map((i) => i.offsetWidth / i.parentElement.clientWidth));
+  expect(graficos.length).toBe(3);
+  for (const proporcao of graficos) expect(proporcao).toBeGreaterThan(0.97);
   for (const [id, r] of Object.entries(LAYOUT_DEV)) {
     if (id === 'nhnu') continue; // oculto por enquanto
     expect(posicoes[id], `posição de ${id} no PDF`).toBe(`${r.y} ${r.x} span ${r.h} span ${r.w}`);
