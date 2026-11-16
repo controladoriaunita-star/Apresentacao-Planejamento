@@ -19,6 +19,7 @@ import { acessoDe } from './domain/acesso.js';
 import { telasDaObra } from './domain/conteudo.js';
 import { ordenarAbas } from './domain/ordem-abas.js';
 import { PAPEIS, pode } from './domain/permissoes.js';
+import { botaoComentarios } from './ui/comentarios-telas.js';
 import { alerta, carregando, toast } from './ui/componentes.js';
 import { barraFiltros } from './ui/filtros.js';
 import { icone } from './ui/icones.js';
@@ -137,9 +138,10 @@ function cabecalho(visao, abaAtual) {
         h('a', { href: `#/obra/${mesmaAba('obra')}`, 'aria-current': String(visao === 'obra') }, 'Obra'),
         h('a', { href: `#/cliente/${mesmaAba('cliente')}`, 'aria-current': String(visao === 'cliente') }, 'Cliente')) : null,
       visao === 'cliente' && estado.bruto && pode(u.papel, 'exportarPdf')
-        ? h('button', { class: 'btn inverse sm so-edicao', type: 'button', 'data-teste': 'exportar-pdf', onclick: exportarPdf }, icone('baixar', { tamanho: 16 }), 'Exportar PDF') : null,
-      apresentacoes ? h('button', { class: 'btn inverse sm', type: 'button', title: 'Tela cheia', onclick: alternarApresentacao }, icone('telaCheia', { tamanho: 16 }), 'Apresentar') : null,
-      apresentacoes && admin ? h('a', { class: 'btn inverse sm so-edicao', href: `#/admin/${admin.id}` }, icone('engrenagem', { tamanho: 16 }), 'Administração') : null,
+        ? h('button', { class: 'btn inverse sm so-edicao', type: 'button', 'data-teste': 'exportar-pdf', title: 'Exportar PDF', onclick: exportarPdf }, icone('baixar', { tamanho: 16 }), h('span', { class: 'rotulo' }, 'Exportar PDF')) : null,
+      // v29: em telas médias os botões ficam só com o ícone (`.rotulo` some; o nome continua no title/leitor de tela)
+      apresentacoes ? h('button', { class: 'btn inverse sm btn-apresentar', type: 'button', title: 'Apresentar (tela cheia)', onclick: alternarApresentacao }, icone('telaCheia', { tamanho: 16 }), h('span', { class: 'rotulo' }, 'Apresentar')) : null,
+      apresentacoes && admin ? h('a', { class: 'btn inverse sm so-edicao', href: `#/admin/${admin.id}`, title: 'Administração' }, icone('engrenagem', { tamanho: 16 }), h('span', { class: 'rotulo' }, 'Administração')) : null,
       h('a', { class: 'usuario', href: '#/conta', style: { textDecoration: 'none' } }, h('b', {}, u.nome), h('span', {}, PAPEIS[u.papel]?.nome)),
       h('button', { class: 'btn inverse sm', type: 'button', onclick: sair, 'aria-label': 'Sair' }, icone('sair', { tamanho: 16 })))));
 }
@@ -177,7 +179,11 @@ async function paginaApresentacao(visao, aba) {
   const conteudo = h('main', { class: `conteudo ${aba.capa ? 'cheio' : ''}`, id: 'conteudo' });
   const bloqueio = estadoDosDados();
   const base = estado.base(visao);
-  montar(raiz, cabecalho(visao, aba.id), base && !aba.capa ? barraFiltros() : null, conteudo);
+  const filtros = base && !aba.capa ? barraFiltros() : null;
+  // v29: comentários da equipe sobre esta tela (obra + mês), ao lado de "Atualizar dados".
+  filtros?.querySelector('.info')?.append(botaoComentarios({ visao, aba }) ?? '');
+  montar(raiz, cabecalho(visao, aba.id), filtros, conteudo);
+  ajustarCabecalho(); // antes de montar a aba: as páginas medem a altura livre abaixo do cabeçalho
   if (estado.bruto?.aviso) conteudo.append(alerta('warning', 'Dados possivelmente desatualizados', estado.bruto.aviso));
   if (bloqueio || !base) return conteudo.append(bloqueio ?? carregando(8));
   if (!base.obras.length) return conteudo.append(alerta('info', 'Nenhuma obra liberada', 'Seu usuário ainda não tem obras liberadas. Fale com o Dev.'));
@@ -222,6 +228,25 @@ function desenhar() {
   if (!r) return ir(rotaInicial());
   r.tratador(r.params);
 }
+
+/**
+ * v29 — Cabeçalho responsivo: se as abas não cabem ao lado do logo e dos botões, descem para uma linha própria
+ * (`.duas-linhas`, quebrando em mais linhas se preciso). A altura dessa área vira --menu-h, que as páginas
+ * descontam da altura da tela. Vale para qualquer quantidade de abas (inclusive as Novas telas).
+ */
+function ajustarCabecalho() {
+  const cabecalhoEl = document.querySelector('.app-header');
+  const nav = cabecalhoEl?.querySelector('nav[aria-label="Abas da apresentação"]');
+  const raizCss = document.documentElement.style;
+  if (!nav) return raizCss.setProperty('--menu-h', '0px');
+  cabecalhoEl.classList.remove('duas-linhas');
+  const naoCabe = nav.scrollWidth > nav.clientWidth + 1 || nav.clientWidth < 120;
+  cabecalhoEl.classList.toggle('duas-linhas', naoCabe);
+  raizCss.setProperty('--menu-h', naoCabe ? `${nav.offsetHeight}px` : '0px');
+}
+let esperaCabecalho = 0;
+window.addEventListener('resize', () => { cancelAnimationFrame(esperaCabecalho); esperaCabecalho = requestAnimationFrame(ajustarCabecalho); });
+new MutationObserver(() => ajustarCabecalho()).observe(raiz, { childList: true });
 
 // ── Inicialização ────────────────────────────────────────────────────
 async function iniciar() {

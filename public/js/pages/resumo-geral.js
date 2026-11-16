@@ -19,6 +19,7 @@ import { LAYOUT_IMPRESSAO, LAYOUT_PADRAO, normalizarLayout, QUADROS, visivel } f
 import { pode } from '../domain/permissoes.js';
 import { calcularResumoGeral } from '../domain/resumo-geral.js';
 import { card, cardTitulo, seloCompetencia, toast, vazio } from '../ui/componentes.js';
+import { abrirDetalheGrafico } from '../ui/detalhe-grafico.js';
 import { aplicarLayout, editarLayout } from '../ui/editor-layout.js';
 import { editarOrdemAbas } from '../ui/ordenar-abas.js';
 import { grafico } from '../ui/graficos.js';
@@ -34,6 +35,35 @@ export function renderResumoGeral(alvo, { base, filtro, usuario, impressao = fal
   const curva = h('div', { class: 'grafico-area' });
   const barras = h('div', { class: 'grafico-area' });
   const assertividade = h('div', { class: 'grafico-area' });
+
+  // Definições dos três gráficos: usadas no quadro e no "Detalhe" (v29), que abre o gráfico em tela cheia.
+  const { meses } = r.graficos;
+  const graficos = {
+    curva: {
+      tipo: 'line', meses, referencia: r.referencia, fonteProporcional: true,
+      series: [
+        { rotulo: 'Previsto original', valores: r.graficos.curvaAcumulada.previstoOriginal, cor: '--series-3', tracejada: true },
+        { rotulo: 'Realizado', valores: r.graficos.curvaAcumulada.realizado, cor: '--series-2', marcadores: true, linha: true, rotulos: 'acima' },
+        { rotulo: 'Planejado atual', valores: r.graficos.curvaAcumulada.planejadoAtual, cor: '--series-1', linha: true, rotulos: 'abaixo' },
+      ],
+    },
+    barras: {
+      tipo: 'bar', meses, referencia: r.referencia, fonteProporcional: true,
+      series: [
+        { rotulo: 'Realizado', valores: r.graficos.realizadoPlanejadoMes.realizado, cor: '--series-2' },
+        { rotulo: 'Planejado atual', valores: r.graficos.realizadoPlanejadoMes.planejado, cor: '--series-1' },
+      ],
+    },
+    assertividade: {
+      tipo: 'bar', meses, referencia: r.referencia, descricao: 'Assertividade mensal', minimoMax: 1, fonteProporcional: true, // eixo vai ao menos a 100%
+      series: [{ rotulo: 'Assertividade', valores: r.graficos.assertividade, cor: '--series-1' }],
+    },
+  };
+  /** Título do quadro de gráfico com o botão "Detalhe" logo ao lado (a legenda fica à direita). */
+  const tituloGrafico = (id, texto) => [texto, h('button', {
+    class: 'rg-detalhe', type: 'button', 'data-teste': `detalhe-${id}`, title: 'Abrir o gráfico em tela cheia com a tabela dos meses',
+    onclick: () => abrirDetalheGrafico({ titulo: texto, def: graficos[id] }),
+  }, icone('telaCheia', { tamanho: 14 }), 'Detalhe')];
   const cartao = (id, titulo, conteudo, extra = null, classe = '') => {
     conteudo.classList.add('rg-conteudo'); // v27: é a fonte deste bloco que se ajusta ao tamanho do quadro
     return card({ class: `rg-cartao ${classe}`, dataset: { quadro: id } }, titulo ? cardTitulo(titulo, extra) : null, conteudo);
@@ -41,9 +71,9 @@ export function renderResumoGeral(alvo, { base, filtro, usuario, impressao = fal
   const quadros = {
     cef: cartao('cef', null, quadroCefFisico(r.painelFisico), null, 'rg-cef'),
     economica: cartao('economica', 'Análise econômica', analiseEconomica(r.economico), h('span', { class: 'muted small' }, fmtMes(r.referencia)), 'rg-economica'),
-    curva: cartao('curva', 'Curva acumulada atual × original', curva, null, 'rg-grafico'),
-    barras: cartao('barras', 'Realizado × planejado (mês)', barras, null, 'rg-grafico'),
-    assertividade: cartao('assertividade', 'Assertividade', assertividade, null, 'rg-grafico'),
+    curva: cartao('curva', tituloGrafico('curva', 'Curva acumulada atual × original'), curva, null, 'rg-grafico'),
+    barras: cartao('barras', tituloGrafico('barras', 'Realizado × planejado (mês)'), barras, null, 'rg-grafico'),
+    assertividade: cartao('assertividade', tituloGrafico('assertividade', 'Assertividade'), assertividade, null, 'rg-grafico'),
     custos: cartao('custos', 'Custos por (R$)', custosPor(r.custosPor), h('span', { class: 'muted small' }, 'sem correção'), 'rg-custos'),
     incc: cartao('incc', 'INCC', incc(r.incc), null, 'rg-incc'),
     nhnu: cartao('nhnu', 'NH-NU', h('div', { class: 'rg-numero' }, h('b', { class: 'tab' }, fmtNumero(r.nhnu, 1)), h('small', { class: 'muted' }, 'Homens/mês × UH × realizado mês ÷ 100')), null, 'rg-nhnu'),
@@ -109,26 +139,9 @@ export function renderResumoGeral(alvo, { base, filtro, usuario, impressao = fal
   montar(alvo, pagina);
   const ajustar = ajustarAlturaATela(pagina);
 
-  const { meses } = r.graficos;
-  grafico(curva, {
-    tipo: 'line', meses, referencia: r.referencia, fonteProporcional: true,
-    series: [
-      { rotulo: 'Previsto original', valores: r.graficos.curvaAcumulada.previstoOriginal, cor: '--series-3', tracejada: true },
-      { rotulo: 'Realizado', valores: r.graficos.curvaAcumulada.realizado, cor: '--series-2', marcadores: true, linha: true, rotulos: 'acima' },
-      { rotulo: 'Planejado atual', valores: r.graficos.curvaAcumulada.planejadoAtual, cor: '--series-1', linha: true, rotulos: 'abaixo' },
-    ],
-  });
-  grafico(barras, {
-    tipo: 'bar', meses, referencia: r.referencia, fonteProporcional: true,
-    series: [
-      { rotulo: 'Realizado', valores: r.graficos.realizadoPlanejadoMes.realizado, cor: '--series-2' },
-      { rotulo: 'Planejado atual', valores: r.graficos.realizadoPlanejadoMes.planejado, cor: '--series-1' },
-    ],
-  });
-  grafico(assertividade, {
-    tipo: 'bar', meses, referencia: r.referencia, descricao: 'Assertividade mensal', minimoMax: 1, fonteProporcional: true, // eixo vai ao menos a 100%
-    series: [{ rotulo: 'Assertividade', valores: r.graficos.assertividade, cor: '--series-1' }],
-  });
+  grafico(curva, graficos.curva);
+  grafico(barras, graficos.barras);
+  grafico(assertividade, graficos.assertividade);
 }
 
 /**
@@ -159,13 +172,18 @@ function ajustarAlturaATela(pagina) {
     if (!pagina.isConnected) return window.removeEventListener('resize', ajustar);
     const cabe = window.innerWidth >= 1100 && window.innerHeight >= 620;
     pagina.classList.toggle('rg-tela', cabe);
-    pagina.style.height = cabe ? `${Math.floor(window.innerHeight - pagina.getBoundingClientRect().top - 16)}px` : '';
+    // v29: em telas muito baixas (ex.: 1280×720) a grade não fica menor que ALTURA_MINIMA_GRADE: a página rola um
+    // pouco, mas gráficos e valores continuam legíveis. Do 1366×768 para cima continua cabendo sem rolagem.
+    const livre = Math.floor(window.innerHeight - pagina.getBoundingClientRect().top - 16);
+    pagina.style.height = cabe ? `${Math.max(livre, ALTURA_MINIMA_GRADE)}px` : '';
     if (cabe) ajustarQuadros(pagina);
     else limparAjuste(pagina);
   };
   window.addEventListener('resize', ajustar);
   requestAnimationFrame(ajustar);
   ajustar();
+  // v29: na primeira carga as fontes da página podem chegar depois do ajuste; o texto cresce e o quadro cortava.
+  document.fonts?.ready.then(() => { if (pagina.isConnected) ajustar(); });
   return ajustar;
 }
 
@@ -173,6 +191,9 @@ function ajustarAlturaATela(pagina) {
  * v27 — Fonte (px) dos quadros de valores: entre o mínimo legível e o máximo, a maior com que o conteúdo cabe.
  * Na impressão os limites são menores (a página A4 é mais densa que a tela).
  */
+/** v29 — Altura mínima (px) da grade do Resumo Geral na tela. */
+const ALTURA_MINIMA_GRADE = 500;
+
 export const FONTE_QUADRO = Object.freeze({ tela: { min: 10, max: 24 }, impressao: { min: 9, max: 18 } });
 
 /** Arranjos alternativos por quadro (classe no conteúdo); o primeiro é o padrão, usado em caso de empate. */

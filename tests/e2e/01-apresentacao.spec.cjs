@@ -233,6 +233,7 @@ test('Resumo Geral cabe na tela sem barra de rolagem', async ({ page }) => {
     await page.goto('/#/obra/resumo-geral');
     await page.reload();
     await expect(page.locator('.rg.rg-tela')).toBeVisible();
+    await page.evaluate(() => document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))); // v29: o app reajusta quando as fontes chegam
     const sobra = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
     expect(sobra, `rolagem em ${tamanho.width}×${tamanho.height}`).toBeLessThanOrEqual(0);
     const economica = await page.evaluate(() => { const e = document.querySelector('.rg-economica'); return e.scrollHeight - e.clientHeight; });
@@ -368,10 +369,99 @@ test('galeria de fotos: meses, locais, teclado e ampliar', async ({ page }) => {
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('.galeria-contagem')).toHaveText('2 / 2');
   await expect(page.locator('.galeria-lateral')).toContainText('Comentário 2');
+  // v29: a imagem aparece inteira no palco (ajustada ao espaço)
+  const caixas = await page.evaluate(() => {
+    const palco = document.querySelector('.galeria-palco').getBoundingClientRect();
+    const img = document.querySelector('.galeria-palco > img').getBoundingClientRect();
+    return { palco: palco.toJSON(), img: img.toJSON() };
+  });
+  expect(caixas.img.width).toBeLessThanOrEqual(caixas.palco.width + 1);
+  expect(caixas.img.height).toBeLessThanOrEqual(caixas.palco.height + 1);
   await page.getByRole('button', { name: 'Ampliar' }).click();
   await expect(page.locator('.visor')).toBeVisible();
+  // v29: em tela cheia navega sem fechar e o zoom liga e desliga
+  await expect(page.locator('.visor .galeria-contagem')).toHaveText('2 / 2');
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.locator('.visor .galeria-contagem')).toHaveText('1 / 2');
+  await expect(page.locator('.visor-legenda')).toContainText('Comentário 1');
+  await page.locator('.visor').getByRole('button', { name: 'Próxima imagem' }).click();
+  await expect(page.locator('.visor .galeria-contagem')).toHaveText('2 / 2');
+  await page.locator('.visor').getByRole('button', { name: 'Zoom' }).click();
+  await expect(page.locator('.visor')).toHaveClass(/com-zoom/);
+  await page.locator('.visor').getByRole('button', { name: 'Ajustar à tela' }).click();
+  await expect(page.locator('.visor')).not.toHaveClass(/com-zoom/);
+  await page.keyboard.press('ArrowLeft');
   await page.keyboard.press('Escape');
   await expect(page.locator('.visor')).toHaveCount(0);
+  await expect(page.locator('.galeria-palco .galeria-contagem')).toHaveText('1 / 2'); // o palco fica na última vista
+});
+
+test('Resumo Geral (v29): "Detalhe" abre o gráfico em tela cheia com a tabela dos meses', async ({ page }) => {
+  await entrar(page, DEV);
+  await page.goto('/#/obra/resumo-geral');
+  await page.locator('[data-teste="detalhe-curva"]').click();
+  const painel = page.locator('[data-teste="detalhe-grafico"]');
+  await expect(painel).toBeVisible();
+  await expect(painel.getByRole('heading', { name: 'Curva acumulada atual × original' })).toBeVisible();
+  const tabela = painel.getByRole('table', { name: /valores por mês/ });
+  await expect(tabela.locator('thead th')).toHaveText(['Mês', 'Previsto original', 'Realizado', 'Planejado atual']);
+  expect(await tabela.locator('tbody tr').count()).toBeGreaterThan(6);
+  await expect(tabela.locator('tr.referencia')).toHaveCount(1);
+  await expect(tabela.locator('tr.referencia')).toBeInViewport();
+  await expect(painel.locator('canvas')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(painel).toHaveCount(0);
+  await page.locator('[data-teste="detalhe-assertividade"]').click();
+  await expect(page.locator('[data-teste="detalhe-grafico"] .detalhe-grafico-tabela thead th')).toHaveText(['Mês', 'Assertividade']);
+  await page.locator('[data-teste="detalhe-grafico"]').getByRole('button', { name: 'Fechar' }).click();
+  await expect(page.locator('[data-teste="detalhe-grafico"]')).toHaveCount(0);
+});
+
+test('Dev (v29): renomeia uma coluna do Econômico (vale na Obra e no Cliente) e volta ao original', async ({ page }) => {
+  await entrar(page, DEV);
+  await page.goto('/#/obra/resumo-economico');
+  const cabecalho = page.locator('.resumo-tabela thead');
+  await expect(cabecalho).toContainText('Custo lançado (R$)');
+  await page.locator('[data-teste="nomes-colunas"]').click();
+  const janela = page.getByRole('dialog', { name: /Nomes das colunas/ });
+  await janela.getByLabel(/Novo nome para Custo lançado/).fill('Custo incorrido');
+  await janela.getByLabel(/Novo nome para Execução/).fill('Realização');
+  await janela.getByRole('button', { name: 'Salvar para todas as apresentações' }).click();
+  await expect(janela).toHaveCount(0);
+  await expect(cabecalho).toContainText('Custo incorrido (R$)');
+  await expect(cabecalho).toContainText('Realização');
+  await page.goto('/#/cliente/resumo-economico');
+  await expect(page.locator('.resumo-tabela thead')).toContainText('Custo incorrido (R$)');
+
+  await page.goto('/#/obra/resumo-economico');
+  await page.locator('[data-teste="nomes-colunas"]').click();
+  await janela.locator('.nomes-linha', { hasText: 'Custo lançado' }).getByRole('button', { name: 'Original' }).click();
+  await janela.getByLabel('Novo nome para Execução (Grupo)').fill(''); // vazio = nome original
+  await janela.getByRole('button', { name: 'Salvar para todas as apresentações' }).click();
+  await expect(cabecalho).toContainText('Custo lançado (R$)');
+  await expect(cabecalho).not.toContainText('Custo incorrido');
+});
+
+test('Dev (v29): comentário da tela fica gravado na obra e no mês', async ({ page }) => {
+  await entrar(page, DEV);
+  await page.goto('/#/obra/resumo-fisico');
+  await page.locator('[data-teste="comentarios-tela"]').click();
+  const painel = page.locator('[data-teste="painel-comentarios"]');
+  await expect(painel).toContainText('Nenhum comentário nesta tela no mês');
+  await painel.getByLabel('Novo comentário').fill('Cliente pediu revisão da estrutura');
+  await painel.getByRole('button', { name: 'Salvar comentário' }).click();
+  await expect(painel.locator('.comentario-tela')).toContainText('Cliente pediu revisão da estrutura');
+  await page.keyboard.press('Escape');
+  await expect(painel).toHaveCount(0);
+  await expect(page.locator('[data-teste="comentarios-tela"] .comentarios-contador')).toHaveText('1');
+  await page.reload();
+  await page.locator('[data-teste="comentarios-tela"]').click();
+  await expect(page.locator('[data-teste="painel-comentarios"] .comentario-tela')).toContainText('Cliente pediu revisão da estrutura');
+  await page.keyboard.press('Escape');
+  // outra tela do mesmo mês: sem o comentário
+  await page.goto('/#/obra/resumo-economico');
+  await page.locator('[data-teste="comentarios-tela"]').click();
+  await expect(page.locator('[data-teste="painel-comentarios"]')).toContainText('Nenhum comentário nesta tela no mês');
 });
 
 test('Novas telas e imagens aparecem só na apresentação escolhida (Obra, Cliente ou ambas)', async ({ page }) => {

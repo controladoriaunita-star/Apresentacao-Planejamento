@@ -16,6 +16,8 @@ const CAMINHOS = {
   planilha: ['M4 4h16v16H4z', 'M4 9h16', 'M4 14h16', 'M10 4v16'],
   texto: ['M5 6h14', 'M5 11h14', 'M5 16h9'],
   x: ['M6 6l12 12', 'M18 6L6 18'],
+  zoomMais: ['M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14z', 'M20 20l-4-4', 'M11 8v6', 'M8 11h6'],
+  zoomMenos: ['M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14z', 'M20 20l-4-4', 'M8 11h6'],
   check: ['M5 12l5 5l9-10'],
   expandir: ['M7 10l5 5l5-5', 'M7 5l5 5l5-5'],
   recolher: ['M7 14l5-5l5 5', 'M7 19l5-5l5 5'],

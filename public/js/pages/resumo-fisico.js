@@ -4,11 +4,13 @@
 import { h, montar } from '../core/dom.js';
 import { classeSinal, fmtMes, fmtMoeda, fmtNumero, fmtPercentual, fmtVariacao, VAZIO } from '../core/formato.js';
 import { estado } from '../core/estado.js';
+import { COLUNAS_FISICO, GRUPOS_FISICO, nomeColuna } from '../domain/nomes-colunas.js';
 import { calcularResumoFisico, itemPai } from '../domain/resumo-fisico.js';
 import { podeRetirar, simularSemItens } from '../domain/simulacao-fisico.js';
 import {
   abrirModal, alerta, carregando, marcadorComentario, seloCompetencia, status, vazio,
 } from '../ui/componentes.js';
+import { botaoNomesColunas } from '../ui/editor-nomes-colunas.js';
 import { obraUnica } from '../ui/filtros.js';
 import { icone } from '../ui/icones.js';
 import { painelSimulacao, rotuloLinhaSimulada } from '../ui/simulacao-fisico.js';
@@ -84,6 +86,7 @@ export async function renderResumoFisico(alvo, ctx) {
     cabecalho(obra, filtro.referencia, seletor, h('div', { class: 'row' },
       botaoSimular,
       botaoExtras,
+      botaoNomesColunas('fisico', () => renderResumoFisico(alvo, ctx)),
       h('button', { class: 'btn ghost sm', type: 'button', onclick: () => tab.alternarTudo(true) }, icone('expandir', { tamanho: 16 }), 'Expandir tudo'),
       h('button', { class: 'btn ghost sm', type: 'button', onclick: () => tab.alternarTudo(false) }, icone('recolher', { tamanho: 16 }), 'Recolher tudo'))),
     painel,
@@ -115,24 +118,28 @@ const pct = (v) => fmtPercentual(v, 1);
  * logo abaixo da linha da obra (as duas só aparecem com a classe `simulando` na planilha).
  */
 function tabela(r, { abertos, pais, retirados, aoRetirar }) {
+  // v29: títulos com os nomes definidos pelo Dev (domain/nomes-colunas.js); sem nome definido, o original.
+  const nomes = estado.bruto?.nomesColunas;
+  const titulo = (id) => nomeColuna(nomes, `fisico.coluna.${id}`, COLUNAS_FISICO.find((c) => c.id === id).titulo);
+  const grupo = (id) => nomeColuna(nomes, `fisico.grupo.${id}`, GRUPOS_FISICO.find((g) => g.id === id).titulo);
   const cols = [
-    ['Orçamento (R$)', (l) => fmtMoeda(l.orcamento), 'extra'],
-    ['Orç. projetado (R$)', (l) => fmtMoeda(l.economico?.orcamentoProjetado), 'extra'],
-    ['IEC', (l) => (l.economico?.iec ? fmtNumero(l.economico.iec, 3) : VAZIO), 'extra'],
-    ['Realizado acm', (l) => pct(l.realizadoAcm), 'cur'],
-    ['Realizado mês', (l) => pct(l.realizadoMes), 'cur'],
-    ['Planejado inicial', (l) => pct(l.planejadoInicial), 'cur'],
-    ['Planejado acm', (l) => pct(l.planejadoAcm), 'cur'],
-    ['Planejado mês', (l) => pct(l.planejadoMes), 'cur'],
-    ['% acerto', (l) => pct(l.acerto), 'cur'],
-    ['Cronograma', (l) => pct(l.cronograma), 'cur'],
-    ['Adiant.', (l) => adiantamento(l.adiantamento), 'cur'],
-    ['Planejado mês', (l) => pct(l.proximo.planejadoMes)],
-    ['Planejado acm', (l) => pct(l.proximo.planejadoAcm)],
-    ['Previsto', (l) => pct(l.proximo.previsto)],
-    ['Adiant.', (l) => adiantamento(l.proximo.adiantamento)],
-    ['Peso atraso', (l) => (l.pesoAtraso === null ? VAZIO : fmtVariacao(l.pesoAtraso, 2))],
-    ['Peso planejado', (l) => fmtPercentual(l.pesoPlanejado, 2)],
+    [titulo('orcamento'), (l) => fmtMoeda(l.orcamento), 'extra'],
+    [titulo('orcamentoProjetado'), (l) => fmtMoeda(l.economico?.orcamentoProjetado), 'extra'],
+    [titulo('iec'), (l) => (l.economico?.iec ? fmtNumero(l.economico.iec, 3) : VAZIO), 'extra'],
+    [titulo('realizadoAcm'), (l) => pct(l.realizadoAcm), 'cur'],
+    [titulo('realizadoMes'), (l) => pct(l.realizadoMes), 'cur'],
+    [titulo('planejadoInicial'), (l) => pct(l.planejadoInicial), 'cur'],
+    [titulo('planejadoAcm'), (l) => pct(l.planejadoAcm), 'cur'],
+    [titulo('planejadoMes'), (l) => pct(l.planejadoMes), 'cur'],
+    [titulo('acerto'), (l) => pct(l.acerto), 'cur'],
+    [titulo('cronograma'), (l) => pct(l.cronograma), 'cur'],
+    [titulo('adiantamento'), (l) => adiantamento(l.adiantamento), 'cur'],
+    [titulo('proximoPlanejadoMes'), (l) => pct(l.proximo.planejadoMes)],
+    [titulo('proximoPlanejadoAcm'), (l) => pct(l.proximo.planejadoAcm)],
+    [titulo('proximoPrevisto'), (l) => pct(l.proximo.previsto)],
+    [titulo('proximoAdiantamento'), (l) => adiantamento(l.proximo.adiantamento)],
+    [titulo('pesoAtraso'), (l) => (l.pesoAtraso === null ? VAZIO : fmtVariacao(l.pesoAtraso, 2))],
+    [titulo('pesoPlanejado'), (l) => fmtPercentual(l.pesoPlanejado, 2)],
   ];
   const seta = (l) => {
     if (l.nivel !== 1) return null;
@@ -189,10 +196,10 @@ function tabela(r, { abertos, pais, retirados, aoRetirar }) {
     h('thead', {},
       h('tr', { class: 'grupo' },
         h('th', { class: 'first', rowspan: 2 }, 'Serviço'),
-        h('th', { colspan: 3, class: 'extra' }, 'Projeção econômica'),
+        h('th', { colspan: 3, class: 'extra' }, grupo('projecao')),
         h('th', { colspan: 8, class: 'cur' }, fmtMes(r.referencia)),
         h('th', { colspan: 4 }, fmtMes(r.seguinte)),
-        h('th', { colspan: 2 }, 'Pesos')),
+        h('th', { colspan: 2 }, grupo('pesos'))),
       h('tr', {}, cols.map(([titulo, , classe]) => h('th', { class: classe ?? '' }, titulo)))),
     corpo);
   return {
