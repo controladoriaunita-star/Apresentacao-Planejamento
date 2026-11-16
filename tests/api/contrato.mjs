@@ -163,13 +163,25 @@ test('layout do Resumo Geral: só o dev salva, sem sobreposição, e vale para t
   };
   assert.equal((await viewer('PUT', '/api/layouts/resumo-geral', { layout })).status, 403);
   assert.equal((await planejamento('PUT', '/api/layouts/resumo-geral', { layout })).status, 403);
-  const sobreposto = await dev('PUT', '/api/layouts/resumo-geral', { layout: { ...layout, nhnu: layout.incc } });
+  const sobreposto = await dev('PUT', '/api/layouts/resumo-geral', { layout: { ...layout, andamento: layout.incc } });
   assert.equal(sobreposto.status, 400);
-  assert.match(sobreposto.dados.erro, /INCC e NH-NU/);
+  assert.match(sobreposto.dados.erro, /INCC e Andamento geral/);
   const salvo = await dev('PUT', '/api/layouts/resumo-geral', { layout });
   assert.equal(salvo.status, 200);
   assert.deepEqual(salvo.dados.layout, layout);
   assert.deepEqual((await viewer('GET', '/api/dados/resumo')).dados.layoutResumoGeral, layout, 'todos recebem o layout do dev');
+});
+
+test('ordem das abas (v28): só o dev salva e vale para todos no resumo', async () => {
+  assert.equal((await viewer('GET', '/api/dados/resumo')).dados.ordemAbas, null, 'sem ordem salva = ordem do app');
+  const ordem = ['resumo-economico', 'inicio', 'resumo-geral', 'resumo-fisico'];
+  assert.equal((await viewer('PUT', '/api/layouts/abas', { ordem })).status, 403);
+  assert.equal((await planejamento('PUT', '/api/layouts/abas', { ordem })).status, 403);
+  assert.equal((await dev('PUT', '/api/layouts/abas', { ordem: 'inicio' })).status, 400);
+  const salvo = await dev('PUT', '/api/layouts/abas', { ordem: [...ordem, 'inicio', 7] });
+  assert.equal(salvo.status, 200);
+  assert.deepEqual(salvo.dados.ordem, ordem, 'sem repetição nem valores inválidos');
+  assert.deepEqual((await viewer('GET', '/api/dados/resumo')).dados.ordemAbas, ordem, 'todos recebem a ordem do dev');
 });
 
 test('cadastro de obra: salvar, atualizar pela chave e importar planilha', async () => {

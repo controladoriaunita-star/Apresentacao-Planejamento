@@ -80,31 +80,102 @@ test('Resumo Físico: itens pai recolhem e expandem', async ({ page }) => {
   await expect(filho).toBeVisible();
 });
 
-test('Resumo Físico: ocultar e reexibir a projeção econômica e os pesos', async ({ page }) => {
+test('Resumo Físico: ocultar e reexibir a projeção econômica (pesos sempre visíveis)', async ({ page }) => {
   await entrar(page, DEV);
   await page.goto('/#/obra/resumo-fisico');
   const projecao = page.locator('th', { hasText: 'Projeção econômica' });
   const pesos = page.locator('th', { hasText: 'Pesos' });
   await expect(projecao).toBeVisible();
-  await page.getByRole('button', { name: 'Ocultar projeção econômica e pesos' }).click();
+  await page.getByRole('button', { name: 'Ocultar projeção econômica' }).click();
   await expect(projecao).toBeHidden();
-  await expect(pesos).toBeHidden();
+  await expect(pesos).toBeVisible();
   await page.reload(); // a escolha é lembrada
   await expect(page.locator('th', { hasText: 'Projeção econômica' })).toBeHidden();
-  await page.getByRole('button', { name: 'Exibir projeção econômica e pesos' }).click();
+  await page.getByRole('button', { name: 'Exibir projeção econômica' }).click();
   await expect(page.locator('th', { hasText: 'Projeção econômica' })).toBeVisible();
+});
+
+test('Abas do menu: com "Editar layout" o Dev arrasta para reordenar; cancelar desfaz e salvar vale após recarregar', async ({ page }) => {
+  await entrar(page, DEV);
+  await page.goto('/#/obra/resumo-geral');
+  await page.waitForLoadState('networkidle'); // dados e telas extras carregados: o menu não é mais redesenhado
+  const menu = page.getByRole('navigation', { name: 'Abas da apresentação' });
+  const ordem = () => menu.locator('a').allInnerTexts();
+  const fisico = menu.getByRole('link', { name: 'Resumo Físico' });
+  const economico = menu.getByRole('link', { name: 'Resumo Econômico' });
+  const original = await ordem();
+  await expect(fisico).not.toHaveAttribute('draggable', 'true'); // fora da edição não arrasta
+
+  await page.locator('[data-teste="editar-layout"]').click();
+  await economico.dragTo(fisico, { targetPosition: { x: 4, y: 8 } }); // solta na metade esquerda: fica antes
+  const nova = await ordem();
+  expect(nova.indexOf('Resumo Econômico')).toBeLessThan(nova.indexOf('Resumo Físico'));
+  await economico.click(); // enquanto edita, clicar na aba não navega
+  await expect(page).toHaveURL(/resumo-geral/);
+  await page.getByRole('button', { name: 'Cancelar' }).click();
+  expect(await ordem()).toEqual(original);
+
+  await page.locator('[data-teste="editar-layout"]').click();
+  await economico.dragTo(fisico, { targetPosition: { x: 4, y: 8 } });
+  await page.getByRole('button', { name: 'Salvar para todas as apresentações' }).click();
+  await expect(page.locator('.rg.editando')).toHaveCount(0);
+  await page.reload();
+  await expect(menu.locator('a')).toHaveText(nova); // espera os dados (com a ordem salva) chegarem
+  await page.goto('/#/cliente/resumo-geral'); // vale também na apresentação Cliente
+  await page.waitForLoadState('networkidle');
+  await expect(page.locator('[data-teste="editar-layout"]')).toBeVisible();
+  const cliente = await ordem();
+  expect(cliente.indexOf('Resumo Econômico')).toBeLessThan(cliente.indexOf('Resumo Físico'));
+
+  // volta à ordem padrão para os próximos testes
+  await page.locator('[data-teste="editar-layout"]').click();
+  await page.getByRole('button', { name: 'Restaurar padrão' }).click();
+  await page.getByRole('button', { name: 'Salvar para todas as apresentações' }).click();
+  await expect(page.locator('.rg.editando')).toHaveCount(0);
+  const padrao = await ordem();
+  expect(padrao.indexOf('Resumo Físico')).toBeLessThan(padrao.indexOf('Resumo Econômico'));
+});
+
+test('Resumo Geral (v28): o espaço do NH-NU oculto fica livre para os vizinhos em "Editar layout"', async ({ page }) => {
+  await entrar(page, DEV);
+  await page.goto('/#/obra/resumo-geral');
+  await page.waitForLoadState('networkidle');
+  const incc = page.locator('[data-quadro="incc"]');
+  await expect(incc).toHaveCSS('grid-column-end', 'span 4');
+  await page.locator('[data-teste="editar-layout"]').click();
+  await incc.focus();
+  for (let i = 0; i < 3; i++) await page.keyboard.press('Shift+ArrowRight'); // cresce sobre o espaço do NH-NU
+  await expect(incc).toHaveCSS('grid-column-end', 'span 7');
+  await expect(incc).not.toHaveClass(/colide/);
+  await page.keyboard.press('Shift+ArrowRight'); // mais uma coluna encostaria no Andamento: não aceita
+  await expect(incc).toHaveCSS('grid-column-end', 'span 7');
+  await page.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(incc).toHaveCSS('grid-column-end', 'span 4');
+});
+
+test('Resumo Econômico (v28): colunas "Sem correção" só na Obra; no Cliente ficam ocultas', async ({ page }) => {
+  await entrar(page, DEV);
+  const tabela = page.locator('.resumo-tabela table');
+  await page.goto('/#/obra/resumo-economico');
+  await expect(tabela.locator('th', { hasText: 'Sem correção' })).toBeVisible();
+  await expect(tabela.locator('th', { hasText: 'IEC s/ correção' })).toBeVisible();
+  await page.goto('/#/cliente/resumo-economico');
+  await expect(tabela.locator('th', { hasText: 'Contratação' })).toBeVisible();
+  await expect(tabela.locator('th', { hasText: /correção/ })).toHaveCount(0);
+  await expect(tabela.locator('tr.total td')).toHaveCount(8); // Item + 7 colunas
 });
 
 test('Resumo Econômico: caixas do rodapé ficam congeladas no pé da tela', async ({ page }) => {
   await entrar(page, DEV);
-  await page.setViewportSize({ width: 1366, height: 600 });
+  // v28: sem os indicadores do topo a página cabe em 600 px; 500 px mantém o conteúdo maior que a tela.
+  await page.setViewportSize({ width: 1366, height: 500 });
   await page.goto('/#/obra/resumo-economico');
   await page.getByRole('button', { name: 'Expandir tudo' }).click(); // conteúdo maior que a tela
   const rodape = page.locator('[data-teste="rodape-economico"]');
   for (const y of [0, 10000]) {
     await page.evaluate((destino) => window.scrollTo(0, destino), y);
     const caixa = await rodape.boundingBox();
-    expect(Math.round(caixa.y + caixa.height), `rodapé no pé da tela (rolagem ${y})`).toBe(600);
+    expect(Math.round(caixa.y + caixa.height), `rodapé no pé da tela (rolagem ${y})`).toBe(500);
   }
 });
 
@@ -177,24 +248,25 @@ test('Resumo Geral: Dev redimensiona um quadro, salva para todos e restaura o pa
   await expect(page.locator('.rg.rg-tela')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Mês de referência' })).toBeVisible();
   await expect(page.locator('.filtros').getByText('De', { exact: true })).toHaveCount(0); // sem intervalo por seleção
-  const nhnu = page.locator('[data-quadro="nhnu"]');
-  await expect(nhnu).toHaveCSS('grid-row-start', '19');
+  await expect(page.locator('[data-quadro="nhnu"]')).toHaveCount(0); // v28: NH-NU oculto por enquanto
+  const andamento = page.locator('[data-quadro="andamento"]');
+  await expect(andamento).toHaveCSS('grid-row-start', '19');
 
   await page.locator('[data-teste="editar-layout"]').click();
   await expect(page.locator('.rg.editando')).toBeVisible();
-  await nhnu.focus();
+  await andamento.focus();
   await page.keyboard.press('Shift+ArrowUp'); // altura 6 → 5
   await page.keyboard.press('ArrowDown'); // desce uma linha: ocupa o espaço até o pé
   await page.getByRole('button', { name: 'Salvar para todas as apresentações' }).click();
   await expect(page.locator('.rg.editando')).toHaveCount(0);
   await page.reload();
-  await expect(nhnu).toHaveCSS('grid-row-start', '20');
+  await expect(andamento).toHaveCSS('grid-row-start', '20');
 
   await page.locator('[data-teste="editar-layout"]').click();
   await page.getByRole('button', { name: 'Restaurar padrão' }).click();
   await page.getByRole('button', { name: 'Salvar para todas as apresentações' }).click();
   await expect(page.locator('.rg.editando')).toHaveCount(0);
-  await expect(nhnu).toHaveCSS('grid-row-start', '19');
+  await expect(andamento).toHaveCSS('grid-row-start', '19');
 });
 
 // v27: o conteúdo do quadro acompanha o tamanho dele (fonte e arranjo), sem nada cortado.
@@ -204,7 +276,7 @@ test('Resumo Geral: quadro redimensionado ajusta fonte e colunas sem cortar valo
   await page.goto('/#/obra/resumo-geral');
   await page.reload();
   await expect(page.locator('.rg.rg-tela')).toBeVisible();
-  const medir = () => page.evaluate(() => Object.fromEntries(['cef', 'economica', 'custos', 'incc', 'nhnu'].map((id) => {
+  const medir = () => page.evaluate(() => Object.fromEntries(['cef', 'economica', 'custos', 'incc'].map((id) => {
     const c = document.querySelector(`[data-quadro="${id}"]`);
     const conteudo = c.querySelector('.rg-conteudo');
     const cortado = c.scrollHeight > c.clientHeight + 1 || c.scrollWidth > c.clientWidth + 1;

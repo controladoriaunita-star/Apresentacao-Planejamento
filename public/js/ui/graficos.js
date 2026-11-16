@@ -14,10 +14,23 @@ const fonteEixo = () => (window.innerHeight >= 1000 ? 13 : 12);
 /**
  * v27 — Gráficos com `fonteProporcional` (quadros do Resumo Geral): a fonte acompanha o tamanho do próprio
  * gráfico, entre 10 e 16 px, para o quadro redimensionado continuar legível e sem rótulos encavalados.
+ * v28 — Também cabe no espaço de cada mês ("MAR" em uma linha, sem inclinar): com muitos meses num gráfico
+ * estreito a fonte desce até 8 px em vez de os meses inclinarem e se sobreporem.
  */
-const fonteDoGrafico = (chart) => (chart?.canvas?.dataset.fonteProporcional
-  ? Math.round(Math.min(16, Math.max(10, Math.min(chart.height / 14, chart.width / 45))) * 2) / 2
-  : fonteEixo());
+const fonteDoGrafico = (chart) => {
+  if (!chart?.canvas?.dataset.fonteProporcional) return fonteEixo();
+  const meses = Math.max(1, chart.data?.labels?.length ?? 1);
+  const porMes = (chart.width * 0.9) / meses / 2.4; // ~2,4 em = largura de "MAR" com folga
+  const tamanho = Math.min(16, Math.max(10, Math.min(chart.height / 14, chart.width / 45)), porMes);
+  return Math.round(Math.max(8, tamanho) * 2) / 2;
+};
+
+/** v28 — Fonte dos rótulos de dados: menor que a dos eixos e, se possível, cabendo na horizontal entre dois pontos. */
+const fonteRotulo = (chart, passo) => {
+  const base = fonteDoGrafico(chart) - 2;
+  if (!chart?.canvas?.dataset.fonteProporcional) return base;
+  return Math.max(7, Math.min(base, Math.floor(passo / 3.6))); // "100,0%" ≈ 3,4 em
+};
 
 function opcoesBase({ percentual = true, max = null, minimoMax = null } = {}) {
   const eixo = token('--chart-axis');
@@ -83,6 +96,7 @@ export function grafico(alvo, def) {
     const fonte = (delta) => (ctx) => ({ family: 'Inter', weight: '500', size: fonteDoGrafico(ctx.chart) + delta });
     opcoes.scales.x.ticks.font = fonte(-1);
     opcoes.scales.y.ticks.font = fonte(0);
+    opcoes.scales.x.ticks.maxRotation = 0; // v28: mês em duas linhas nunca inclina (inclinado, se encavalava)
   }
   opcoes.plugins.tooltip.callbacks.title = (itens) => fmtMes(def.meses[itens[0]?.dataIndex]);
   if (def.referencia) opcoes.plugins.linhaReferencia = { indice: def.meses.indexOf(def.referencia) };
@@ -132,7 +146,9 @@ const pluginRotulosBarras = {
   afterDatasetsDraw(chart) {
     const ctx = chart.ctx;
     ctx.save();
-    ctx.font = `600 ${fonteDoGrafico(chart) - 2}px Inter, sans-serif`;
+    const meta0 = chart.getDatasetMeta(0);
+    const passo = meta0?.data?.length > 1 ? Math.abs(meta0.data[1].x - meta0.data[0].x) / Math.max(1, chart.data.datasets.length) : Infinity;
+    ctx.font = `600 ${fonteRotulo(chart, passo)}px Inter, sans-serif`;
     ctx.fillStyle = token('--ink-700');
     chart.data.datasets.forEach((ds, i) => {
       const meta = chart.getDatasetMeta(i);
@@ -170,12 +186,12 @@ const pluginRotulosLinha = {
   afterDatasetsDraw(chart) {
     const ctx = chart.ctx;
     ctx.save();
-    ctx.font = `600 ${fonteDoGrafico(chart) - 2}px Inter, sans-serif`;
     chart.data.datasets.forEach((ds, i) => {
       const meta = chart.getDatasetMeta(i);
       if (!ds.rotulos || meta.hidden) return;
       const abaixo = ds.rotulos === 'abaixo';
       const passo = meta.data.length > 1 ? Math.abs(meta.data[1].x - meta.data[0].x) : Infinity;
+      ctx.font = `600 ${fonteRotulo(chart, passo)}px Inter, sans-serif`;
       ctx.fillStyle = ds.borderColor;
       meta.data.forEach((ponto, j) => {
         const v = ds.data[j];

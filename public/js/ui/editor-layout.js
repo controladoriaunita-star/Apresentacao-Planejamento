@@ -5,7 +5,7 @@
  * A regra da grade (limites, mínimos, sobreposição) fica em domain/layout-resumo.js.
  */
 import { h } from '../core/dom.js';
-import { ajustarRetangulo, GRADE, LAYOUT_PADRAO, QUADROS, sobrepoe } from '../domain/layout-resumo.js';
+import { ajustarRetangulo, GRADE, LAYOUT_PADRAO, QUADROS, sobrepoe, visivel } from '../domain/layout-resumo.js';
 import { botaoAcao } from './componentes.js';
 
 /** Posiciona cada quadro (`[data-quadro]`) da grade conforme o layout. */
@@ -17,14 +17,16 @@ export function aplicarLayout(corpo, layout) {
 }
 
 const copiar = (layout) => Object.fromEntries(Object.entries(layout).map(([id, r]) => [id, { ...r }]));
-const colideComOutro = (layout, id, r) => QUADROS.some((q) => q.id !== id && sobrepoe(r, layout[q.id]));
+// v28: quadros ocultos não contam — o espaço deles fica livre para os outros.
+const colideComOutro = (layout, id, r) => QUADROS.some((q) => q.id !== id && visivel(q.id) && sobrepoe(r, layout[q.id]));
 
 /**
  * Liga o modo de edição na página. Devolve a barra de ações (Salvar / Restaurar padrão / Cancelar).
  * @param {{ pagina: HTMLElement, corpo: HTMLElement, layout: object, aoMudar: () => void,
- *           aoSalvar: (layout) => Promise<boolean>, aoTerminar: (layout) => void }} opcoes
+ *           aoSalvar: (layout) => Promise<boolean>, aoTerminar: (layout) => void,
+ *           aoRestaurarPadrao?: () => void }} opcoes — aoRestaurarPadrao (v28): volta também a ordem das abas
  */
-export function editarLayout({ pagina, corpo, layout: salvo, aoMudar, aoSalvar, aoTerminar }) {
+export function editarLayout({ pagina, corpo, layout: salvo, aoMudar, aoSalvar, aoTerminar, aoRestaurarPadrao = null }) {
   let layout = copiar(salvo);
   const quadros = [...corpo.querySelectorAll(':scope > [data-quadro]')];
   const nome = (id) => QUADROS.find((q) => q.id === id)?.nome ?? id;
@@ -122,10 +124,10 @@ export function editarLayout({ pagina, corpo, layout: salvo, aoMudar, aoSalvar, 
   };
 
   return h('div', { class: 'row rg-edicao-acoes', role: 'toolbar', 'aria-label': 'Editar layout do Resumo Geral' },
-    h('span', { class: 'muted small' }, 'Arraste para mover · alça no canto para redimensionar'),
+    h('span', { class: 'muted small' }, 'Arraste para mover · alça no canto para redimensionar · arraste as abas do menu para reordenar'),
     h('button', {
       class: 'btn ghost sm', type: 'button',
-      onclick: () => { layout = copiar(LAYOUT_PADRAO); aplicarLayout(corpo, layout); aoMudar(); },
+      onclick: () => { layout = copiar(LAYOUT_PADRAO); aplicarLayout(corpo, layout); aoMudar(); aoRestaurarPadrao?.(); },
     }, 'Restaurar padrão'),
     h('button', { class: 'btn secondary sm', type: 'button', onclick: () => terminar(salvo) }, 'Cancelar'),
     botaoAcao('Salvar para todas as apresentações', async () => {

@@ -304,6 +304,20 @@ main.conteudo:has(.rodape-fixo) > div:last-child { flex: 1; display: flex; flex-
 .btn-comentario:hover { background: var(--color-primary); color: var(--color-primary-foreground); }
 .sheet.sem-extras .extra { display: none; }
 
+/*
+ * v28 — Resumo Físico / Econômico: todas as colunas de valores com a mesma largura (layout fixo: a coluna
+ * Item/Serviço tem largura própria e o resto da tabela é dividido por igual), títulos quebram linha e os
+ * valores ficam centralizados. Abaixo da largura mínima a tabela rola na horizontal.
+ */
+.colunas-iguais { --largura-item: 300px; --largura-coluna: 96px; }
+/* Resumo Físico: 17 colunas — coluna Serviço e mínimo por coluna menores para caber numa tela de 1920 px */
+.colunas-iguais.compacta { --largura-item: 250px; --largura-coluna: 84px; }
+.colunas-iguais table { table-layout: fixed; min-width: calc(var(--largura-item) + var(--colunas) * var(--largura-coluna)); }
+.colunas-iguais.sem-extras table { min-width: calc(var(--largura-item) + var(--colunas-sem-extras) * var(--largura-coluna)); }
+.colunas-iguais th.first, .colunas-iguais td.first { width: var(--largura-item); min-width: 0; }
+.colunas-iguais th:not(.first), .colunas-iguais tbody tr:not(.detalhe) td:not(.first) { padding-left: 4px; padding-right: 4px; text-align: center; }
+.colunas-iguais thead tr + tr th { white-space: normal; vertical-align: bottom; line-height: 1.25; }
+
 /* Simulação "sem atividades" no Resumo Físico: caixas e linha simulada só aparecem com `.simulando` */
 .sheet .retirar, .sheet tr.simulada { display: none; }
 .sheet.simulando .retirar { display: inline-block; margin-right: 8px; vertical-align: middle; }

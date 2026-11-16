@@ -54,7 +54,7 @@ export async function renderResumoFisico(alvo, ctx) {
     atualizarSimulacao();
   };
   const tab = tabela(r, { abertos, pais, retirados: sim.retirados, aoRetirar: atualizarSimulacao });
-  const planilha = h('div', { class: `sheet resumo-tabela ${lerExtras() ? '' : 'sem-extras'} ${sim.ativa ? 'simulando' : ''}` }, tab.elemento);
+  const planilha = h('div', { class: `sheet resumo-tabela colunas-iguais compacta ${lerExtras() ? '' : 'sem-extras'} ${sim.ativa ? 'simulando' : ''}` }, tab.elemento);
   const textoSimular = () => (sim.ativa ? 'Encerrar simulação' : 'Simular sem atividades');
   const botaoSimular = h('button', {
     class: `btn sm ${sim.ativa ? 'primary' : 'secondary'}`, type: 'button', 'aria-pressed': String(sim.ativa), 'data-teste': 'simular',
@@ -69,7 +69,7 @@ export async function renderResumoFisico(alvo, ctx) {
     },
   }, icone('funil', { tamanho: 16 }), textoSimular());
   atualizarSimulacao();
-  const textoExtras = () => (planilha.classList.contains('sem-extras') ? 'Exibir projeção econômica e pesos' : 'Ocultar projeção econômica e pesos');
+  const textoExtras = () => (planilha.classList.contains('sem-extras') ? 'Exibir projeção econômica' : 'Ocultar projeção econômica');
   const botaoExtras = h('button', {
     class: 'btn secondary sm', type: 'button', 'aria-pressed': String(!planilha.classList.contains('sem-extras')),
     onclick: () => {
@@ -90,7 +90,7 @@ export async function renderResumoFisico(alvo, ctx) {
     planilha);
 }
 
-/** Preferência "mostrar projeção econômica e pesos" (lembrada neste navegador). */
+/** Preferência "mostrar projeção econômica" (lembrada neste navegador). Os pesos ficam sempre visíveis (v28). */
 const CHAVE_EXTRAS = 'resumoFisico.extras';
 function lerExtras() {
   try { return localStorage.getItem(CHAVE_EXTRAS) !== 'ocultas'; } catch { return true; }
@@ -131,8 +131,8 @@ function tabela(r, { abertos, pais, retirados, aoRetirar }) {
     ['Planejado acm', (l) => pct(l.proximo.planejadoAcm)],
     ['Previsto', (l) => pct(l.proximo.previsto)],
     ['Adiant.', (l) => adiantamento(l.proximo.adiantamento)],
-    ['Peso atraso', (l) => (l.pesoAtraso === null ? VAZIO : fmtVariacao(l.pesoAtraso, 2)), 'extra'],
-    ['Peso planejado', (l) => fmtPercentual(l.pesoPlanejado, 2), 'extra'],
+    ['Peso atraso', (l) => (l.pesoAtraso === null ? VAZIO : fmtVariacao(l.pesoAtraso, 2))],
+    ['Peso planejado', (l) => fmtPercentual(l.pesoPlanejado, 2)],
   ];
   const seta = (l) => {
     if (l.nivel !== 1) return null;
@@ -183,14 +183,16 @@ function tabela(r, { abertos, pais, retirados, aoRetirar }) {
     trSimulada,
     r.linhas.map((l) => linha(l, `nivel-${l.nivel} ${l.nivel === 2 && !abertos.has(itemPai(l.item)) ? 'oculto' : ''}`)));
 
-  const elemento = h('table', {},
+  // v28: número de colunas visíveis com e sem a projeção econômica (largura mínima da tabela, css/paginas.css).
+  const extras = cols.filter(([, , classe]) => classe === 'extra').length;
+  const elemento = h('table', { style: `--colunas: ${cols.length}; --colunas-sem-extras: ${cols.length - extras}` },
     h('thead', {},
       h('tr', { class: 'grupo' },
         h('th', { class: 'first', rowspan: 2 }, 'Serviço'),
         h('th', { colspan: 3, class: 'extra' }, 'Projeção econômica'),
         h('th', { colspan: 8, class: 'cur' }, fmtMes(r.referencia)),
         h('th', { colspan: 4 }, fmtMes(r.seguinte)),
-        h('th', { colspan: 2, class: 'extra' }, 'Pesos')),
+        h('th', { colspan: 2 }, 'Pesos')),
       h('tr', {}, cols.map(([titulo, , classe]) => h('th', { class: classe ?? '' }, titulo)))),
     corpo);
   return {
