@@ -8,9 +8,6 @@
  * tamanho dele (rótulos quebram linha; Análise econômica em 1, 2 ou 3 colunas e Custos por em 4, 2 × 2 ou 1,
  * o arranjo que permitir a fonte maior) e recalcula ao mudar de tamanho — inclusive enquanto o Dev redimensiona.
  * Os gráficos ajustam a fonte dos eixos ao próprio tamanho. A exportação em PDF usa o mesmo ajuste.
- *
- * v29 — Fonte única na página: todos os quadros de valores usam a mesma fonte (a maior com que todos cabem) e
- * os três gráficos também (ui/graficos.js), em vez de cada quadro ter um tamanho diferente.
  */
 import { h, montar } from '../core/dom.js';
 import { api } from '../core/api.js';
@@ -18,17 +15,19 @@ import { estado } from '../core/estado.js';
 import {
   classeSinal, fmtData, fmtIndice, fmtMes, fmtMoeda, fmtNumero, fmtPercentual, fmtVariacao, VAZIO,
 } from '../core/formato.js';
-import { LAYOUT_PADRAO, normalizarLayout, QUADROS } from '../domain/layout-resumo.js';
+import { LAYOUT_IMPRESSAO, LAYOUT_PADRAO, normalizarLayout, QUADROS, visivel } from '../domain/layout-resumo.js';
 import { pode } from '../domain/permissoes.js';
 import { calcularResumoGeral } from '../domain/resumo-geral.js';
 import { card, cardTitulo, seloCompetencia, toast, vazio } from '../ui/componentes.js';
+import { abrirDetalheGrafico } from '../ui/detalhe-grafico.js';
 import { aplicarLayout, editarLayout } from '../ui/editor-layout.js';
+import { editarOrdemAbas } from '../ui/ordenar-abas.js';
 import { grafico } from '../ui/graficos.js';
 import { velocimetro } from '../ui/velocimetro.js';
 import { icone } from '../ui/icones.js';
 import { abrirInfosObra } from './infos-obra.js';
 
-export function renderResumoGeral(alvo, { base, filtro, usuario }) {
+export function renderResumoGeral(alvo, { base, filtro, usuario, impressao = false }) {
   if (!filtro.obras.length) return montar(alvo, vazio('Selecione uma obra no filtro'));
   const r = calcularResumoGeral(base, filtro);
   const nomes = base.obras.filter((o) => filtro.obras.includes(o.chave)).map((o) => o.nome);
@@ -36,6 +35,35 @@ export function renderResumoGeral(alvo, { base, filtro, usuario }) {
   const curva = h('div', { class: 'grafico-area' });
   const barras = h('div', { class: 'grafico-area' });
   const assertividade = h('div', { class: 'grafico-area' });
+
+  // Definições dos três gráficos: usadas no quadro e no "Detalhe" (v29), que abre o gráfico em tela cheia.
+  const { meses } = r.graficos;
+  const graficos = {
+    curva: {
+      tipo: 'line', meses, referencia: r.referencia, fonteProporcional: true,
+      series: [
+        { rotulo: 'Previsto original', valores: r.graficos.curvaAcumulada.previstoOriginal, cor: '--series-3', tracejada: true },
+        { rotulo: 'Realizado', valores: r.graficos.curvaAcumulada.realizado, cor: '--series-2', marcadores: true, linha: true, rotulos: 'acima' },
+        { rotulo: 'Planejado atual', valores: r.graficos.curvaAcumulada.planejadoAtual, cor: '--series-1', linha: true, rotulos: 'abaixo' },
+      ],
+    },
+    barras: {
+      tipo: 'bar', meses, referencia: r.referencia, fonteProporcional: true,
+      series: [
+        { rotulo: 'Realizado', valores: r.graficos.realizadoPlanejadoMes.realizado, cor: '--series-2' },
+        { rotulo: 'Planejado atual', valores: r.graficos.realizadoPlanejadoMes.planejado, cor: '--series-1' },
+      ],
+    },
+    assertividade: {
+      tipo: 'bar', meses, referencia: r.referencia, descricao: 'Assertividade mensal', minimoMax: 1, fonteProporcional: true, // eixo vai ao menos a 100%
+      series: [{ rotulo: 'Assertividade', valores: r.graficos.assertividade, cor: '--series-1' }],
+    },
+  };
+  /** Título do quadro de gráfico com o botão "Detalhe" logo ao lado (a legenda fica à direita). */
+  const tituloGrafico = (id, texto) => [texto, h('button', {
+    class: 'rg-detalhe', type: 'button', 'data-teste': `detalhe-${id}`, title: 'Abrir o gráfico em tela cheia com a tabela dos meses',
+    onclick: () => abrirDetalheGrafico({ titulo: texto, def: graficos[id] }),
+  }, icone('telaCheia', { tamanho: 14 }), 'Detalhe')];
   const cartao = (id, titulo, conteudo, extra = null, classe = '') => {
     conteudo.classList.add('rg-conteudo'); // v27: é a fonte deste bloco que se ajusta ao tamanho do quadro
     return card({ class: `rg-cartao ${classe}`, dataset: { quadro: id } }, titulo ? cardTitulo(titulo, extra) : null, conteudo);
@@ -43,17 +71,17 @@ export function renderResumoGeral(alvo, { base, filtro, usuario }) {
   const quadros = {
     cef: cartao('cef', null, quadroCefFisico(r.painelFisico), null, 'rg-cef'),
     economica: cartao('economica', 'Análise econômica', analiseEconomica(r.economico), h('span', { class: 'muted small' }, fmtMes(r.referencia)), 'rg-economica'),
-    curva: cartao('curva', 'Curva acumulada atual × original', curva, null, 'rg-grafico'),
-    barras: cartao('barras', 'Realizado × planejado (mês)', barras, null, 'rg-grafico'),
-    assertividade: cartao('assertividade', 'Assertividade', assertividade, null, 'rg-grafico'),
+    curva: cartao('curva', tituloGrafico('curva', 'Curva acumulada atual × original'), curva, null, 'rg-grafico'),
+    barras: cartao('barras', tituloGrafico('barras', 'Realizado × planejado (mês)'), barras, null, 'rg-grafico'),
+    assertividade: cartao('assertividade', tituloGrafico('assertividade', 'Assertividade'), assertividade, null, 'rg-grafico'),
     custos: cartao('custos', 'Custos por (R$)', custosPor(r.custosPor), h('span', { class: 'muted small' }, 'sem correção'), 'rg-custos'),
     incc: cartao('incc', 'INCC', incc(r.incc), null, 'rg-incc'),
     nhnu: cartao('nhnu', 'NH-NU', h('div', { class: 'rg-numero' }, h('b', { class: 'tab' }, fmtNumero(r.nhnu, 1)), h('small', { class: 'muted' }, 'Homens/mês × UH × realizado mês ÷ 100')), null, 'rg-nhnu'),
     andamento: cartao('andamento', 'Andamento geral', velocimetro(r.andamento), null, 'rg-andamento'),
   };
-  const corpo = h('div', { class: 'rg-corpo' }, QUADROS.map((q) => quadros[q.id]));
+  const corpo = h('div', { class: 'rg-corpo' }, QUADROS.filter((q) => visivel(q.id)).map((q) => quadros[q.id]) /* v28: QUADROS_OCULTOS em domain/layout-resumo.js */);
   let layout = normalizarLayout(estado.bruto?.layoutResumoGeral ?? LAYOUT_PADRAO);
-  aplicarLayout(corpo, layout);
+  aplicarLayout(corpo, impressao ? LAYOUT_IMPRESSAO : layout); // v28: o PDF tem disposição própria para a A4
 
   const acoes = h('div', { class: 'row' },
     seloCompetencia(r.referencia, { compacto: true }),
@@ -66,25 +94,41 @@ export function renderResumoGeral(alvo, { base, filtro, usuario }) {
     corpo);
 
   // Dev: "Editar layout" troca as ações do título pela barra de edição até salvar ou cancelar.
+  // v28: com a edição ligada, as abas do menu superior também podem ser arrastadas para mudar a ordem.
   if (pode(usuario?.papel, 'administrar')) {
     const botaoEditar = h('button', {
       class: 'btn ghost sm so-edicao rg-editar', type: 'button', 'data-teste': 'editar-layout',
       onclick: () => {
+        const menu = document.querySelector('nav[aria-label="Abas da apresentação"]');
+        const abas = menu ? editarOrdemAbas(menu) : null;
+        const ordemOriginal = abas?.ordem() ?? [];
+        let salvou = false;
         const barra = editarLayout({
           pagina, corpo, layout,
           aoMudar: ajustar,
+          aoRestaurarPadrao: () => abas?.restaurarPadrao(),
           aoSalvar: async (novo) => {
             try {
               const { layout: gravado } = await api.put('/layouts/resumo-geral', { layout: novo });
               if (estado.bruto) estado.bruto.layoutResumoGeral = gravado;
+              if (abas) {
+                const { ordem } = await api.put('/layouts/abas', { ordem: abas.ordem() });
+                if (estado.bruto) estado.bruto.ordemAbas = ordem;
+              }
               toast('success', 'Layout salvo para todas as apresentações');
+              salvou = true;
               return true;
             } catch (e) {
               toast('error', 'Não foi possível salvar o layout', e.message);
               return false;
             }
           },
-          aoTerminar: (final) => { layout = final; barra.replaceWith(acoes); },
+          aoTerminar: (final) => {
+            if (abas && !salvou) abas.restaurar(ordemOriginal); // cancelou: o menu volta à ordem de antes
+            abas?.terminar();
+            layout = final;
+            barra.replaceWith(acoes);
+          },
         });
         acoes.replaceWith(barra);
       },
@@ -95,26 +139,9 @@ export function renderResumoGeral(alvo, { base, filtro, usuario }) {
   montar(alvo, pagina);
   const ajustar = ajustarAlturaATela(pagina);
 
-  const { meses } = r.graficos;
-  grafico(curva, {
-    tipo: 'line', meses, referencia: r.referencia, fonteProporcional: true,
-    series: [
-      { rotulo: 'Previsto original', valores: r.graficos.curvaAcumulada.previstoOriginal, cor: '--series-3', tracejada: true },
-      { rotulo: 'Realizado', valores: r.graficos.curvaAcumulada.realizado, cor: '--series-2', marcadores: true, linha: true, rotulos: 'acima' },
-      { rotulo: 'Planejado atual', valores: r.graficos.curvaAcumulada.planejadoAtual, cor: '--series-1', linha: true, rotulos: 'abaixo' },
-    ],
-  });
-  grafico(barras, {
-    tipo: 'bar', meses, referencia: r.referencia, fonteProporcional: true,
-    series: [
-      { rotulo: 'Realizado', valores: r.graficos.realizadoPlanejadoMes.realizado, cor: '--series-2' },
-      { rotulo: 'Planejado atual', valores: r.graficos.realizadoPlanejadoMes.planejado, cor: '--series-1' },
-    ],
-  });
-  grafico(assertividade, {
-    tipo: 'bar', meses, referencia: r.referencia, descricao: 'Assertividade mensal', minimoMax: 1, fonteProporcional: true, // eixo vai ao menos a 100%
-    series: [{ rotulo: 'Assertividade', valores: r.graficos.assertividade, cor: '--series-1' }],
-  });
+  grafico(curva, graficos.curva);
+  grafico(barras, graficos.barras);
+  grafico(assertividade, graficos.assertividade);
 }
 
 /**
@@ -129,29 +156,32 @@ function ajustarAlturaATela(pagina) {
     pagina.classList.add('rg-tela');
     return () => {};
   }
-  // v27/v29: quando um quadro muda de tamanho (janela, edição do layout), a fonte única da página é recalculada.
-  let agendado = false;
+  // v27: os quadros reajustam a fonte quando algum muda de tamanho (janela, edição do layout). v29: a fonte é
+  // uma só para a tela inteira, então qualquer mudança refaz o ajuste de todos (uma vez por quadro de animação).
+  let agendado = 0;
   const observador = new ResizeObserver(() => {
     if (!pagina.isConnected) return observador.disconnect();
-    if (!pagina.classList.contains('rg-tela') || agendado) return;
-    agendado = true;
-    requestAnimationFrame(() => { agendado = false; ajustarQuadros(pagina); });
+    if (!pagina.classList.contains('rg-tela')) return;
+    cancelAnimationFrame(agendado);
+    agendado = requestAnimationFrame(() => ajustarQuadros(pagina));
   });
   for (const c of pagina.querySelectorAll('.rg-cartao')) observador.observe(c);
   const ajustar = () => {
     if (!pagina.isConnected) return window.removeEventListener('resize', ajustar);
     const cabe = window.innerWidth >= 1100 && window.innerHeight >= 620;
     pagina.classList.toggle('rg-tela', cabe);
-    pagina.style.height = cabe ? `${Math.floor(window.innerHeight - pagina.getBoundingClientRect().top - 16)}px` : '';
+    // v29: em telas muito baixas (ex.: 1280×720) a grade não fica menor que ALTURA_MINIMA_GRADE: a página rola um
+    // pouco, mas gráficos e valores continuam legíveis. Do 1366×768 para cima continua cabendo sem rolagem.
+    const livre = Math.floor(window.innerHeight - pagina.getBoundingClientRect().top - 16);
+    pagina.style.height = cabe ? `${Math.max(livre, ALTURA_MINIMA_GRADE)}px` : '';
     if (cabe) ajustarQuadros(pagina);
     else limparAjuste(pagina);
   };
   window.addEventListener('resize', ajustar);
   requestAnimationFrame(ajustar);
   ajustar();
-  // A fonte da marca (Inter) pode chegar depois da primeira medida: o texto cresce sem mudar o tamanho dos
-  // quadros (o observador não dispara) e algum ficava cortado. Mede de novo quando as fontes terminam de carregar.
-  document.fonts?.ready.then(() => pagina.isConnected && ajustar());
+  // v29: na primeira carga as fontes da página podem chegar depois do ajuste; o texto cresce e o quadro cortava.
+  document.fonts?.ready.then(() => { if (pagina.isConnected) ajustar(); });
   return ajustar;
 }
 
@@ -159,7 +189,11 @@ function ajustarAlturaATela(pagina) {
  * v27 — Fonte (px) dos quadros de valores: entre o mínimo legível e o máximo, a maior com que o conteúdo cabe.
  * Na impressão os limites são menores (a página A4 é mais densa que a tela).
  */
-export const FONTE_QUADRO = Object.freeze({ tela: { min: 10, max: 24 }, impressao: { min: 9, max: 18 } });
+/** v29 — Altura mínima (px) da grade do Resumo Geral na tela. */
+const ALTURA_MINIMA_GRADE = 500;
+
+// v29: máximo da tela 18 px — com a fonte global, títulos e gráficos usam o mesmo tamanho dos valores.
+export const FONTE_QUADRO = Object.freeze({ tela: { min: 10, max: 18 }, impressao: { min: 9, max: 18 } });
 
 /** Arranjos alternativos por quadro (classe no conteúdo); o primeiro é o padrão, usado em caso de empate. */
 const ARRANJOS = {
@@ -170,8 +204,9 @@ const ARRANJOS = {
 const SEM_AJUSTE = new Set(['curva', 'barras', 'assertividade', 'andamento']);
 
 const cortado = (el) => el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
-/** Valores que não quebram linha (ex.: Custos por) podem vazar da própria célula sem cortar o quadro. */
-const vazaCelula = (conteudo) => [...conteudo.querySelectorAll('.custo-item, dd, td')].some((el) => el.scrollWidth > el.clientWidth + 1);
+/** v29: caixas internas que também não podem transbordar (ex.: os valores de "Custos por" dentro do fundo). */
+const CAIXAS_INTERNAS = '.custo-item';
+const quadroCabe = (cartao, conteudo) => !cortado(cartao) && !cortado(conteudo) && ![...conteudo.querySelectorAll(CAIXAS_INTERNAS)].some(cortado);
 
 function aplicarArranjo(conteudo, arranjos, escolhido) {
   for (const a of arranjos) if (a) conteudo.classList.toggle(a, a === escolhido);
@@ -181,7 +216,7 @@ function aplicarArranjo(conteudo, arranjos, escolhido) {
 function maiorFonte(cartao, conteudo, { min, max }) {
   const cabe = (f) => {
     conteudo.style.fontSize = `${f}px`;
-    return !cortado(cartao) && !cortado(conteudo) && !vazaCelula(conteudo);
+    return quadroCabe(cartao, conteudo);
   };
   if (!cabe(min)) return null;
   let [menor, maior] = [min, max];
@@ -194,42 +229,67 @@ function maiorFonte(cartao, conteudo, { min, max }) {
   return Math.floor(menor * 4) / 4;
 }
 
-/** Maior fonte de um quadro em cada arranjo: [{ arranjo, fonte | null }] (null = nem a mínima coube). */
-function fontesDoQuadro(cartao, conteudo, limites) {
-  const arranjos = ARRANJOS[cartao.dataset.quadro] ?? [''];
-  return arranjos.map((arranjo) => {
-    aplicarArranjo(conteudo, arranjos, arranjo);
-    return { arranjo, fonte: maiorFonte(cartao, conteudo, limites) };
-  });
+/** Quadros de valores (com texto a ajustar) da página, com o conteúdo e os arranjos possíveis de cada um. */
+const quadrosDeValores = (pagina) => [...pagina.querySelectorAll('.rg-cartao')]
+  .map((cartao) => ({ cartao, conteudo: cartao.querySelector(':scope > .rg-conteudo'), arranjos: ARRANJOS[cartao.dataset.quadro] ?? [''] }))
+  .filter((q) => q.conteudo && !SEM_AJUSTE.has(q.cartao.dataset.quadro));
+
+/** Maior fonte do quadro, no melhor arranjo (null se nem a mínima couber). */
+function maiorFonteDoQuadro({ cartao, conteudo, arranjos }, limites) {
+  let melhor = null;
+  for (const a of arranjos) {
+    aplicarArranjo(conteudo, arranjos, a);
+    const fonte = maiorFonte(cartao, conteudo, limites);
+    if (fonte !== null && (melhor === null || fonte > melhor + 0.5)) melhor = fonte;
+  }
+  return melhor;
+}
+
+/** Primeiro arranjo em que o quadro cabe na fonte `f` (null se nenhum). Deixa o quadro nesse arranjo e fonte. */
+function arranjoNaFonte({ cartao, conteudo, arranjos }, f) {
+  conteudo.style.fontSize = `${f}px`;
+  for (const a of arranjos) {
+    aplicarArranjo(conteudo, arranjos, a);
+    if (quadroCabe(cartao, conteudo)) return a;
+  }
+  return null;
 }
 
 /**
- * Ajusta todos os quadros de valores da página à mesma fonte: a maior com que todos cabem (v29). Cada quadro
- * fica no primeiro arranjo em que essa fonte cabe. Quadro que não coube nem na fonte mínima ganha a classe
- * `apertado` (na tela, rolagem por dentro; no PDF a página é ampliada até caber). Devolve true se todos couberam.
+ * v29 — Fonte global do Resumo Geral: todos os quadros de valores, os títulos dos quadros e os textos dos
+ * gráficos usam UM tamanho só — o maior com que todos os quadros cabem (cada um no seu melhor arranjo). O tamanho
+ * vai para `--fonte-rg` (base de toda a tela, css/paginas.css) e os gráficos o leem (ui/graficos.js).
+ * Devolve true se todos couberam; quem não coube nem na mínima fica `apertado` (rola por dentro; no PDF a página
+ * é ampliada até caber).
  */
 export function ajustarQuadros(pagina, limites = FONTE_QUADRO.tela) {
-  const quadros = [...pagina.querySelectorAll('.rg-cartao')]
-    .filter((c) => !SEM_AJUSTE.has(c.dataset.quadro))
-    .map((cartao) => ({ cartao, conteudo: cartao.querySelector(':scope > .rg-conteudo') }))
-    .filter((q) => q.conteudo);
-  for (const q of quadros) q.opcoes = fontesDoQuadro(q.cartao, q.conteudo, limites);
-  const maximos = quadros.map((q) => Math.max(...q.opcoes.map((o) => o.fonte ?? -1))).filter((f) => f >= 0);
-  const fonte = maximos.length ? Math.min(...maximos) : limites.min;
+  const quadros = quadrosDeValores(pagina);
+  const definir = (f) => (f === null ? pagina.style.removeProperty('--fonte-rg') : pagina.style.setProperty('--fonte-rg', `${f}px`));
+  const menorDosMaiores = () => Math.min(limites.max, ...quadros.map((q) => maiorFonteDoQuadro(q, limites) ?? limites.min));
+  // 1ª estimativa com os títulos no tamanho padrão; 2ª com os títulos já na fonte estimada (eles ocupam espaço).
+  definir(null);
+  let fonte = menorDosMaiores();
+  definir(fonte);
+  fonte = menorDosMaiores();
+  // Confirma com tudo na mesma fonte (títulos inclusive); se algo não couber, desce de 0,25 em 0,25 px.
+  const todosCabem = (f) => { definir(f); return quadros.every((q) => arranjoNaFonte(q, f) !== null); };
+  while (fonte > limites.min && !todosCabem(fonte)) fonte = Math.max(limites.min, fonte - 0.25);
+  definir(fonte);
   let todos = true;
-  for (const { cartao, conteudo, opcoes } of quadros) {
-    const arranjos = opcoes.map((o) => o.arranjo);
-    const escolhido = opcoes.find((o) => o.fonte !== null && o.fonte >= fonte) ?? null;
-    aplicarArranjo(conteudo, arranjos, escolhido?.arranjo ?? arranjos[0]);
-    conteudo.style.fontSize = `${fonte}px`;
-    cartao.classList.toggle('apertado', !escolhido);
-    todos = todos && Boolean(escolhido);
+  for (const q of quadros) {
+    const coube = arranjoNaFonte(q, fonte) !== null;
+    if (!coube) aplicarArranjo(q.conteudo, q.arranjos, q.arranjos[0]);
+    q.cartao.classList.toggle('apertado', !coube);
+    todos = todos && coube;
   }
+  // Gráficos acompanham a fonte global (redesenho sem animação).
+  for (const canvas of pagina.querySelectorAll('canvas')) window.Chart?.getChart(canvas)?.update('none');
   return todos;
 }
 
 /** Telas pequenas (um quadro abaixo do outro): volta à fonte e ao arranjo padrão. */
 function limparAjuste(pagina) {
+  pagina.style.removeProperty('--fonte-rg');
   for (const c of pagina.querySelectorAll('.rg-cartao')) {
     c.classList.remove('apertado');
     const conteudo = c.querySelector(':scope > .rg-conteudo');

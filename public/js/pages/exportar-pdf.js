@@ -22,7 +22,6 @@ import { icone } from '../ui/icones.js';
 import { mesExibido } from './galeria.js';
 import { dadosCapaCliente } from './inicio.js';
 import { ajustarQuadros, FONTE_QUADRO } from './resumo-geral.js';
-import { fonteDoGrafico } from '../ui/graficos.js';
 
 const CAPA = { id: 'capa', nome: 'Capa' };
 const ESPERA_MAXIMA = 45000; // ms para planilhas, físico por atividade e imagens carregarem
@@ -116,6 +115,8 @@ async function gerarPdf({ base, chave, referencia, comCapa, secoes }) {
     }
     if (comCapa) doc.prepend(capa(base, filtro, incluidas));
     await esperarCarregamentos(doc);
+    // v28: medir só com as fontes da página carregadas — medido antes, o texto crescia ao trocar a fonte e cortava quadros.
+    await Promise.race([document.fonts?.ready, pausa(5000)]);
     recolherTabelas(doc);
     const geral = doc.querySelector('[data-secao="resumo-geral"] > div');
     if (geral) enquadrarResumoGeral(geral);
@@ -194,7 +195,6 @@ const pausa = (ms) => new Promise((r) => setTimeout(r, ms));
 async function esperarCarregamentos(doc) {
   const limite = Date.now() + ESPERA_MAXIMA;
   while (doc.querySelector('.skel, [aria-busy="true"], .carregando-msg') && Date.now() < limite) await pausa(100);
-  await document.fonts?.ready; // medir os quadros do Resumo Geral só com a fonte da marca já carregada
 }
 
 /** Físico e Econômico como abrem na tela: só os itens principais (sem subitens e sem detalhes); sem a simulação. */
@@ -258,46 +258,10 @@ function enquadrarEmUmaPagina(alvo) {
   alvo.dataset.zoom = alvo.style.zoom;
 }
 
-/**
- * v30 — Gráficos mês a mês do Resumo Geral no PDF: a página A4 é mais estreita que a tela, então na fonte da
- * tela os meses do eixo inclinavam e se encavalavam ("24SET 24OUT…"), e os rótulos de valor também. Aqui a
- * fonte desce até todos os meses caberem lado a lado sem inclinar (mínimo legível de 6,5 px), e os três
- * gráficos ficam com a mesma fonte (a menor delas), como na tela.
- */
-const FONTE_MINIMA_PDF = 6.5;
-function fonteQueCabeNosMeses(chart) {
-  const meses = chart.data.labels ?? [];
-  if (!meses.length) return null;
-  const ctx = chart.ctx;
-  const larguraMaior = (fonte) => {
-    ctx.save();
-    ctx.font = `500 ${fonte - 1}px Inter, sans-serif`; // rótulo do eixo x = fonte − 1 (ui/graficos.js)
-    const w = Math.max(...meses.flat().map((t) => ctx.measureText(String(t)).width));
-    ctx.restore();
-    return w;
-  };
-  const porMes = chart.chartArea.width / meses.length;
-  let fonte = fonteDoGrafico(chart);
-  while (fonte > FONTE_MINIMA_PDF && larguraMaior(fonte) + 8 > porMes) fonte -= 0.5;
-  return fonte;
-}
-
-function ajustarFonteDosGraficos(doc) {
-  const Chart = window.Chart;
-  const graficos = [...doc.querySelectorAll('canvas[data-fonte-proporcional]')].map((c) => Chart.getChart(c)).filter(Boolean);
-  if (!graficos.length) return;
-  for (const chart of graficos) { chart.options.animation = false; chart.update('none'); }
-  const fontes = graficos.map(fonteQueCabeNosMeses).filter((f) => f !== null);
-  if (!fontes.length) return;
-  const fonte = Math.min(...fontes);
-  for (const chart of graficos) chart.canvas.dataset.fonteFixa = String(fonte);
-}
-
 /** Cada gráfico Chart.js vira uma imagem no mesmo tamanho, desenhada em 3× (nítida na impressão). */
 function graficosComoImagem(doc) {
   const Chart = window.Chart;
   if (!Chart) return;
-  ajustarFonteDosGraficos(doc);
   for (const canvas of doc.querySelectorAll('canvas')) {
     const chart = Chart.getChart(canvas);
     if (!chart) continue;

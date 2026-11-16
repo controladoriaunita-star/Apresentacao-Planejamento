@@ -49,11 +49,16 @@ Sem `obras`/`apresentacoes` (usuários anteriores à v26) = todas as obras, Obra
 
 | Método | Caminho | Permissão | Resposta |
 |---|---|---|---|
-| GET | `/dados/resumo` | ver | `{ fonte, aviso, atualizadoEm, abas: { "BD_Infos Gerais", "BD_Orc", "BD_Econômico" }, cadastro[], incc[], layoutResumoGeral }` — `layoutResumoGeral` = layout salvo pelo Dev ou `null` (padrão do app) (v24) |
+| GET | `/dados/resumo` | ver | `{ fonte, aviso, atualizadoEm, abas: { "BD_Infos Gerais", "BD_Orc", "BD_Econômico" }, cadastro[], incc[], layoutResumoGeral, ordemAbas }` — `layoutResumoGeral` = layout salvo pelo Dev ou `null` (padrão do app) (v24); `ordemAbas` = ordem das abas do menu salva pelo Dev ou `null` (v28) |
 | GET | `/dados/fisico?obra=<nome>` | ver | `{ colunas, linhas }` do BD_Físico por atividade só da obra (nome comparado sem acento/caixa). **403** se a obra não estiver liberada (v26) |
 | POST | `/dados/atualizar` | editarConteudo | relê as 4 abas no SharePoint → `{ ok, ...mesmo corpo de /dados/resumo }` (já relido na mesma instância) |
 | GET | `/saude` | pública | `{ ok, fonte }` |
 | PUT | `/layouts/resumo-geral` | administrar | `{ layout: { <quadro>: { x, y, w, h } } }` → `{ layout }`. Grade de 24 × 24 (`public/js/domain/layout-resumo.js`): valores ajustados aos limites, quadros sobrepostos → 400. Gravado no armazém de documentos (`DATA_DIR/layout-resumo-geral.json` ou Storage `sistema/` no Supabase), vale para todas as apresentações (v24) |
+| PUT | `/layouts/abas` | administrar | `{ ordem: string[] }` (ids das abas e `tela-<id>`) → `{ ordem }` sem repetições nem valores inválidos; não-lista → 400. Gravado no armazém (`ordem-abas`) e devolvido como `ordemAbas` em `/dados/resumo`; vale para todas as apresentações (v28) |
+| PUT | `/layouts/nomes-colunas` | administrar | `{ nomes: { <chave>: string } }` → `{ nomes }`: só chaves de `public/js/domain/nomes-colunas.js` (`fisico.coluna.<id>`, `fisico.grupo.<id>`, `economico.coluna.<campo>`, `economico.grupo.<grupo>`), sem vazio nem igual ao original, até 60 caracteres; não-objeto → 400. Devolvido como `nomesColunas` em `/dados/resumo` (v29) |
+| GET | `/comentarios-telas?obra=&mes=AAAA-MM` | editarConteudo | `{ comentarios: [{ id, tela, visao, texto, autor, email, criadoEm }] }` da obra no mês; obra não liberada → 403 (v29) |
+| POST | `/comentarios-telas` | administrar | `{ obra, mes, tela, visao, texto }` → 201 com o comentário; texto vazio/maior que 2000, mês ou tela inválidos → 400 (v29) |
+| DELETE | `/comentarios-telas/:id?obra=&mes=` | administrar | `{ ok: true }`; inexistente → 404 (v29) |
 
 Cada aba é a matriz crua do Graph: `{ colunas: string[], linhas: unknown[][] }` (datas como serial do Excel).
 **O servidor não calcula medidas** — os cálculos estão em `public/js/domain` e rodam no navegador.

@@ -163,13 +163,61 @@ test('layout do Resumo Geral: só o dev salva, sem sobreposição, e vale para t
   };
   assert.equal((await viewer('PUT', '/api/layouts/resumo-geral', { layout })).status, 403);
   assert.equal((await planejamento('PUT', '/api/layouts/resumo-geral', { layout })).status, 403);
-  const sobreposto = await dev('PUT', '/api/layouts/resumo-geral', { layout: { ...layout, nhnu: layout.incc } });
+  const sobreposto = await dev('PUT', '/api/layouts/resumo-geral', { layout: { ...layout, andamento: layout.incc } });
   assert.equal(sobreposto.status, 400);
-  assert.match(sobreposto.dados.erro, /INCC e NH-NU/);
+  assert.match(sobreposto.dados.erro, /INCC e Andamento geral/);
   const salvo = await dev('PUT', '/api/layouts/resumo-geral', { layout });
   assert.equal(salvo.status, 200);
   assert.deepEqual(salvo.dados.layout, layout);
   assert.deepEqual((await viewer('GET', '/api/dados/resumo')).dados.layoutResumoGeral, layout, 'todos recebem o layout do dev');
+});
+
+test('ordem das abas (v28): só o dev salva e vale para todos no resumo', async () => {
+  assert.equal((await viewer('GET', '/api/dados/resumo')).dados.ordemAbas, null, 'sem ordem salva = ordem do app');
+  const ordem = ['resumo-economico', 'inicio', 'resumo-geral', 'resumo-fisico'];
+  assert.equal((await viewer('PUT', '/api/layouts/abas', { ordem })).status, 403);
+  assert.equal((await planejamento('PUT', '/api/layouts/abas', { ordem })).status, 403);
+  assert.equal((await dev('PUT', '/api/layouts/abas', { ordem: 'inicio' })).status, 400);
+  const salvo = await dev('PUT', '/api/layouts/abas', { ordem: [...ordem, 'inicio', 7] });
+  assert.equal(salvo.status, 200);
+  assert.deepEqual(salvo.dados.ordem, ordem, 'sem repetição nem valores inválidos');
+  assert.deepEqual((await viewer('GET', '/api/dados/resumo')).dados.ordemAbas, ordem, 'todos recebem a ordem do dev');
+});
+
+test('nomes das colunas (v29): só o dev salva, só chaves conhecidas, e todos recebem no resumo', async () => {
+  assert.deepEqual((await viewer('GET', '/api/dados/resumo')).dados.nomesColunas, {}, 'sem nomes = originais');
+  const nomes = { 'economico.coluna.custoLancado': '  Custo   incorrido ', 'fisico.grupo.pesos': 'Pesos (%)', 'economico.coluna.inexistente': 'x', 'fisico.coluna.iec': 'IEC' };
+  assert.equal((await viewer('PUT', '/api/layouts/nomes-colunas', { nomes })).status, 403);
+  assert.equal((await planejamento('PUT', '/api/layouts/nomes-colunas', { nomes })).status, 403);
+  assert.equal((await dev('PUT', '/api/layouts/nomes-colunas', { nomes: [] })).status, 400);
+  const salvo = await dev('PUT', '/api/layouts/nomes-colunas', { nomes });
+  assert.equal(salvo.status, 200);
+  const esperado = { 'economico.coluna.custoLancado': 'Custo incorrido', 'fisico.grupo.pesos': 'Pesos (%)' };
+  assert.deepEqual(salvo.dados.nomes, esperado, 'sem chave desconhecida nem nome igual ao original');
+  assert.deepEqual((await viewer('GET', '/api/dados/resumo')).dados.nomesColunas, esperado);
+  await dev('PUT', '/api/layouts/nomes-colunas', { nomes: {} });
+});
+
+test('comentários por tela (v29): equipe interna lê, só o dev escreve e apaga, por obra e mês', async () => {
+  const q = 'obra=Residencial%20Alpha&mes=2026-03';
+  assert.equal((await viewer('GET', `/api/comentarios-telas?${q}`)).status, 403, 'Viewer não vê');
+  assert.deepEqual((await planejamento('GET', `/api/comentarios-telas?${q}`)).dados.comentarios, []);
+  assert.equal((await dev('GET', '/api/comentarios-telas?obra=Residencial%20Alpha&mes=2026-3')).status, 400);
+  const novo = { obra: 'Residencial Alpha', mes: '2026-03', tela: 'resumo-geral', visao: 'cliente', texto: '  Revisar curva  ' };
+  assert.equal((await planejamento('POST', '/api/comentarios-telas', novo)).status, 403, 'Planejamento só lê');
+  assert.equal((await dev('POST', '/api/comentarios-telas', { ...novo, texto: '   ' })).status, 400);
+  const criado = await dev('POST', '/api/comentarios-telas', novo);
+  assert.equal(criado.status, 201);
+  assert.equal(criado.dados.texto, 'Revisar curva');
+  assert.equal(criado.dados.tela, 'resumo-geral');
+  assert.equal(criado.dados.visao, 'cliente');
+  const lidos = (await planejamento('GET', `/api/comentarios-telas?${q}`)).dados.comentarios;
+  assert.deepEqual(lidos.map((c) => c.id), [criado.dados.id]);
+  assert.deepEqual((await dev('GET', '/api/comentarios-telas?obra=Residencial%20Alpha&mes=2026-04')).dados.comentarios, [], 'outro mês: vazio');
+  assert.equal((await planejamento('DELETE', `/api/comentarios-telas/${criado.dados.id}?${q}`)).status, 403);
+  assert.equal((await dev('DELETE', `/api/comentarios-telas/${criado.dados.id}?${q}`)).status, 200);
+  assert.equal((await dev('DELETE', `/api/comentarios-telas/${criado.dados.id}?${q}`)).status, 404);
+  assert.deepEqual((await dev('GET', `/api/comentarios-telas?${q}`)).dados.comentarios, []);
 });
 
 test('cadastro de obra: salvar, atualizar pela chave e importar planilha', async () => {
