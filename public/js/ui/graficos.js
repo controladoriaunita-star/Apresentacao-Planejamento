@@ -8,6 +8,12 @@ import { fmtMes, fmtPercentual, VAZIO } from '../core/formato.js';
 
 const instancias = new WeakMap();
 
+/**
+ * v29 — Fonte dos gráficos com reserva do sistema: se a Inter (Google Fonts) não carregar, Windows e Mac usam
+ * fontes de largura parecida em vez da serifada padrão. Os gráficos são redesenhados quando as fontes carregam.
+ */
+const FAMILIA = 'Inter, "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif';
+
 /** Tamanho das legendas dos eixos acompanha a altura da tela (mais legível em telões e Full HD). */
 const fonteEixo = () => (window.innerHeight >= 1000 ? 13 : 12);
 
@@ -21,15 +27,21 @@ const fonteDoGrafico = (chart) => {
   if (!chart?.canvas?.dataset.fonteProporcional) return fonteEixo();
   const meses = Math.max(1, chart.data?.labels?.length ?? 1);
   const porMes = (chart.width * 0.9) / meses / 2.4; // ~2,4 em = largura de "MAR" com folga
-  const tamanho = Math.min(16, Math.max(10, Math.min(chart.height / 14, chart.width / 45)), porMes);
+  // v29: no Resumo Geral a fonte é a global da tela (--fonte-rg), limitada só pelo espaço de cada mês.
+  const global = parseFloat(chart.canvas.closest('.rg-tela')?.style.getPropertyValue('--fonte-rg'));
+  if (global > 0) return Math.round(Math.max(8, Math.min(global, porMes, chart.height / 10)) * 2) / 2;
+  // v29: até 20 px em gráficos grandes (telões, 2560 px), acompanhando o texto dos quadros.
+  const tamanho = Math.min(20, Math.max(10, Math.min(chart.height / 14, chart.width / 45)), porMes);
   return Math.round(Math.max(8, tamanho) * 2) / 2;
 };
 
 /** v28 — Fonte dos rótulos de dados: menor que a dos eixos e, se possível, cabendo na horizontal entre dois pontos. */
 const fonteRotulo = (chart, passo) => {
-  const base = fonteDoGrafico(chart) - 2;
-  if (!chart?.canvas?.dataset.fonteProporcional) return base;
-  return Math.max(7, Math.min(base, Math.floor(passo / 3.6))); // "100,0%" ≈ 3,4 em
+  if (!chart?.canvas?.dataset.fonteProporcional) return fonteDoGrafico(chart) - 2;
+  const base = Math.round(fonteDoGrafico(chart) * 0.7); // v29: 70% da fonte do gráfico (rótulos não disputam com os eixos)
+  // v29: na tela, nunca abaixo de 9 px (se não couber na horizontal, o rótulo fica na vertical); no PDF, 7 px.
+  const minimo = chart.canvas.closest('.impressao') ? 7 : 9;
+  return Math.max(minimo, Math.min(base, Math.floor(passo / 3.6))); // "100,0%" ≈ 3,4 em
 };
 
 function opcoesBase({ percentual = true, max = null, minimoMax = null } = {}) {
@@ -43,8 +55,8 @@ function opcoesBase({ percentual = true, max = null, minimoMax = null } = {}) {
       legend: { display: false },
       tooltip: {
         backgroundColor: token('--ink-900'),
-        titleFont: { family: 'Inter', weight: '600', size: 13 },
-        bodyFont: { family: 'Inter', size: 13 },
+        titleFont: { family: FAMILIA, weight: '600', size: 13 },
+        bodyFont: { family: FAMILIA, size: 13 },
         padding: 12,
         cornerRadius: 10,
         boxPadding: 6,
@@ -53,14 +65,14 @@ function opcoesBase({ percentual = true, max = null, minimoMax = null } = {}) {
       },
     },
     scales: {
-      x: { grid: { display: false }, border: { color: token('--chart-grid') }, ticks: { color: eixo, font: { family: 'Inter', size: fonteEixo() - 1, weight: '500' }, autoSkip: false, maxRotation: 90, minRotation: 0 } }, // todos os meses; inclinados quando não cabem
+      x: { grid: { display: false }, border: { color: token('--chart-grid') }, ticks: { color: eixo, font: { family: FAMILIA, size: fonteEixo() - 1, weight: '500' }, autoSkip: false, maxRotation: 90, minRotation: 0 } }, // todos os meses; inclinados quando não cabem
       y: {
         beginAtZero: true,
         max: max ?? undefined,
         suggestedMax: minimoMax ?? undefined,
         grid: { color: token('--chart-grid'), drawTicks: false },
         border: { display: false, dash: [4, 4] },
-        ticks: { color: eixo, font: { family: 'Inter', size: fonteEixo(), weight: '500' }, padding: 8, maxTicksLimit: 6, callback: (v) => (percentual ? fmtPercentual(v, 0) : v) },
+        ticks: { color: eixo, font: { family: FAMILIA, size: fonteEixo(), weight: '500' }, padding: 8, maxTicksLimit: 6, callback: (v) => (percentual ? fmtPercentual(v, 0) : v) },
       },
     },
   };
@@ -93,7 +105,7 @@ export function grafico(alvo, def) {
 
   const opcoes = opcoesBase({ percentual: true, max: def.max, minimoMax: def.minimoMax });
   if (def.fonteProporcional) {
-    const fonte = (delta) => (ctx) => ({ family: 'Inter', weight: '500', size: fonteDoGrafico(ctx.chart) + delta });
+    const fonte = (delta) => (ctx) => ({ family: FAMILIA, weight: '500', size: fonteDoGrafico(ctx.chart) + delta });
     opcoes.scales.x.ticks.font = fonte(-1);
     opcoes.scales.y.ticks.font = fonte(0);
     opcoes.scales.x.ticks.maxRotation = 0; // v28: mês em duas linhas nunca inclina (inclinado, se encavalava)
@@ -101,9 +113,19 @@ export function grafico(alvo, def) {
   opcoes.plugins.tooltip.callbacks.title = (itens) => fmtMes(def.meses[itens[0]?.dataIndex]);
   if (def.referencia) opcoes.plugins.linhaReferencia = { indice: def.meses.indexOf(def.referencia) };
   const comRotulos = def.tipo === 'bar' || def.series.some((s) => s.rotulos);
-  if (comRotulos) { // espaço para o rótulo mais alto (na vertical ele é mais comprido)
-    opcoes.layout = { padding: { top: 22 } };
+  if (comRotulos) { // espaço para o rótulo mais alto (na vertical ele é mais comprido) e para o último rótulo à direita
+    opcoes.layout = { padding: { top: 22, right: def.fonteProporcional ? 14 : 0, left: def.fonteProporcional ? 4 : 0 } };
     opcoes.scales.y.grace = '12%';
+  }
+  if (def.fonteProporcional && !def.max) {
+    // v29: topo do eixo = maior valor + 15% (arredondado), em vez do "número redondo" do Chart.js — num gráfico
+    // baixo ele saltava para 200% e os dados ocupavam só metade da altura.
+    const maior = Math.max(def.minimoMax ?? 0, ...def.series.flatMap((s) => s.valores).filter((v) => typeof v === 'number'));
+    if (maior > 0) {
+      const passo = maior > 0.2 ? 0.1 : 0.01;
+      opcoes.scales.y.max = Math.ceil((maior * 1.15) / passo) * passo;
+      delete opcoes.scales.y.grace;
+    }
   }
   const chart = new Chart(tela, {
     type: def.tipo,
@@ -113,7 +135,14 @@ export function grafico(alvo, def) {
     plugins: [pluginReferencia, def.tipo === 'bar' ? pluginRotulosBarras : pluginRotulosLinha],
   });
   instancias.set(alvo, chart);
+  redesenharComFontes(chart);
   return chart;
+}
+
+/** v29: redesenha o gráfico quando as fontes da página terminam de carregar (medidas de texto corretas). */
+function redesenharComFontes(chart) {
+  if (!document.fonts || document.fonts.status === 'loaded') return;
+  document.fonts.ready.then(() => { if (chart.canvas?.isConnected) chart.update('none'); });
 }
 
 /** Linha vertical tracejada no mês de referência. */
@@ -141,14 +170,21 @@ const pluginReferencia = {
  * Rótulo de dados das barras: valor acima de cada barra; quando a barra é mais estreita que o texto
  * (muitos meses na tela), o rótulo fica na vertical.
  */
+/** v29: rótulos de dados só quando a área do gráfico tem altura para eles (no "Detalhe" a tabela traz os valores). */
+const ALTURA_MINIMA_ROTULOS = 70;
+// No PDF os rótulos ficam sempre (lá não existe o "Detalhe" para consultar os valores).
+const semEspacoParaRotulos = (chart) => chart.canvas?.dataset.fonteProporcional && !chart.canvas.closest('.impressao')
+  && chart.chartArea && (chart.chartArea.bottom - chart.chartArea.top) < ALTURA_MINIMA_ROTULOS;
+
 const pluginRotulosBarras = {
   id: 'rotulosBarras',
   afterDatasetsDraw(chart) {
+    if (semEspacoParaRotulos(chart)) return;
     const ctx = chart.ctx;
     ctx.save();
     const meta0 = chart.getDatasetMeta(0);
     const passo = meta0?.data?.length > 1 ? Math.abs(meta0.data[1].x - meta0.data[0].x) / Math.max(1, chart.data.datasets.length) : Infinity;
-    ctx.font = `600 ${fonteRotulo(chart, passo)}px Inter, sans-serif`;
+    ctx.font = `600 ${fonteRotulo(chart, passo)}px ${FAMILIA}`;
     ctx.fillStyle = token('--ink-700');
     chart.data.datasets.forEach((ds, i) => {
       const meta = chart.getDatasetMeta(i);
@@ -184,6 +220,7 @@ const pluginRotulosBarras = {
 const pluginRotulosLinha = {
   id: 'rotulosLinha',
   afterDatasetsDraw(chart) {
+    if (semEspacoParaRotulos(chart)) return;
     const ctx = chart.ctx;
     ctx.save();
     chart.data.datasets.forEach((ds, i) => {
@@ -191,7 +228,7 @@ const pluginRotulosLinha = {
       if (!ds.rotulos || meta.hidden) return;
       const abaixo = ds.rotulos === 'abaixo';
       const passo = meta.data.length > 1 ? Math.abs(meta.data[1].x - meta.data[0].x) : Infinity;
-      ctx.font = `600 ${fonteRotulo(chart, passo)}px Inter, sans-serif`;
+      ctx.font = `600 ${fonteRotulo(chart, passo)}px ${FAMILIA}`;
       ctx.fillStyle = ds.borderColor;
       meta.data.forEach((ponto, j) => {
         const v = ds.data[j];
@@ -256,7 +293,7 @@ export function graficoCategorias(alvo, def) {
   const valor = opcoes.scales.y;
   const categoria = opcoes.scales.x;
   // `fonte`: tamanho (px) dos rótulos dos eixos e dos valores escritos nas barras.
-  const fonte = def.fonte ? { family: 'Inter', size: def.fonte, weight: '600' } : null;
+  const fonte = def.fonte ? { family: FAMILIA, size: def.fonte, weight: '600' } : null;
   valor.ticks = { ...valor.ticks, precision: 0, callback: (v) => v, ...(fonte ? { font: fonte } : {}) };
   // `max`: topo fixo do eixo de valores (Segurança do Trabalho: maior mês + 2). Com teto inteiro, passo 1.
   if (def.max) { valor.max = def.max; valor.ticks.stepSize = def.max <= 12 ? 1 : undefined; valor.ticks.maxTicksLimit = 13; }
@@ -278,7 +315,7 @@ const pluginRotulos = {
   afterDatasetsDraw(chart, _args, opcoes) {
     const ctx = chart.ctx;
     ctx.save();
-    ctx.font = opcoes?.fonte ? `700 ${opcoes.fonte}px Inter, sans-serif` : `600 ${fonteEixo()}px Inter, sans-serif`;
+    ctx.font = opcoes?.fonte ? `700 ${opcoes.fonte}px ${FAMILIA}` : `600 ${fonteEixo()}px ${FAMILIA}`;
     chart.data.datasets.forEach((ds, i) => {
       const meta = chart.getDatasetMeta(i);
       if (meta.hidden) return;

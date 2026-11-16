@@ -91,4 +91,7 @@
   --shadow-rodape: 0 -8px 24px rgb(26 24 23 / 0.06);
 
   --header-h: 56px;
+  /* v29: altura da 2ª linha do cabeçalho (abas), usada quando elas não cabem ao lado do logo (layout.css) */
+  --menu-h: 0px;
+  --topo-h: calc(var(--header-h) + var(--menu-h));
 }

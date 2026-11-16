@@ -49,16 +49,32 @@ body.apresentando main.conteudo { padding-top: 12px; }
   .app-header .usuario { display: none; }
   .app-header .in { gap: 12px; }
 }
+
+/*
+ * v29 — Responsividade (regra do app: todas as abas sempre visíveis e legíveis, em qualquer tela; docs/RESPONSIVIDADE.md).
+ * Até 1600 px os botões do cabeçalho ficam só com o ícone. Quando as abas não cabem ao lado do logo, o main.js
+ * liga `.duas-linhas`: as abas descem para uma linha própria de largura inteira e quebram em mais linhas se
+ * preciso; a altura dessa área vai para --menu-h (entra em --topo-h, usado nas alturas de página).
+ */
+@media (max-width: 1600px) {
+  .app-header .direita .rotulo { display: none; }
+  .app-header .direita .btn { padding-left: 10px; padding-right: 10px; }
+}
+.app-header.duas-linhas .in { flex-wrap: wrap; height: auto; row-gap: 0; }
+.app-header.duas-linhas .in > a:first-child, .app-header.duas-linhas .direita { height: var(--header-h); display: flex; align-items: center; }
+.app-header.duas-linhas nav { order: 3; flex: 1 0 100%; flex-wrap: wrap; overflow: visible; padding: 5px 0; border-top: 1px solid var(--ink-700); }
 @media (max-width: 1024px) {
   .admin { flex-direction: column; }
   .admin aside { width: auto; }
   .admin aside nav { flex-direction: row; overflow-x: auto; }
 }
 @media (max-width: 760px) {
-  .app-header .in { padding: 0 16px; gap: 12px; }
-  .app-header .usuario { display: none; }
+  .app-header .in { padding: 0 16px; gap: 8px; }
+  .app-header .usuario, .app-header .btn-apresentar { display: none; }
+  .app-header .direita { gap: 8px; }
   .filtros, main.conteudo { padding-left: 16px; padding-right: 16px; }
-  .filtros .info { margin-left: 0; text-align: left; }
+  .filtros .info { margin-left: 0; text-align: left; flex-wrap: wrap; }
+  .filtros .info > span { flex-basis: 100%; }
 }
 @media print {
   .app-header, .filtros, .so-edicao { display: none !important; }

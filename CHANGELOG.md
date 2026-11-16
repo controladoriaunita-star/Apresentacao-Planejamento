@@ -5,7 +5,55 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v28 (em validação — ainda não publicada) |
+| Dev (local) | v29 (em validação — ainda não publicada; depende da v28) |
+
+## v29 — 16/11/2026 — Detalhe dos gráficos, galeria, nomes de colunas e comentários (Dev) e responsividade
+
+- **Detalhe dos gráficos (Resumo Geral)**: botão "Detalhe" ao lado do título de cada gráfico abre o gráfico em tela
+  cheia com, à esquerda, a tabela das curvas mês a mês (rola na vertical; o mês de referência fica destacado e
+  visível). Fecha com Esc ou "Fechar". Some no PDF e na edição do layout (`ui/detalhe-grafico.js`).
+- **Galeria (TxC e fotos)**: a imagem sempre aparece inteira no palco, ajustada ao espaço (antes, imagens grandes
+  saíam cortadas). Em "Ampliar" dá para ir à anterior/próxima (setas e ← →) sem fechar, e o botão "Zoom" (ou
+  duplo clique no ponto) amplia para ver detalhes, arrastando para mover. Ao fechar, a página fica na última
+  imagem vista (`pages/galeria.js`).
+- **Dev — nomes das colunas**: botão "Nomes das colunas" no Resumo Físico e no Econômico abre a lista de colunas e
+  grupos com o nome original e o atual; vazio ou "Original" volta ao original. Vale para Obra, Cliente e PDF. Os
+  grupos com o mês (ex.: MAR/26) não são renomeáveis. `PUT /api/layouts/nomes-colunas` e `nomesColunas` em
+  `/dados/resumo` (documento `nomes-colunas` no armazém, sem migration) — `domain/nomes-colunas.js`,
+  `ui/editor-nomes-colunas.js`.
+- **Dev — comentários por tela**: botão "Comentários" na barra de filtros abre um painel com as anotações da obra,
+  do mês de referência e da tela atuais. O Dev escreve e apaga; o Planejamento só lê; o Viewer não vê e nada vai
+  para o PDF. Com várias obras no filtro, pede uma obra só. `GET/POST/DELETE /api/comentarios-telas` (um documento
+  por obra e mês no armazém, sem migration) — `domain/comentarios-telas.js`, `ui/comentarios-telas.js`,
+  `server/routes/comentarios.mjs`.
+- **Responsividade como regra do app** (`docs/RESPONSIVIDADE.md`, conferida pelo teste
+  `tests/e2e/05-responsividade.spec.cjs` em 7 tamanhos de tela, do celular ao 2560 px):
+  - Cabeçalho: até 1600 px os botões ficam só com o ícone; quando as abas não cabem, descem para uma linha
+    própria (e quebram se preciso) — antes, de 1024 a 1536 px, abas sumiam cortadas. No celular o cabeçalho
+    deixava as abas inacessíveis e a página rolava para o lado.
+  - Galeria: em tela cheia a imagem saía cortada embaixo (1280–1536 px); agora sempre inteira. Painel lateral
+    só desce para baixo da foto abaixo de 900 px.
+  - Resumo Geral: textos nunca abaixo de 10 px; eixo dos gráficos até o maior valor + 15% (antes saltava para
+    200% e os dados usavam metade da altura); em gráfico muito baixo os rótulos de valor somem (o Detalhe mostra
+    a tabela); fonte dos gráficos até 20 px em telas grandes; grade com altura mínima de 500 px (1280×720 rola um
+    pouco; do 1366×768 para cima continua sem rolagem); abaixo de 1100 px, quadros em 2 colunas.
+  - Físico/Econômico: títulos de grupo quebram linha em vez de cortar; até 1600 px letra 12,5 px e a tabela
+    rola dentro do quadro (valores nunca encostam).
+  - Resumo Geral na primeira carga: os quadros eram ajustados antes de as fontes da página chegarem e ficavam
+    cortados (ex.: Análise econômica 121 px maior que o quadro); agora reajustam quando as fontes carregam. Era a
+    causa das falhas intermitentes dos testes do Resumo Geral.
+  - Celular: rodapé congelado do Econômico vira bloco no fim da página (empilhado, cobria a tabela).
+  - Windows × Mac: gráficos com fonte de reserva do sistema e redesenhados quando as fontes carregam; capa com
+    rótulos em até 2 linhas em vez de reticências; textos de 10 px passaram a 11 px.
+- **Ajustes após a validação do preview:**
+  - Fotos: nunca ampliadas além do tamanho real (`object-fit: scale-down`) — fotos menores que o palco apareciam
+    esticadas, "com zoom". Continuam inteiras quando são maiores.
+  - Resumo Geral com **fonte global**: um tamanho só para todos os quadros de valores, títulos dos quadros e textos
+    dos gráficos — o maior com que todos cabem (`--fonte-rg`, `ajustarQuadros` em `pages/resumo-geral.js`; vale
+    também no PDF). Máximo na tela 18 px. Rótulos de valor dos gráficos a 70% dessa fonte.
+  - "Custos por": os valores nunca saem dos fundos — o ajuste da fonte também confere cada caixa (antes só o quadro).
+- Testes: `tests/domain/nomes-comentarios.test.mjs`, contrato das rotas novas, testes de tela do Detalhe, da
+  galeria em tela cheia, dos nomes das colunas e dos comentários, e o teste de responsividade.
 
 ## v28 — 16/11/2026 — colunas iguais nos resumos e ordem das abas
 

@@ -16,6 +16,7 @@ import { servirEstatico } from './http/estaticos.mjs';
 import { enviarJson, ErroHttp } from './http/respostas.mjs';
 import { Roteador } from './http/roteador.mjs';
 import { registrarAuth } from './routes/auth.mjs';
+import { registrarComentarios } from './routes/comentarios.mjs';
 import { registrarConteudo } from './routes/conteudo.mjs';
 import { registrarDados } from './routes/dados.mjs';
 import { registrarSeguranca } from './routes/seguranca.mjs';
@@ -39,6 +40,7 @@ export function criarApp(config, { fetchImpl } = {}) {
   registrarUsuarios(rotas, deps);
   registrarDados(rotas, deps);
   registrarConteudo(rotas, deps);
+  registrarComentarios(rotas, deps); // v29
   registrarSeguranca(rotas, deps);
 
   async function tratar(req, res) {

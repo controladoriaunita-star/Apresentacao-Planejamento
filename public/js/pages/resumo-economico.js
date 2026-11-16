@@ -9,8 +9,11 @@ import { classeSinal, fmtMes, fmtPorTipo, tituloComUnidade } from '../core/forma
 import {
   COLUNAS_ECONOMICO, DETALHES_ECONOMICO, INDICADORES_ECONOMICO, calcularResumoEconomico,
 } from '../domain/resumo-economico.js';
+import { estado } from '../core/estado.js';
+import { nomeColuna } from '../domain/nomes-colunas.js';
 import { validarEconomico } from '../domain/validador-economico.js';
 import { kpi, marcadorComentario, seloCompetencia, vazio } from '../ui/componentes.js';
+import { botaoNomesColunas } from '../ui/editor-nomes-colunas.js';
 import { obraUnica } from '../ui/filtros.js';
 import { icone } from '../ui/icones.js';
 
@@ -52,6 +55,10 @@ export function renderResumoEconomico(alvo, ctx) {
   if (!obra) return montar(alvo, vazio('Selecione uma obra no filtro'));
   const r = calcularResumoEconomico(base, obra.chave, filtro.referencia);
   const colunas = colunasDaVisao(ctx.visao);
+  // v29: títulos com os nomes definidos pelo Dev (domain/nomes-colunas.js); sem nome definido, o original.
+  const nomes = estado.bruto?.nomesColunas;
+  const tituloColuna = (c) => tituloComUnidade(nomeColuna(nomes, `economico.coluna.${c.campo}`, c.titulo), c.tipo);
+  const tituloGrupo = (g) => nomeColuna(nomes, `economico.grupo.${g}`, g);
 
   const linhasCorpo = new Map();
   const alternar = (item, abrir) => {
@@ -85,6 +92,7 @@ export function renderResumoEconomico(alvo, ctx) {
       seloCompetencia(filtro.referencia),
       MOSTRAR_TOPO ? farolEconomico(validarEconomico(base, obra.chave, filtro.referencia)) : null),
     h('div', { class: 'row' },
+      botaoNomesColunas('economico', () => renderResumoEconomico(alvo, ctx)),
       r.linhas.length ? h('div', { class: 'row' },
         h('button', { class: 'btn ghost sm', type: 'button', onclick: () => r.linhas.forEach((l) => alternar(l.item, true)) }, icone('expandir', { tamanho: 16 }), 'Expandir tudo'),
         h('button', { class: 'btn ghost sm', type: 'button', onclick: () => r.linhas.forEach((l) => alternar(l.item, false)) }, icone('recolher', { tamanho: 16 }), 'Recolher tudo')) : null,
@@ -112,8 +120,8 @@ export function renderResumoEconomico(alvo, ctx) {
       h('thead', {},
         h('tr', { class: 'grupo' },
           h('th', { class: 'first', rowspan: 2 }, 'Item'),
-          faixas(colunas).map((f) => h('th', { colspan: f.span }, f.grupo))),
-        h('tr', {}, colunas.map((c) => h('th', {}, tituloComUnidade(c.titulo, c.tipo))))),
+          faixas(colunas).map((f) => h('th', { colspan: f.span }, tituloGrupo(f.grupo)))),
+        h('tr', {}, colunas.map((c) => h('th', {}, tituloColuna(c))))),
       h('tbody', {},
         r.geral ? h('tr', { class: 'total' }, h('td', { class: 'first' }, h('span', { class: 'arvore-espaco' }), obra.nome), colunas.map((c) => h('td', {}, valor(r.geral, c)))) : null,
         r.linhas.flatMap(linhaItem)))),
