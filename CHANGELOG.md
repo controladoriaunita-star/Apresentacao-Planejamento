@@ -5,7 +5,14 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v29 (em validação — ainda não publicada; depende da v28) |
+| Dev (local) | v30 (em validação) |
+
+## v30 — 16/11/2026 — PDF do Resumo Geral com o layout da tela
+
+- O PDF do Resumo Geral volta a sair **exatamente com o layout desenhado em "Editar layout"** (mesmas posições e
+  tamanhos na grade de 24 × 24, na página A4 paisagem). Sai a disposição própria da A4 da v28 (`LAYOUT_IMPRESSAO`).
+  Continuam valendo os ajustes de gráficos (meses sem inclinar, eixo até o maior valor + 15%) e a fonte global.
+- Teste do PDF: confere que cada quadro sai na mesma posição da grade do layout salvo.
 
 ## v29 — 16/11/2026 — Detalhe dos gráficos, galeria, nomes de colunas e comentários (Dev) e responsividade
 

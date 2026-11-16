@@ -13,9 +13,21 @@ const cadastrarImagem = (page, midia) => page.evaluate(async (m) => {
   await fetch('/api/midias', { method: 'POST', headers: { 'x-requested-with': 'fetch', 'content-type': 'application/json' }, body: JSON.stringify({ ...m, arquivoId: a.id }) });
 }, midia);
 
+/** v30: layout do Resumo Geral desenhado pelo Dev (diferente do padrão) — o PDF tem de sair igual. */
+const LAYOUT_DEV = {
+  cef: { x: 1, y: 1, w: 5, h: 12 }, economica: { x: 1, y: 13, w: 5, h: 12 }, incc: { x: 6, y: 1, w: 3, h: 9 },
+  custos: { x: 6, y: 10, w: 3, h: 8 }, andamento: { x: 6, y: 18, w: 3, h: 7 }, nhnu: { x: 6, y: 18, w: 3, h: 7 },
+  curva: { x: 9, y: 1, w: 16, h: 11 }, barras: { x: 9, y: 12, w: 16, h: 7 }, assertividade: { x: 9, y: 19, w: 16, h: 6 },
+};
+const salvarLayout = (page, layout) => page.evaluate((l) => fetch('/api/layouts/resumo-geral', {
+  method: 'PUT', headers: { 'x-requested-with': 'fetch', 'content-type': 'application/json' }, body: JSON.stringify({ layout: l }),
+}).then((r) => r.status), layout);
+
 test('Exportar PDF: monta as seções do Cliente da obra, gráficos em imagem e os resumos em uma página cada', async ({ page }) => {
   await page.addInitScript(() => { window.print = () => { window.__impressoes = (window.__impressoes ?? 0) + 1; }; });
   await entrar(page, DEV);
+  expect(await salvarLayout(page, LAYOUT_DEV)).toBe(200);
+  await page.reload();
   await cadastrarImagem(page, { tipo: 'txc', obra: 'Residencial Alpha', mes: '2026-03', grupo: 'Torre PDF', comentario: 'Linha de balanço da torre' });
 
   // Só na apresentação Cliente
@@ -71,6 +83,15 @@ test('Exportar PDF: monta as seções do Cliente da obra, gráficos em imagem e 
     expect(m.largura, m.id).toBeLessThanOrEqual(277 * mm + 1);
     expect(m.altura, m.id).toBeLessThanOrEqual(183 * mm);
   }
+  // v30: o Resumo Geral sai com o layout desenhado em "Editar layout" (mesma posição de cada quadro na grade)
+  const posicoes = await doc.locator('[data-secao="resumo-geral"] [data-quadro]').evaluateAll((cs) => Object.fromEntries(cs.map((c) => {
+    const e = getComputedStyle(c);
+    return [c.dataset.quadro, [e.gridRowStart, e.gridColumnStart, e.gridRowEnd, e.gridColumnEnd].join(' ')];
+  })));
+  for (const [id, r] of Object.entries(LAYOUT_DEV)) {
+    if (id === 'nhnu') continue; // oculto por enquanto
+    expect(posicoes[id], `posição de ${id} no PDF`).toBe(`${r.y} ${r.x} span ${r.h} span ${r.w}`);
+  }
   expect(await doc.locator('[data-secao="resumo-geral"] .rg-cartao:not(.rg-grafico)').evaluateAll((cs) => cs
     .filter((c) => c.scrollHeight > c.clientHeight + 1 || c.scrollWidth > c.clientWidth + 1).map((c) => c.dataset.quadro))).toEqual([]);
   // TxC: a imagem do mês com torre e comentário
@@ -92,6 +113,7 @@ test('Exportar PDF: monta as seções do Cliente da obra, gráficos em imagem e 
   await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
   await expect(doc).toHaveCount(0);
   await expect(page).toHaveTitle(/Planejamento e Controle/);
+  await page.evaluate(() => fetch('/api/layouts/resumo-geral', { method: 'PUT', headers: { 'x-requested-with': 'fetch', 'content-type': 'application/json' }, body: JSON.stringify({ layout: {} }) }));
 });
 
 test('Exportar PDF não aparece para o Viewer', async ({ page }) => {
