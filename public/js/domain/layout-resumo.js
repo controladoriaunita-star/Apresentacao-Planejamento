@@ -45,24 +45,6 @@ export const LAYOUT_PADRAO = Object.freeze({
   andamento: { x: 21, y: 19, w: 4, h: 6 },
 });
 
-/**
- * v28 — Disposição própria do PDF (folha A4 paisagem, mais baixa que a tela): não segue o layout do Dev.
- * Valores à esquerda (CEF × Físico e Análise econômica), os três gráficos empilhados e largos à direita e,
- * embaixo deles, a faixa Custos por · INCC · Andamento geral.
- * NH-NU está oculto (QUADROS_OCULTOS) e por isso divide o retângulo do INCC; ao voltar, precisa de um lugar.
- */
-export const LAYOUT_IMPRESSAO = Object.freeze({
-  cef: { x: 1, y: 1, w: 7, h: 10 },
-  economica: { x: 1, y: 11, w: 7, h: 14 },
-  curva: { x: 8, y: 1, w: 17, h: 7 },
-  barras: { x: 8, y: 8, w: 17, h: 6 },
-  assertividade: { x: 8, y: 14, w: 17, h: 6 },
-  custos: { x: 8, y: 20, w: 8, h: 5 },
-  incc: { x: 16, y: 20, w: 5, h: 5 },
-  nhnu: { x: 16, y: 20, w: 5, h: 5 },
-  andamento: { x: 21, y: 20, w: 4, h: 5 },
-});
-
 const inteiro = (v, padrao) => (Number.isInteger(v) ? v : padrao);
 const limitar = (v, min, max) => Math.min(max, Math.max(min, v));
 

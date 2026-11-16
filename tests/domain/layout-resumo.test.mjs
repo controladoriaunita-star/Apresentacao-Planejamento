@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ajustarRetangulo, GRADE, LAYOUT_IMPRESSAO, LAYOUT_PADRAO, MINIMO, normalizarLayout, QUADROS, QUADROS_OCULTOS, sobreposicoes,
+  ajustarRetangulo, GRADE, LAYOUT_PADRAO, MINIMO, normalizarLayout, QUADROS, QUADROS_OCULTOS, sobreposicoes,
 } from '../../public/js/domain/layout-resumo.js';
 
 const area = (r) => r.w * r.h;
@@ -42,13 +42,4 @@ test('Layout (v28) — quadro oculto não conta na sobreposição: os vizinhos o
   const layout = { ...LAYOUT_PADRAO, incc };
   assert.deepEqual(sobreposicoes(layout), []);
   assert.deepEqual(normalizarLayout(layout, { estrito: true }), layout, 'o retângulo do NH-NU continua guardado');
-});
-
-test('Layout (v28) — disposição do PDF: quadros visíveis sem sobreposição cobrindo a grade inteira', () => {
-  assert.deepEqual(Object.keys(LAYOUT_IMPRESSAO).sort(), QUADROS.map((q) => q.id).sort());
-  assert.deepEqual(sobreposicoes(LAYOUT_IMPRESSAO), []);
-  assert.deepEqual(normalizarLayout(LAYOUT_IMPRESSAO, { estrito: true }), LAYOUT_IMPRESSAO, 'dentro dos limites');
-  const visiveis = QUADROS.filter((q) => !QUADROS_OCULTOS.includes(q.id));
-  const area = visiveis.reduce((soma, q) => soma + LAYOUT_IMPRESSAO[q.id].w * LAYOUT_IMPRESSAO[q.id].h, 0);
-  assert.equal(area, GRADE.colunas * GRADE.linhas, 'sem buracos na página');
 });
