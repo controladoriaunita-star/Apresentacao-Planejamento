@@ -31,6 +31,14 @@ Cada versão só é fechada com `npm run verificar` passando.
     (arquivo local ou Storage `sistema/` no Supabase — **sem migration**).
   - Arquivos: `domain/ordem-abas.js` (puro, testado), `ui/ordenar-abas.js`, `main.js`, `pages/resumo-geral.js`,
     `ui/editor-layout.js` (`aoRestaurarPadrao`), `server/routes/dados.mjs`, `css/layout.css`. Nenhum cálculo mudou.
+- **PDF — Resumo Geral com disposição própria para a A4** (não segue mais o layout do Dev, feito para a tela):
+  CEF × Físico e Análise econômica à esquerda, os três gráficos largos e empilhados à direita e a faixa
+  Custos por · INCC · Andamento geral embaixo, sem espaços vazios (`LAYOUT_IMPRESSAO` em `domain/layout-resumo.js`).
+- **Gráficos do Resumo Geral (tela e PDF)**: a fonte dos eixos também cabe no espaço de cada mês (até 8 px) e os
+  meses nunca inclinam — antes, num gráfico estreito com muitos meses, os meses inclinavam e se sobrepunham. Os
+  rótulos de dados usam uma fonte que cabe na horizontal entre dois pontos (`ui/graficos.js`).
+- PDF: o ajuste dos quadros só mede depois que as fontes da página carregaram (antes, a troca de fonte depois da
+  medida podia cortar quadros — falha intermitente do teste do PDF).
 - Testes: `tests/domain/ordem-abas.test.mjs`, contrato da rota nova e teste de tela do arrastar; o teste do rodapé
   congelado usa janela de 500 px (sem os indicadores do topo a página cabe em 600 px).
 

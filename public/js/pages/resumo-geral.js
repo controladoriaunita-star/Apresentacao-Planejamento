@@ -15,7 +15,7 @@ import { estado } from '../core/estado.js';
 import {
   classeSinal, fmtData, fmtIndice, fmtMes, fmtMoeda, fmtNumero, fmtPercentual, fmtVariacao, VAZIO,
 } from '../core/formato.js';
-import { LAYOUT_PADRAO, normalizarLayout, QUADROS, visivel } from '../domain/layout-resumo.js';
+import { LAYOUT_IMPRESSAO, LAYOUT_PADRAO, normalizarLayout, QUADROS, visivel } from '../domain/layout-resumo.js';
 import { pode } from '../domain/permissoes.js';
 import { calcularResumoGeral } from '../domain/resumo-geral.js';
 import { card, cardTitulo, seloCompetencia, toast, vazio } from '../ui/componentes.js';
@@ -26,7 +26,7 @@ import { velocimetro } from '../ui/velocimetro.js';
 import { icone } from '../ui/icones.js';
 import { abrirInfosObra } from './infos-obra.js';
 
-export function renderResumoGeral(alvo, { base, filtro, usuario }) {
+export function renderResumoGeral(alvo, { base, filtro, usuario, impressao = false }) {
   if (!filtro.obras.length) return montar(alvo, vazio('Selecione uma obra no filtro'));
   const r = calcularResumoGeral(base, filtro);
   const nomes = base.obras.filter((o) => filtro.obras.includes(o.chave)).map((o) => o.nome);
@@ -51,7 +51,7 @@ export function renderResumoGeral(alvo, { base, filtro, usuario }) {
   };
   const corpo = h('div', { class: 'rg-corpo' }, QUADROS.filter((q) => visivel(q.id)).map((q) => quadros[q.id]) /* v28: QUADROS_OCULTOS em domain/layout-resumo.js */);
   let layout = normalizarLayout(estado.bruto?.layoutResumoGeral ?? LAYOUT_PADRAO);
-  aplicarLayout(corpo, layout);
+  aplicarLayout(corpo, impressao ? LAYOUT_IMPRESSAO : layout); // v28: o PDF tem disposição própria para a A4
 
   const acoes = h('div', { class: 'row' },
     seloCompetencia(r.referencia, { compacto: true }),
