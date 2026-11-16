@@ -21,7 +21,7 @@ import { abrirModal, alerta, campo, toast } from '../ui/componentes.js';
 import { icone } from '../ui/icones.js';
 import { mesExibido } from './galeria.js';
 import { dadosCapaCliente } from './inicio.js';
-import { ajustarQuadros, FONTE_QUADRO } from './resumo-geral.js';
+import { ajustarQuadros, FONTE_QUADRO, proporcaoNaTela } from './resumo-geral.js';
 
 const CAPA = { id: 'capa', nome: 'Capa' };
 const ESPERA_MAXIMA = 45000; // ms para planilhas, físico por atividade e imagens carregarem
@@ -207,24 +207,35 @@ function recolherTabelas(doc) {
   for (const area of doc.querySelectorAll('.simulacao-area')) area.replaceChildren();
 }
 
+/** v30 — Limites da proporção do Resumo Geral no PDF: nunca mais alto que a folha; nunca uma faixa fina demais. */
+const PROPORCAO_PDF = Object.freeze({ min: PAGINA.largura / PAGINA.altura, max: 3 });
+/** Maior largura de montagem do Resumo Geral (px) antes da redução para a página. */
+const LARGURA_MAXIMA_GERAL = 2600;
+
 /**
- * Resumo Geral numa página com a menor redução possível: a grade é montada no tamanho da página e cada quadro
- * ajusta fonte e arranjo ao próprio tamanho (v27, como na tela). Só se algum quadro não couber nem na fonte
- * mínima a área cresce (na proporção da página) e o zoom a traz de volta à largura da página. Os gráficos se
- * ajustam a qualquer tamanho e não entram na conta. Devolve o zoom (aplicado por gerarPdf).
+ * Resumo Geral numa página com a menor redução possível. v30: a grade tem a mesma proporção da tela
+ * (proporcaoNaTela) — ocupa a largura da página e a altura que tinha na tela, sem esticar na vertical; sobra
+ * espaço embaixo quando a tela é mais larga que a folha. Cada quadro ajusta a fonte ao próprio tamanho (fonte
+ * global, como na tela); se algum não couber nem na fonte mínima, a área cresce (6% por vez, mantendo a
+ * proporção) e o zoom a traz de volta à largura da página. Os gráficos se ajustam a qualquer tamanho e não
+ * entram na conta. Devolve o zoom (aplicado por gerarPdf depois de converter os gráficos em imagem).
  */
 function enquadrarResumoGeral(alvo) {
   const rg = alvo.querySelector('.rg.rg-tela');
-  if (!rg) return;
+  if (!rg) return '1';
+  const proporcao = Math.min(PROPORCAO_PDF.max, Math.max(PROPORCAO_PDF.min, proporcaoNaTela()));
   const cortado = (el) => el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
   let largura = Math.floor(PAGINA.largura);
-  for (; largura <= 1800; largura += 40) {
+  for (;;) {
     alvo.style.width = `${largura}px`;
-    rg.style.height = `${Math.floor(largura * (PAGINA.altura / PAGINA.largura))}px`;
+    rg.style.height = `${Math.floor(largura / proporcao)}px`;
     const couberam = ajustarQuadros(rg, FONTE_QUADRO.impressao);
     if (couberam && ![...rg.querySelectorAll('.rg-cartao:not(.rg-grafico)')].some(cortado)) break;
+    if (largura >= LARGURA_MAXIMA_GERAL) break;
+    largura = Math.min(LARGURA_MAXIMA_GERAL, Math.round(largura * 1.06));
   }
-  // Devolve a redução; quem chama aplica depois de converter os gráficos em imagem (no tamanho de montagem).
+  rg.dataset.proporcao = proporcao.toFixed(3);
+  // A redução é calculada com a largura realmente montada (a última testada).
   return Math.min(1, PAGINA.largura / largura).toFixed(4);
 }
 

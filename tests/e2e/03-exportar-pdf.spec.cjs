@@ -33,6 +33,9 @@ test('Exportar PDF: monta as seções do Cliente da obra, gráficos em imagem e 
   // Só na apresentação Cliente
   await page.goto('/#/obra/resumo-geral');
   await expect(page.locator('[data-teste="exportar-pdf"]')).toHaveCount(0);
+  // v30: proporção da grade do Resumo Geral na tela (o PDF tem de sair com a mesma, sem esticar na vertical)
+  await expect(page.locator('.rg.rg-tela')).toBeVisible();
+  const proporcaoTela = await page.locator('.rg-corpo').evaluate((c) => c.clientWidth / c.clientHeight);
   await page.goto('/#/cliente/inicio');
   await page.locator('[data-teste="exportar-pdf"]').click();
 
@@ -88,6 +91,9 @@ test('Exportar PDF: monta as seções do Cliente da obra, gráficos em imagem e 
     const e = getComputedStyle(c);
     return [c.dataset.quadro, [e.gridRowStart, e.gridColumnStart, e.gridRowEnd, e.gridColumnEnd].join(' ')];
   })));
+  // v30: a grade do PDF tem a proporção da tela (largura ÷ altura), não a da folha
+  const proporcaoPdf = await doc.locator('[data-secao="resumo-geral"] .rg').evaluate((rg) => rg.offsetWidth / rg.offsetHeight);
+  expect(Math.abs(proporcaoPdf - proporcaoTela), `proporção ${proporcaoPdf.toFixed(3)} × tela ${proporcaoTela.toFixed(3)}`).toBeLessThan(0.03);
   // v30: cada gráfico (imagem) ocupa a largura inteira do seu quadro
   const graficos = await doc.locator('[data-secao="resumo-geral"] img.imp-grafico').evaluateAll((is) => is.map((i) => i.offsetWidth / i.parentElement.clientWidth));
   expect(graficos.length).toBe(3);

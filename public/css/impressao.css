@@ -60,6 +60,16 @@
 .impressao .rg.rg-tela { height: 178mm; font-size: var(--fonte-rg, 13px); }
 /* (a altura da página impressa cai na regra de telas baixas do paginas.css: anula aqui) */
 .impressao .rg.rg-tela .custo-item small, .impressao .rg.rg-tela .rg-numero small { display: block; }
+/* v30: notas pequenas dos quadros e os complementos dos títulos ("sem correção", mês) acompanham a fonte global
+   (com tamanho fixo, ficavam maiores que os títulos e quebravam diferente na redução da página) */
+.impressao .rg.rg-tela .rg-nota, .impressao .rg.rg-tela .card-titulo .small { font-size: 0.85em; }
+/* v30: no PDF, sem os pisos de legibilidade da tela (v29, em px): a página tem a própria escala e, com piso,
+   legenda, pílulas e rótulos de "Custos por" ficavam maiores que o resto do Resumo Geral */
+.impressao .rg.rg-tela .cef-fisico th.grupo { font-size: 0.8em; }
+.impressao .rg.rg-tela .pilula { font-size: 0.95em; }
+.impressao .rg.rg-tela .custo-item .sigla { font-size: 0.85em; }
+.impressao .rg.rg-tela .custo-item small { font-size: 0.78em; }
+.impressao .rg.rg-tela .legenda { font-size: 0.86em; }
 .impressao .rg.rg-tela .rg-custos .card-titulo span { display: inline; }
 /* Quadros de valores mais justos (linhas sem folga, rótulos sem quebrar): a grade precisa de menos redução */
 .impressao .rg.rg-tela .cef-fisico { border-spacing: 0 1px; line-height: 1.2; }

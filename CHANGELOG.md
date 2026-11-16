@@ -15,8 +15,15 @@ Cada versão só é fechada com `npm run verificar` passando.
 - PDF: os gráficos do Resumo Geral ocupavam só parte do quadro (cerca de 2/3) quando o layout tem colunas estreitas
   — a página é montada maior e reduzida para caber na A4, e o gráfico ficava com o tamanho de antes. Agora cada
   gráfico é redesenhado já no tamanho final do quadro antes de virar imagem, e a redução é aplicada depois.
-- Teste do PDF: confere que cada quadro sai na mesma posição da grade do layout salvo e que cada gráfico ocupa o
-  quadro inteiro.
+- PDF com a **proporção da tela**: a grade saía com a proporção da folha A4 (≈ 1,56 : 1), mais alta que a tela
+  (≈ 2 a 2,5 : 1), e tudo ficava esticado na vertical. Agora usa a proporção que o Resumo Geral teve na tela (a da
+  última vez que apareceu; sem isso, a estimada para a janela atual — `proporcaoNaTela` em `pages/resumo-geral.js`):
+  ocupa a largura da página e sobra espaço embaixo quando a tela é mais larga que a folha.
+- PDF sem quadros cortados depois da redução da página: o ajuste da fonte deixa ~6% de folga (o texto reduzido
+  quebra um pouco diferente), e as notas pequenas e os complementos dos títulos acompanham a fonte global. A
+  redução passou a ser calculada com a largura realmente montada.
+- Teste do PDF: confere que cada quadro sai na mesma posição da grade do layout salvo, que a grade tem a proporção
+  da tela e que cada gráfico ocupa o quadro inteiro.
 
 ## v29 — 16/11/2026 — Detalhe dos gráficos, galeria, nomes de colunas e comentários (Dev) e responsividade
 
