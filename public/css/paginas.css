@@ -202,7 +202,8 @@
 
 /* Ocupando exatamente a altura livre da janela (classe colocada pelo JS quando a tela comporta): grade de
    24 × 24 células cobrindo toda a área; a posição de cada quadro vem do layout (domain/layout-resumo.js). */
-.rg.rg-tela { overflow: hidden; font-size: clamp(11.5px, 1.5vh, 16px); gap: 8px; }
+/* v29: --fonte-rg = fonte global da tela, calculada no JS (ajustarQuadros): quadros, títulos e gráficos iguais */
+.rg.rg-tela { overflow: hidden; font-size: var(--fonte-rg, clamp(11.5px, 1.5vh, 16px)); gap: 8px; }
 main.conteudo:has(.rg-tela) { padding-bottom: 16px; }
 .rg.rg-tela .rg-editar { display: inline-flex; }
 .rg.rg-tela .rg-corpo {
@@ -230,7 +231,7 @@ main.conteudo:has(.rg-tela) { padding-bottom: 16px; }
 .rg.rg-tela .economia-grade dt, .rg.rg-tela .economia-grade dd { line-height: 1.25; }
 /* Rodapé: conteúdo centralizado e esticado até o pé de cada quadro */
 .rg.rg-tela .rg-custos > div:last-child { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-.rg.rg-tela .custo-item { padding: 0.15em 0.2em; justify-content: center; }
+.rg.rg-tela .custo-item { padding: 0.15em 0.2em; justify-content: center; min-width: 0; overflow: hidden; } /* v29: o valor nunca sai do fundo */
 .rg.rg-tela .rg-incc .lista-valores { flex: 1; align-content: space-evenly; }
 .rg.rg-tela .lista-valores dt, .rg.rg-tela .lista-valores dd { padding: 0.14em 0; }
 .rg.rg-tela .lista-valores dt { white-space: nowrap; padding-right: 8px; }
@@ -429,7 +430,7 @@ main.conteudo:has(.rodape-fixo) > div:last-child { flex: 1; display: flex; flex-
 }
 .galeria-principal:has(.miniaturas:not(.oculto)) .galeria-palco { height: calc(100dvh - 470px); }
 /* v29: a imagem ocupa o palco inteiro ajustada (contain): sempre aparece inteira, sem cortes */
-.galeria-palco > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+.galeria-palco > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: scale-down; display: block; } /* inteira e nunca maior que o tamanho real */
 .galeria-palco-topo { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; pointer-events: none; }
 .galeria-contagem, .galeria-ampliar { pointer-events: auto; background: var(--vidro); color: var(--surface); border: 1px solid var(--vidro-borda); backdrop-filter: blur(6px); border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 600; }
 .galeria-ampliar { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
@@ -457,7 +458,7 @@ main.conteudo:has(.rodape-fixo) > div:last-child { flex: 1; display: flex; flex-
 .visor { position: fixed; inset: 0; z-index: 80; background: var(--visor); display: grid; place-items: center; padding: 64px 24px 88px; }
 /* v29: área da imagem ajustada à tela; com zoom a imagem cresce e a área rola (arrastar move) */
 .visor-area { position: absolute; inset: 64px 24px 88px; overflow: hidden; display: grid; place-items: center; }
-.visor-area img { width: 100%; height: 100%; object-fit: contain; cursor: zoom-in; user-select: none; }
+.visor-area img { width: 100%; height: 100%; object-fit: scale-down; cursor: zoom-in; user-select: none; }
 .visor.com-zoom .visor-area { overflow: auto; place-items: start; cursor: grab; }
 .visor.com-zoom .visor-area.arrastando { cursor: grabbing; }
 .visor.com-zoom .visor-area img { height: auto; width: 250%; cursor: zoom-out; }

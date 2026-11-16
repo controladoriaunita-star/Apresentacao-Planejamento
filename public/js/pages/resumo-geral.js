@@ -156,16 +156,14 @@ function ajustarAlturaATela(pagina) {
     pagina.classList.add('rg-tela');
     return () => {};
   }
-  // v27: cada quadro reajusta a fonte quando muda de tamanho (janela, edição do layout).
-  const pendentes = new Set();
-  const observador = new ResizeObserver((entradas) => {
+  // v27: os quadros reajustam a fonte quando algum muda de tamanho (janela, edição do layout). v29: a fonte é
+  // uma só para a tela inteira, então qualquer mudança refaz o ajuste de todos (uma vez por quadro de animação).
+  let agendado = 0;
+  const observador = new ResizeObserver(() => {
     if (!pagina.isConnected) return observador.disconnect();
     if (!pagina.classList.contains('rg-tela')) return;
-    for (const e of entradas) pendentes.add(e.target);
-    requestAnimationFrame(() => {
-      for (const c of pendentes) ajustarQuadro(c);
-      pendentes.clear();
-    });
+    cancelAnimationFrame(agendado);
+    agendado = requestAnimationFrame(() => ajustarQuadros(pagina));
   });
   for (const c of pagina.querySelectorAll('.rg-cartao')) observador.observe(c);
   const ajustar = () => {
@@ -194,7 +192,8 @@ function ajustarAlturaATela(pagina) {
 /** v29 — Altura mínima (px) da grade do Resumo Geral na tela. */
 const ALTURA_MINIMA_GRADE = 500;
 
-export const FONTE_QUADRO = Object.freeze({ tela: { min: 10, max: 24 }, impressao: { min: 9, max: 18 } });
+// v29: máximo da tela 18 px — com a fonte global, títulos e gráficos usam o mesmo tamanho dos valores.
+export const FONTE_QUADRO = Object.freeze({ tela: { min: 10, max: 18 }, impressao: { min: 9, max: 18 } });
 
 /** Arranjos alternativos por quadro (classe no conteúdo); o primeiro é o padrão, usado em caso de empate. */
 const ARRANJOS = {
@@ -205,6 +204,9 @@ const ARRANJOS = {
 const SEM_AJUSTE = new Set(['curva', 'barras', 'assertividade', 'andamento']);
 
 const cortado = (el) => el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
+/** v29: caixas internas que também não podem transbordar (ex.: os valores de "Custos por" dentro do fundo). */
+const CAIXAS_INTERNAS = '.custo-item';
+const quadroCabe = (cartao, conteudo) => !cortado(cartao) && !cortado(conteudo) && ![...conteudo.querySelectorAll(CAIXAS_INTERNAS)].some(cortado);
 
 function aplicarArranjo(conteudo, arranjos, escolhido) {
   for (const a of arranjos) if (a) conteudo.classList.toggle(a, a === escolhido);
@@ -214,7 +216,7 @@ function aplicarArranjo(conteudo, arranjos, escolhido) {
 function maiorFonte(cartao, conteudo, { min, max }) {
   const cabe = (f) => {
     conteudo.style.fontSize = `${f}px`;
-    return !cortado(cartao) && !cortado(conteudo);
+    return quadroCabe(cartao, conteudo);
   };
   if (!cabe(min)) return null;
   let [menor, maior] = [min, max];
@@ -227,35 +229,67 @@ function maiorFonte(cartao, conteudo, { min, max }) {
   return Math.floor(menor * 4) / 4;
 }
 
-/**
- * Ajusta um quadro ao próprio tamanho (fonte e arranjo). Devolve false se nem na fonte mínima coube — aí o
- * quadro ganha a classe `apertado` (na tela, rolagem por dentro; no PDF a página é ampliada até caber).
- */
-export function ajustarQuadro(cartao, limites = FONTE_QUADRO.tela) {
-  const conteudo = cartao.querySelector(':scope > .rg-conteudo');
-  if (!conteudo || SEM_AJUSTE.has(cartao.dataset.quadro)) return true;
-  const arranjos = ARRANJOS[cartao.dataset.quadro] ?? [''];
-  let melhor = { arranjo: arranjos[0], fonte: null };
+/** Quadros de valores (com texto a ajustar) da página, com o conteúdo e os arranjos possíveis de cada um. */
+const quadrosDeValores = (pagina) => [...pagina.querySelectorAll('.rg-cartao')]
+  .map((cartao) => ({ cartao, conteudo: cartao.querySelector(':scope > .rg-conteudo'), arranjos: ARRANJOS[cartao.dataset.quadro] ?? [''] }))
+  .filter((q) => q.conteudo && !SEM_AJUSTE.has(q.cartao.dataset.quadro));
+
+/** Maior fonte do quadro, no melhor arranjo (null se nem a mínima couber). */
+function maiorFonteDoQuadro({ cartao, conteudo, arranjos }, limites) {
+  let melhor = null;
   for (const a of arranjos) {
     aplicarArranjo(conteudo, arranjos, a);
     const fonte = maiorFonte(cartao, conteudo, limites);
-    if (fonte !== null && (melhor.fonte === null || fonte > melhor.fonte + 0.5)) melhor = { arranjo: a, fonte };
+    if (fonte !== null && (melhor === null || fonte > melhor + 0.5)) melhor = fonte;
   }
-  aplicarArranjo(conteudo, arranjos, melhor.arranjo);
-  conteudo.style.fontSize = `${melhor.fonte ?? limites.min}px`;
-  cartao.classList.toggle('apertado', melhor.fonte === null);
-  return melhor.fonte !== null;
+  return melhor;
 }
 
-/** Ajusta todos os quadros da página; devolve true se todos couberam. */
+/** Primeiro arranjo em que o quadro cabe na fonte `f` (null se nenhum). Deixa o quadro nesse arranjo e fonte. */
+function arranjoNaFonte({ cartao, conteudo, arranjos }, f) {
+  conteudo.style.fontSize = `${f}px`;
+  for (const a of arranjos) {
+    aplicarArranjo(conteudo, arranjos, a);
+    if (quadroCabe(cartao, conteudo)) return a;
+  }
+  return null;
+}
+
+/**
+ * v29 — Fonte global do Resumo Geral: todos os quadros de valores, os títulos dos quadros e os textos dos
+ * gráficos usam UM tamanho só — o maior com que todos os quadros cabem (cada um no seu melhor arranjo). O tamanho
+ * vai para `--fonte-rg` (base de toda a tela, css/paginas.css) e os gráficos o leem (ui/graficos.js).
+ * Devolve true se todos couberam; quem não coube nem na mínima fica `apertado` (rola por dentro; no PDF a página
+ * é ampliada até caber).
+ */
 export function ajustarQuadros(pagina, limites = FONTE_QUADRO.tela) {
+  const quadros = quadrosDeValores(pagina);
+  const definir = (f) => (f === null ? pagina.style.removeProperty('--fonte-rg') : pagina.style.setProperty('--fonte-rg', `${f}px`));
+  const menorDosMaiores = () => Math.min(limites.max, ...quadros.map((q) => maiorFonteDoQuadro(q, limites) ?? limites.min));
+  // 1ª estimativa com os títulos no tamanho padrão; 2ª com os títulos já na fonte estimada (eles ocupam espaço).
+  definir(null);
+  let fonte = menorDosMaiores();
+  definir(fonte);
+  fonte = menorDosMaiores();
+  // Confirma com tudo na mesma fonte (títulos inclusive); se algo não couber, desce de 0,25 em 0,25 px.
+  const todosCabem = (f) => { definir(f); return quadros.every((q) => arranjoNaFonte(q, f) !== null); };
+  while (fonte > limites.min && !todosCabem(fonte)) fonte = Math.max(limites.min, fonte - 0.25);
+  definir(fonte);
   let todos = true;
-  for (const c of pagina.querySelectorAll('.rg-cartao')) todos = ajustarQuadro(c, limites) && todos;
+  for (const q of quadros) {
+    const coube = arranjoNaFonte(q, fonte) !== null;
+    if (!coube) aplicarArranjo(q.conteudo, q.arranjos, q.arranjos[0]);
+    q.cartao.classList.toggle('apertado', !coube);
+    todos = todos && coube;
+  }
+  // Gráficos acompanham a fonte global (redesenho sem animação).
+  for (const canvas of pagina.querySelectorAll('canvas')) window.Chart?.getChart(canvas)?.update('none');
   return todos;
 }
 
 /** Telas pequenas (um quadro abaixo do outro): volta à fonte e ao arranjo padrão. */
 function limparAjuste(pagina) {
+  pagina.style.removeProperty('--fonte-rg');
   for (const c of pagina.querySelectorAll('.rg-cartao')) {
     c.classList.remove('apertado');
     const conteudo = c.querySelector(':scope > .rg-conteudo');

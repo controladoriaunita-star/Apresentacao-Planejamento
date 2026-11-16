@@ -45,6 +45,13 @@ Cada versão só é fechada com `npm run verificar` passando.
   - Celular: rodapé congelado do Econômico vira bloco no fim da página (empilhado, cobria a tabela).
   - Windows × Mac: gráficos com fonte de reserva do sistema e redesenhados quando as fontes carregam; capa com
     rótulos em até 2 linhas em vez de reticências; textos de 10 px passaram a 11 px.
+- **Ajustes após a validação do preview:**
+  - Fotos: nunca ampliadas além do tamanho real (`object-fit: scale-down`) — fotos menores que o palco apareciam
+    esticadas, "com zoom". Continuam inteiras quando são maiores.
+  - Resumo Geral com **fonte global**: um tamanho só para todos os quadros de valores, títulos dos quadros e textos
+    dos gráficos — o maior com que todos cabem (`--fonte-rg`, `ajustarQuadros` em `pages/resumo-geral.js`; vale
+    também no PDF). Máximo na tela 18 px. Rótulos de valor dos gráficos a 70% dessa fonte.
+  - "Custos por": os valores nunca saem dos fundos — o ajuste da fonte também confere cada caixa (antes só o quadro).
 - Testes: `tests/domain/nomes-comentarios.test.mjs`, contrato das rotas novas, testes de tela do Detalhe, da
   galeria em tela cheia, dos nomes das colunas e dos comentários, e o teste de responsividade.
 

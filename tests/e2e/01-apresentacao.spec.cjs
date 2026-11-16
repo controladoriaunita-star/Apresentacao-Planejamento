@@ -238,6 +238,11 @@ test('Resumo Geral cabe na tela sem barra de rolagem', async ({ page }) => {
     expect(sobra, `rolagem em ${tamanho.width}×${tamanho.height}`).toBeLessThanOrEqual(0);
     const economica = await page.evaluate(() => { const e = document.querySelector('.rg-economica'); return e.scrollHeight - e.clientHeight; });
     expect(economica, `rolagem na análise econômica em ${tamanho.width}×${tamanho.height}`).toBeLessThanOrEqual(1);
+    // v29: uma fonte só para os quadros de valores; valores de "Custos por" dentro dos fundos
+    const fontes = await page.locator('.rg-cartao > .rg-conteudo').evaluateAll((cs) => [...new Set(cs.filter((c) => c.style.fontSize).map((c) => c.style.fontSize))]);
+    expect(fontes, `fonte global em ${tamanho.width}×${tamanho.height}`).toHaveLength(1);
+    const custosFora = await page.locator('.custo-item').evaluateAll((cs) => cs.filter((c) => c.scrollWidth > c.clientWidth + 1 || c.scrollHeight > c.clientHeight + 1).length);
+    expect(custosFora, `Custos por em ${tamanho.width}×${tamanho.height}`).toBe(0);
   }
 });
 

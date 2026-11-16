@@ -27,6 +27,9 @@ const fonteDoGrafico = (chart) => {
   if (!chart?.canvas?.dataset.fonteProporcional) return fonteEixo();
   const meses = Math.max(1, chart.data?.labels?.length ?? 1);
   const porMes = (chart.width * 0.9) / meses / 2.4; // ~2,4 em = largura de "MAR" com folga
+  // v29: no Resumo Geral a fonte é a global da tela (--fonte-rg), limitada só pelo espaço de cada mês.
+  const global = parseFloat(chart.canvas.closest('.rg-tela')?.style.getPropertyValue('--fonte-rg'));
+  if (global > 0) return Math.round(Math.max(8, Math.min(global, porMes, chart.height / 10)) * 2) / 2;
   // v29: até 20 px em gráficos grandes (telões, 2560 px), acompanhando o texto dos quadros.
   const tamanho = Math.min(20, Math.max(10, Math.min(chart.height / 14, chart.width / 45)), porMes);
   return Math.round(Math.max(8, tamanho) * 2) / 2;
@@ -34,8 +37,8 @@ const fonteDoGrafico = (chart) => {
 
 /** v28 — Fonte dos rótulos de dados: menor que a dos eixos e, se possível, cabendo na horizontal entre dois pontos. */
 const fonteRotulo = (chart, passo) => {
-  const base = fonteDoGrafico(chart) - 2;
-  if (!chart?.canvas?.dataset.fonteProporcional) return base;
+  if (!chart?.canvas?.dataset.fonteProporcional) return fonteDoGrafico(chart) - 2;
+  const base = Math.round(fonteDoGrafico(chart) * 0.7); // v29: 70% da fonte do gráfico (rótulos não disputam com os eixos)
   // v29: na tela, nunca abaixo de 9 px (se não couber na horizontal, o rótulo fica na vertical); no PDF, 7 px.
   const minimo = chart.canvas.closest('.impressao') ? 7 : 9;
   return Math.max(minimo, Math.min(base, Math.floor(passo / 3.6))); // "100,0%" ≈ 3,4 em
@@ -169,7 +172,9 @@ const pluginReferencia = {
  */
 /** v29: rótulos de dados só quando a área do gráfico tem altura para eles (no "Detalhe" a tabela traz os valores). */
 const ALTURA_MINIMA_ROTULOS = 70;
-const semEspacoParaRotulos = (chart) => chart.canvas?.dataset.fonteProporcional && chart.chartArea && (chart.chartArea.bottom - chart.chartArea.top) < ALTURA_MINIMA_ROTULOS;
+// No PDF os rótulos ficam sempre (lá não existe o "Detalhe" para consultar os valores).
+const semEspacoParaRotulos = (chart) => chart.canvas?.dataset.fonteProporcional && !chart.canvas.closest('.impressao')
+  && chart.chartArea && (chart.chartArea.bottom - chart.chartArea.top) < ALTURA_MINIMA_ROTULOS;
 
 const pluginRotulosBarras = {
   id: 'rotulosBarras',
