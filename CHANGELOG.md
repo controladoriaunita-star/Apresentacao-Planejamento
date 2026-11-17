@@ -4,7 +4,7 @@ Cada versão só é fechada com `npm run verificar` passando.
 
 | Ambiente | Versão |
 |---|---|
-| Produção | v31 (publicada em 17/11/2026) |
+| Produção | v32 (publicada em 17/11/2026) |
 | Dev (local) | v33 (em validação) |
 
 ## v33 — 11/11/2026 — barra de rolagem no menu de abas
