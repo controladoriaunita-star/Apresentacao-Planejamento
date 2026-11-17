@@ -215,7 +215,7 @@ const pluginRotulosBarras = {
           ctx.rotate(-Math.PI / 2);
           ctx.textAlign = dentro ? 'right' : 'left';
           ctx.textBaseline = 'middle';
-          if (dentro) ctx.fillStyle = '#fff';
+          if (dentro) ctx.fillStyle = token('--color-primary-foreground');
           ctx.fillText(texto, 0, 0);
           ctx.restore();
         }
