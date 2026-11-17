@@ -148,6 +148,9 @@ async function gerarPdf({ base, chave, referencia, comCapa, secoes }) {
 }
 
 // ── Seções ─────────────────────────────────────────────────────────────
+/** v32 — Quadros de indicadores da capa (avanço, planejado e desvio) ocultos por enquanto (pedido do usuário). */
+const INDICADORES_NA_CAPA = false;
+
 function capa(base, filtro, secoes) {
   const { obra, info, desvio } = dadosCapaCliente(base, filtro.obras[0], filtro.referencia);
   const indicador = (rotulo, valor, detalhe) => h('div', { class: 'imp-capa-kpi' }, h('span', {}, rotulo), h('b', {}, valor), detalhe ? h('small', {}, detalhe) : null);
@@ -158,10 +161,10 @@ function capa(base, filtro, secoes) {
       h('div', { class: 'eyebrow' }, obra?.cliente ? `Apresentação ao cliente · ${obra.cliente}` : 'Apresentação ao cliente'),
       h('h1', {}, obra?.nome ?? ''),
       h('p', {}, `Fechamento de ${fmtMesLongo(filtro.referencia)}`)),
-    h('div', { class: 'imp-capa-kpis' },
+    INDICADORES_NA_CAPA ? h('div', { class: 'imp-capa-kpis' },
       indicador('Avanço físico realizado', fmtPercentual(info?.realizadoAcm, 1), 'acumulado até o mês'),
       indicador('Planejado acumulado', fmtPercentual(info?.replanAcm, 1), 'cronograma atual'),
-      indicador('Desvio', fmtVariacao(desvio, 1), desvio === null ? null : desvio >= 0 ? 'adiantado em relação ao planejado' : 'atrasado em relação ao planejado')),
+      indicador('Desvio', fmtVariacao(desvio, 1), desvio === null ? null : desvio >= 0 ? 'adiantado em relação ao planejado' : 'atrasado em relação ao planejado')) : null,
     secoes.length ? h('div', { class: 'imp-capa-sumario' }, h('span', {}, 'Conteúdo'), h('ol', {}, secoes.map((s) => h('li', {}, s.nome)))) : null);
 }
 

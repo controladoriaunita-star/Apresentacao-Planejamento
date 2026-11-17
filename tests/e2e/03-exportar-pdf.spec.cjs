@@ -61,6 +61,7 @@ test('Exportar PDF: monta as seções do Cliente da obra, gráficos em imagem e 
   // capa com a obra e o sumário das seções
   await expect(doc.locator('.imp-capa h1')).toHaveText('Residencial Alpha');
   await expect(doc.locator('.imp-capa-sumario li')).toHaveCount(ids.length - 1);
+  await expect(doc.locator('.imp-capa-kpi'), 'v32: quadros de indicadores ocultos na capa').toHaveCount(0);
   // nada interativo; gráficos viram imagens
   await expect(doc.locator('canvas')).toHaveCount(0);
   expect(await doc.locator('img.imp-grafico').count()).toBeGreaterThanOrEqual(4); // 3 do Resumo Geral + Segurança
