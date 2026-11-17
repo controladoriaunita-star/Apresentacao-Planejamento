@@ -6,7 +6,7 @@
 import { filtrarMatriz } from '../../public/js/domain/acesso.js';
 import { ABAS } from '../../public/js/domain/colunas.js';
 import { associarObrasConhecidas, cadastrosDePlanilha, normalizarCadastro } from '../../public/js/domain/cadastro-obra.js';
-import { normalizarLayout } from '../../public/js/domain/layout-resumo.js';
+import { normalizarEscalas, normalizarLayout } from '../../public/js/domain/layout-resumo.js';
 import { normalizarNomes } from '../../public/js/domain/nomes-colunas.js';
 import { normalizarOrdemAbas } from '../../public/js/domain/ordem-abas.js';
 import { chaveObra } from '../../public/js/domain/normalizar.js';
@@ -18,6 +18,8 @@ const DOC_LAYOUT = 'layout-resumo-geral';
 const DOC_ORDEM_ABAS = 'ordem-abas';
 /** v29 — Documento com os nomes das colunas do Resumo Físico e Econômico definidos pelo Dev. */
 const DOC_NOMES_COLUNAS = 'nomes-colunas';
+/** v31 — Documento com a escala da fonte de cada quadro do Resumo Geral (botões A− / A+ do Dev). */
+const DOC_ESCALAS = 'escalas-fonte-resumo-geral';
 
 export function registrarDados(rotas, { planilhas, incc, cadastro, acidentes, armazem, config }) {
   /** Abas do resumo + cadastro + INCC (o que a apresentação carrega ao abrir). */
@@ -40,6 +42,7 @@ export function registrarDados(rotas, { planilhas, incc, cadastro, acidentes, ar
       cadastro: (await cadastro.listar()).filter((c) => acesso.obra(c.chave)),
       incc: (await incc.listar()).itens.map(({ mes, indice }) => ({ mes, indice })),
       layoutResumoGeral: (await armazem.ler(DOC_LAYOUT).catch(() => null))?.layout ?? null,
+      escalasResumoGeral: (await armazem.ler(DOC_ESCALAS).catch(() => null))?.escalas ?? {},
       ordemAbas: (await armazem.ler(DOC_ORDEM_ABAS).catch(() => null))?.ordem ?? null,
       nomesColunas: (await armazem.ler(DOC_NOMES_COLUNAS).catch(() => null))?.nomes ?? {},
     };
@@ -74,6 +77,15 @@ export function registrarDados(rotas, { planilhas, incc, cadastro, acidentes, ar
     }
     await armazem.gravar(DOC_LAYOUT, { layout: normalizado, atualizadoEm: new Date().toISOString(), por: usuario.email });
     enviarJson(req, res, 200, { layout: normalizado });
+  });
+
+  /** v31 — Escala da fonte por quadro do Resumo Geral: só o Dev define (vale para todos e para o PDF). */
+  rotas.adicionar('PUT', '/api/layouts/escalas-fonte', { permissao: 'administrar' }, async ({ req, res, usuario }) => {
+    const { escalas } = await lerJson(req);
+    if (!escalas || typeof escalas !== 'object' || Array.isArray(escalas)) throw erro(400, 'Informe a escala de cada quadro.');
+    const normalizadas = normalizarEscalas(escalas);
+    await armazem.gravar(DOC_ESCALAS, { escalas: normalizadas, atualizadoEm: new Date().toISOString(), por: usuario.email });
+    enviarJson(req, res, 200, { escalas: normalizadas });
   });
 
   /** v28 — Ordem das abas do menu superior: só o Dev define (Resumo Geral → "Editar layout"). */
