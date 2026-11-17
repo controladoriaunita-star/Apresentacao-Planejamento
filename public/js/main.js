@@ -146,13 +146,16 @@ function cabecalho(visao, abaAtual) {
       h('button', { class: 'btn inverse sm', type: 'button', onclick: sair, 'aria-label': 'Sair' }, icone('sair', { tamanho: 16 })))));
 }
 
-/** "Exportar PDF" da apresentação Cliente: seções = abas e telas extras do Cliente para a obra escolhida. */
+/**
+ * "Exportar PDF" da apresentação Cliente: seções = abas e telas extras do Cliente para a obra escolhida,
+ * na mesma ordem do menu (ordem salva em "Editar layout").
+ */
 function exportarPdf() {
   abrirExportarPdf({
-    secoesDaObra: (chave) => [
+    secoesDaObra: (chave) => ordenarAbas([
       ...abasDaVisao('cliente', [chave]).filter((a) => !a.capa),
       ...telasDaObra(telasExtras, [chave], 'cliente').map((t) => ({ id: `tela-${t.id}`, nome: t.titulo, render: (alvo) => renderTelaExtra(alvo, t, 'cliente') })),
-    ],
+    ], estado.bruto?.ordemAbas),
   });
 }
 

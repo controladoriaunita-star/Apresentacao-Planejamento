@@ -136,6 +136,45 @@ test('Exportar PDF: monta as seções do Cliente da obra, gráficos em imagem e 
   await page.evaluate(() => fetch('/api/layouts/resumo-geral', { method: 'PUT', headers: { 'x-requested-with': 'fetch', 'content-type': 'application/json' }, body: JSON.stringify({ layout: {} }) }));
 });
 
+/** Grava a ordem das abas do menu (Resumo Geral → "Editar layout"); lista vazia volta à ordem padrão. */
+const salvarOrdemAbas = (page, ordem) => page.evaluate((o) => fetch('/api/layouts/abas', {
+  method: 'PUT', headers: { 'x-requested-with': 'fetch', 'content-type': 'application/json' }, body: JSON.stringify({ ordem: o }),
+}).then((r) => r.status), ordem);
+
+test('Exportar PDF: seções e folhas na ordem das abas definida na apresentação', async ({ page }) => {
+  await page.addInitScript(() => { window.print = () => { window.__impressoes = (window.__impressoes ?? 0) + 1; }; });
+  await entrar(page, DEV);
+  const marcos = await page.evaluate(() => fetch('/api/telas').then((r) => r.json()).then((t) => t.find((x) => x.titulo === 'Marcos do cliente').id));
+  // Tela extra primeiro e o Econômico antes do Geral e do Físico; as demais seguem na ordem padrão.
+  expect(await salvarOrdemAbas(page, [`tela-${marcos}`, 'resumo-economico', 'resumo-geral', 'resumo-fisico'])).toBe(200);
+  try {
+    await page.goto('/#/cliente/inicio');
+    await page.reload();
+    // o menu é redesenhado com a ordem salva quando os dados terminam de carregar
+    await expect.poll(() => page.locator('nav[aria-label="Abas da apresentação"] a').evaluateAll((a) => a.slice(0, 4).map((e) => e.dataset.aba)))
+      .toEqual([`tela-${marcos}`, 'resumo-economico', 'resumo-geral', 'resumo-fisico']);
+
+    await page.locator('[data-teste="exportar-pdf"]').click();
+    const modal = page.getByRole('dialog', { name: /Exportar PDF/ });
+    await modal.getByLabel('Obra').selectOption({ label: 'Residencial Alpha' });
+    const secoes = modal.getByRole('group', { name: 'Seções do PDF' });
+    const rotulos = await secoes.locator('label').allTextContents();
+    expect(rotulos.slice(0, 5)).toEqual(['Capa', 'Marcos do cliente', 'Resumo Econômico', 'Resumo Geral', 'Resumo Físico']);
+    // Só as seções reordenadas, para o teste ser rápido.
+    for (const nome of rotulos.slice(5)) await secoes.getByLabel(nome, { exact: true }).uncheck();
+    await modal.getByRole('button', { name: 'Gerar PDF' }).click();
+    await expect.poll(() => page.evaluate(() => window.__impressoes ?? 0), { timeout: 60000 }).toBe(1);
+
+    const doc = page.locator('[data-teste="impressao"]');
+    const ids = await doc.locator(':scope > section').evaluateAll((s) => s.map((e) => e.dataset.secao));
+    expect(ids).toEqual(['capa', `tela-${marcos}`, 'resumo-economico', 'resumo-geral', 'resumo-fisico']);
+    await expect(doc.locator('.imp-capa-sumario li')).toHaveText(['Marcos do cliente', 'Resumo Econômico', 'Resumo Geral', 'Resumo Físico']);
+    await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+  } finally {
+    await salvarOrdemAbas(page, []);
+  }
+});
+
 test('Exportar PDF não aparece para o Viewer', async ({ page }) => {
   await entrar(page, VIEWER);
   await page.goto('/#/cliente/inicio');
