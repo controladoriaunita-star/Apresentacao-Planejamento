@@ -4,8 +4,8 @@ Cada versão só é fechada com `npm run verificar` passando.
 
 | Ambiente | Versão |
 |---|---|
-| Produção | v31 (publicada em 17/11/2026) |
-| Dev (local) | v32 (em validação) |
+| Produção | v32 (publicada em 17/11/2026) |
+| Dev (local) | v32 |
 
 ## v32 — 17/11/2026 — Capa do PDF sem os quadros de indicadores
 
