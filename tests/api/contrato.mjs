@@ -172,6 +172,18 @@ test('layout do Resumo Geral: só o dev salva, sem sobreposição, e vale para t
   assert.deepEqual((await viewer('GET', '/api/dados/resumo')).dados.layoutResumoGeral, layout, 'todos recebem o layout do dev');
 });
 
+test('escala da fonte por quadro (v31): só o dev salva, valores limitados, e todos recebem no resumo', async () => {
+  assert.deepEqual((await viewer('GET', '/api/dados/resumo')).dados.escalasResumoGeral, {}, 'sem escala salva = 100%');
+  const escalas = { curva: 1.24, cef: 9, barras: 1, inexistente: 1.2, incc: 'x' };
+  assert.equal((await viewer('PUT', '/api/layouts/escalas-fonte', { escalas })).status, 403);
+  assert.equal((await planejamento('PUT', '/api/layouts/escalas-fonte', { escalas })).status, 403);
+  assert.equal((await dev('PUT', '/api/layouts/escalas-fonte', { escalas: [1] })).status, 400);
+  const salvo = await dev('PUT', '/api/layouts/escalas-fonte', { escalas });
+  assert.equal(salvo.status, 200);
+  assert.deepEqual(salvo.dados.escalas, { cef: 1.6, curva: 1.2 }, 'só quadros conhecidos, entre 60% e 160%, sem os de 100%');
+  assert.deepEqual((await viewer('GET', '/api/dados/resumo')).dados.escalasResumoGeral, { cef: 1.6, curva: 1.2 });
+});
+
 test('ordem das abas (v28): só o dev salva e vale para todos no resumo', async () => {
   assert.equal((await viewer('GET', '/api/dados/resumo')).dados.ordemAbas, null, 'sem ordem salva = ordem do app');
   const ordem = ['resumo-economico', 'inicio', 'resumo-geral', 'resumo-fisico'];

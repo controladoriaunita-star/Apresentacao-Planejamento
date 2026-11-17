@@ -5,7 +5,17 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | — (ainda não publicada) |
-| Dev (local) | v30 (em validação) |
+| Dev (local) | v31 (em validação) |
+
+## v31 — 17/11/2026 — Fontes dos gráficos e escala por quadro
+
+- Resumo Geral: eixos X e Y dos três gráficos maiores e em **negrito**; rótulos de dados maiores (85% da fonte do
+  gráfico, antes 70%) e em negrito. Quando o rótulo não cabe deitado, fica em pé no tamanho cheio (antes caía para
+  9 px); se em pé ele passaria do topo do quadro, vai dentro da barra, em branco.
+- Dev: botões **A− / % / A+** em cada quadro do Resumo Geral (ao passar o mouse, ao lado do título, como o
+  "Detalhe") mudam a fonte só daquele quadro, de 60% a 160% em passos de 10%; clicar no % volta a 100%. Grava na
+  hora (`PUT /api/layouts/escalas-fonte`), vale para todas as apresentações e para o PDF. Ao aumentar, a fonte
+  cresce até onde o conteúdo cabe no quadro; nos gráficos o espaço de cada mês continua limitando os meses.
 
 ## v30 — 16/11/2026 — PDF do Resumo Geral com o layout da tela
 

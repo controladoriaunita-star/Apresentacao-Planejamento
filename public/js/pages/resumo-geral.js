@@ -15,7 +15,9 @@ import { estado } from '../core/estado.js';
 import {
   classeSinal, fmtData, fmtIndice, fmtMes, fmtMoeda, fmtNumero, fmtPercentual, fmtVariacao, VAZIO,
 } from '../core/formato.js';
-import { LAYOUT_PADRAO, normalizarLayout, QUADROS, visivel } from '../domain/layout-resumo.js';
+import {
+  ajustarEscala, ESCALA_FONTE, LAYOUT_PADRAO, normalizarEscalas, normalizarLayout, QUADROS, visivel,
+} from '../domain/layout-resumo.js';
 import { pode } from '../domain/permissoes.js';
 import { calcularResumoGeral } from '../domain/resumo-geral.js';
 import { card, cardTitulo, seloCompetencia, toast, vazio } from '../ui/componentes.js';
@@ -60,13 +62,23 @@ export function renderResumoGeral(alvo, { base, filtro, usuario }) {
     },
   };
   /** Título do quadro de gráfico com o botão "Detalhe" logo ao lado (a legenda fica à direita). */
+  // v31: Dev aumenta/diminui a fonte de cada quadro (A− / A+); vale para todas as apresentações e para o PDF.
+  const ehDev = pode(usuario?.papel, 'administrar');
+  const escalas = normalizarEscalas(estado.bruto?.escalasResumoGeral);
+  const fonte = (id) => (ehDev ? controlesFonte(id, escalas, () => ajustar()) : null);
   const tituloGrafico = (id, texto) => [texto, h('button', {
     class: 'rg-detalhe', type: 'button', 'data-teste': `detalhe-${id}`, title: 'Abrir o gráfico em tela cheia com a tabela dos meses',
     onclick: () => abrirDetalheGrafico({ titulo: texto, def: graficos[id] }),
-  }, icone('telaCheia', { tamanho: 14 }), 'Detalhe')];
+  }, icone('telaCheia', { tamanho: 14 }), 'Detalhe'), fonte(id)];
   const cartao = (id, titulo, conteudo, extra = null, classe = '') => {
     conteudo.classList.add('rg-conteudo'); // v27: é a fonte deste bloco que se ajusta ao tamanho do quadro
-    return card({ class: `rg-cartao ${classe}`, dataset: { quadro: id } }, titulo ? cardTitulo(titulo, extra) : null, conteudo);
+    // Título dos quadros de valores ganha os botões de fonte; no CEF × Físico (sem título) eles ficam soltos no canto.
+    const comFonte = titulo && !Array.isArray(titulo) ? [titulo, fonte(id)] : titulo;
+    const solto = titulo ? null : fonte(id);
+    solto?.classList.add('rg-fonte-solta');
+    const cartaoEl = card({ class: `rg-cartao ${classe}`, dataset: { quadro: id } }, titulo ? cardTitulo(comFonte, extra) : solto, conteudo);
+    definirEscala(cartaoEl, escalas[id]);
+    return cartaoEl;
   };
   const quadros = {
     cef: cartao('cef', null, quadroCefFisico(r.painelFisico), null, 'rg-cef'),
@@ -142,6 +154,53 @@ export function renderResumoGeral(alvo, { base, filtro, usuario }) {
   grafico(curva, graficos.curva);
   grafico(barras, graficos.barras);
   grafico(assertividade, graficos.assertividade);
+}
+
+// ── v31: escala da fonte por quadro (Dev) ─────────────────────────────
+/** Escala do quadro (1 = fonte da tela), guardada no próprio cartão para o ajuste e os gráficos lerem. */
+export const escalaDoQuadro = (cartao) => parseFloat(cartao?.style.getPropertyValue('--escala-fonte')) || 1;
+
+function definirEscala(cartao, escala = 1) {
+  if (escala === 1) cartao.style.removeProperty('--escala-fonte');
+  else cartao.style.setProperty('--escala-fonte', String(escala));
+}
+
+/** Grava as escalas pouco depois do último clique (vários cliques seguidos = uma gravação). */
+let gravacaoEscalas = 0;
+function salvarEscalas(escalas) {
+  clearTimeout(gravacaoEscalas);
+  gravacaoEscalas = setTimeout(async () => {
+    try {
+      const { escalas: gravadas } = await api.put('/layouts/escalas-fonte', { escalas });
+      if (estado.bruto) estado.bruto.escalasResumoGeral = gravadas;
+    } catch (e) {
+      toast('error', 'Não foi possível salvar o tamanho da fonte', e.message);
+    }
+  }, 600);
+}
+
+/** Botões A− / % / A+ do quadro (como o "Detalhe" dos gráficos). Clicar no % volta a 100%. */
+function controlesFonte(id, escalas, aoMudar) {
+  const rotulo = h('button', { class: 'rg-fonte-valor', type: 'button', title: 'Voltar a fonte deste quadro para 100%' });
+  const grupo = h('span', { class: 'rg-fonte', 'data-teste': `fonte-${id}`, role: 'group', 'aria-label': 'Tamanho da fonte do quadro' });
+  const mostrar = () => { rotulo.textContent = `${Math.round((escalas[id] ?? 1) * 100)}%`; };
+  const mudar = (nova) => {
+    const e = ajustarEscala(nova);
+    if (e === 1) delete escalas[id];
+    else escalas[id] = e;
+    definirEscala(grupo.closest('.rg-cartao'), e);
+    mostrar();
+    aoMudar();
+    salvarEscalas({ ...escalas });
+  };
+  rotulo.onclick = () => mudar(1);
+  grupo.append(
+    h('button', { type: 'button', title: 'Diminuir a fonte deste quadro', 'aria-label': 'Diminuir fonte', onclick: () => mudar((escalas[id] ?? 1) - ESCALA_FONTE.passo) }, 'A−'),
+    rotulo,
+    h('button', { type: 'button', title: 'Aumentar a fonte deste quadro', 'aria-label': 'Aumentar fonte', onclick: () => mudar((escalas[id] ?? 1) + ESCALA_FONTE.passo) }, 'A+'),
+  );
+  mostrar();
+  return grupo;
 }
 
 /**
@@ -293,6 +352,7 @@ export function ajustarQuadros(pagina, limites = FONTE_QUADRO.tela) {
   const folga = limites.folga ?? 1;
   const busca = { min: limites.min / folga, max: limites.max / folga };
   const definir = (f) => (f === null ? pagina.style.removeProperty('--fonte-rg') : pagina.style.setProperty('--fonte-rg', `${f}px`));
+  pagina.classList.remove('com-escala'); // v31: a fonte global é calculada sem as escalas dos quadros
   const menorDosMaiores = () => Math.min(busca.max, ...quadros.map((q) => maiorFonteDoQuadro(q, busca) ?? busca.min));
   // 1ª estimativa com os títulos no tamanho padrão; 2ª com os títulos já na fonte estimada (eles ocupam espaço).
   definir(null);
@@ -306,11 +366,21 @@ export function ajustarQuadros(pagina, limites = FONTE_QUADRO.tela) {
   const arranjos = quadros.map((q) => arranjoNaFonte(q, fonte));
   const final = folga < 1 ? Math.max(limites.min, Math.floor(fonte * folga * 4) / 4) : fonte;
   definir(final);
+  pagina.classList.add('com-escala');
   let todos = true;
   quadros.forEach((q, i) => {
-    aplicarArranjo(q.conteudo, q.arranjos, arranjos[i] ?? q.arranjos[0]);
-    q.conteudo.style.fontSize = `${final}px`;
-    const coube = arranjos[i] !== null && quadroCabe(q.cartao, q.conteudo);
+    // v31: quadro com escala — menor: a fonte global × escala; maior: até a global × escala, se couber.
+    const e = escalaDoQuadro(q.cartao);
+    let fq = final;
+    let arranjo = arranjos[i];
+    if (e !== 1) {
+      const alvo = Math.round(final * e * 4) / 4;
+      fq = e < 1 ? alvo : (maiorFonteDoQuadro(q, { min: final, max: alvo }) ?? final);
+      arranjo = arranjoNaFonte(q, fq);
+    }
+    aplicarArranjo(q.conteudo, q.arranjos, arranjo ?? q.arranjos[0]);
+    q.conteudo.style.fontSize = `${fq}px`;
+    const coube = arranjo !== null && quadroCabe(q.cartao, q.conteudo);
     q.cartao.classList.toggle('apertado', !coube);
     todos = todos && coube;
   });
@@ -322,6 +392,7 @@ export function ajustarQuadros(pagina, limites = FONTE_QUADRO.tela) {
 /** Telas pequenas (um quadro abaixo do outro): volta à fonte e ao arranjo padrão. */
 function limparAjuste(pagina) {
   pagina.style.removeProperty('--fonte-rg');
+  pagina.classList.remove('com-escala');
   for (const c of pagina.querySelectorAll('.rg-cartao')) {
     c.classList.remove('apertado');
     const conteudo = c.querySelector(':scope > .rg-conteudo');

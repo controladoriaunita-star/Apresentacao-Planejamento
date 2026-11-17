@@ -29,7 +29,9 @@ const fonteDoGrafico = (chart) => {
   const porMes = (chart.width * 0.9) / meses / 2.4; // ~2,4 em = largura de "MAR" com folga
   // v29: no Resumo Geral a fonte é a global da tela (--fonte-rg), limitada só pelo espaço de cada mês.
   const global = parseFloat(chart.canvas.closest('.rg-tela')?.style.getPropertyValue('--fonte-rg'));
-  if (global > 0) return Math.round(Math.max(8, Math.min(global, porMes, chart.height / 10)) * 2) / 2;
+  // v31: escala do quadro (A− / A+ do Dev); o espaço de cada mês continua limitando, para os meses não se encavalarem.
+  const escala = chart.canvas.closest('.com-escala') ? parseFloat(chart.canvas.closest('.rg-cartao')?.style.getPropertyValue('--escala-fonte')) || 1 : 1;
+  if (global > 0) return Math.round(Math.max(8, Math.min(global * escala, porMes, (chart.height / 10) * escala)) * 2) / 2;
   // v29: até 20 px em gráficos grandes (telões, 2560 px), acompanhando o texto dos quadros.
   const tamanho = Math.min(20, Math.max(10, Math.min(chart.height / 14, chart.width / 45)), porMes);
   return Math.round(Math.max(8, tamanho) * 2) / 2;
@@ -38,11 +40,17 @@ const fonteDoGrafico = (chart) => {
 /** v28 — Fonte dos rótulos de dados: menor que a dos eixos e, se possível, cabendo na horizontal entre dois pontos. */
 const fonteRotulo = (chart, passo) => {
   if (!chart?.canvas?.dataset.fonteProporcional) return fonteDoGrafico(chart) - 2;
-  const base = Math.round(fonteDoGrafico(chart) * 0.7); // v29: 70% da fonte do gráfico (rótulos não disputam com os eixos)
+  const base = Math.round(fonteDoGrafico(chart) * 0.85); // v31: 85% da fonte do gráfico, em negrito (antes 70%)
   // v29: na tela, nunca abaixo de 9 px (se não couber na horizontal, o rótulo fica na vertical); no PDF, 7 px.
   const minimo = chart.canvas.closest('.impressao') ? 7 : 9;
-  return Math.max(minimo, Math.min(base, Math.floor(passo / 3.6))); // "100,0%" ≈ 3,4 em
+  const deitado = Math.floor(passo / 3.6); // "100,0%" ≈ 3,4 em
+  if (deitado >= base * 0.8) return Math.max(minimo, Math.min(base, deitado));
+  // v31: não cabe deitado → o rótulo vai na vertical, onde o limite é a altura da letra (não o comprimento do texto).
+  return Math.max(minimo, Math.min(base, Math.floor(passo * 0.9)));
 };
+
+/** v31: rótulos de dados em negrito nos gráficos do Resumo Geral. */
+const pesoRotulo = (chart) => (chart?.canvas?.dataset.fonteProporcional ? 700 : 600);
 
 function opcoesBase({ percentual = true, max = null, minimoMax = null } = {}) {
   const eixo = token('--chart-axis');
@@ -105,9 +113,10 @@ export function grafico(alvo, def) {
 
   const opcoes = opcoesBase({ percentual: true, max: def.max, minimoMax: def.minimoMax });
   if (def.fonteProporcional) {
-    const fonte = (delta) => (ctx) => ({ family: FAMILIA, weight: '500', size: fonteDoGrafico(ctx.chart) + delta });
-    opcoes.scales.x.ticks.font = fonte(-1);
-    opcoes.scales.y.ticks.font = fonte(0);
+    // v31: eixos maiores e em negrito no Resumo Geral (antes 500 e x um ponto menor que y).
+    const fonte = (delta) => (ctx) => ({ family: FAMILIA, weight: '700', size: fonteDoGrafico(ctx.chart) + delta });
+    opcoes.scales.x.ticks.font = fonte(0);
+    opcoes.scales.y.ticks.font = fonte(1);
     opcoes.scales.x.ticks.maxRotation = 0; // v28: mês em duas linhas nunca inclina (inclinado, se encavalava)
   }
   opcoes.plugins.tooltip.callbacks.title = (itens) => fmtMes(def.meses[itens[0]?.dataIndex]);
@@ -184,7 +193,7 @@ const pluginRotulosBarras = {
     ctx.save();
     const meta0 = chart.getDatasetMeta(0);
     const passo = meta0?.data?.length > 1 ? Math.abs(meta0.data[1].x - meta0.data[0].x) / Math.max(1, chart.data.datasets.length) : Infinity;
-    ctx.font = `600 ${fonteRotulo(chart, passo)}px ${FAMILIA}`;
+    ctx.font = `${pesoRotulo(chart)} ${fonteRotulo(chart, passo)}px ${FAMILIA}`;
     ctx.fillStyle = token('--ink-700');
     chart.data.datasets.forEach((ds, i) => {
       const meta = chart.getDatasetMeta(i);
@@ -199,11 +208,14 @@ const pluginRotulosBarras = {
           ctx.textBaseline = 'bottom';
           ctx.fillText(texto, barra.x, barra.y - 3);
         } else {
+          // v31: se o rótulo vertical passaria do topo do quadro, ele vai dentro da barra (em branco).
+          const dentro = barra.y - 3 - largura < 0 && Math.abs(barra.base - barra.y) >= largura + 6;
           ctx.save();
-          ctx.translate(barra.x, barra.y - 3);
+          ctx.translate(barra.x, dentro ? barra.y + 4 : barra.y - 3);
           ctx.rotate(-Math.PI / 2);
-          ctx.textAlign = 'left';
+          ctx.textAlign = dentro ? 'right' : 'left';
           ctx.textBaseline = 'middle';
+          if (dentro) ctx.fillStyle = '#fff';
           ctx.fillText(texto, 0, 0);
           ctx.restore();
         }
@@ -228,7 +240,7 @@ const pluginRotulosLinha = {
       if (!ds.rotulos || meta.hidden) return;
       const abaixo = ds.rotulos === 'abaixo';
       const passo = meta.data.length > 1 ? Math.abs(meta.data[1].x - meta.data[0].x) : Infinity;
-      ctx.font = `600 ${fonteRotulo(chart, passo)}px ${FAMILIA}`;
+      ctx.font = `${pesoRotulo(chart)} ${fonteRotulo(chart, passo)}px ${FAMILIA}`;
       ctx.fillStyle = ds.borderColor;
       meta.data.forEach((ponto, j) => {
         const v = ds.data[j];
