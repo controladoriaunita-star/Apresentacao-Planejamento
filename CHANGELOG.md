@@ -4,8 +4,8 @@ Cada versão só é fechada com `npm run verificar` passando.
 
 | Ambiente | Versão |
 |---|---|
-| Produção | — (ainda não publicada) |
-| Dev (local) | v31 (em validação) |
+| Produção | v31 (publicada em 17/11/2026) |
+| Dev (local) | v31 |
 
 ## v31 — 17/11/2026 — Fontes dos gráficos e escala por quadro
 
