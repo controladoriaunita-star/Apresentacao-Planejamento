@@ -5,7 +5,14 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | v32 (publicada em 17/11/2026) |
-| Dev (local) | v32 |
+| Dev (local) | v33 |
+
+## v33 — 17/11/2026 — PDF na ordem das abas da apresentação
+
+- Exportar PDF: as seções (lista da janela, sumário da capa e folhas) saem na **mesma ordem das abas definida em
+  "Editar layout"** — antes saíam sempre na ordem padrão, com as telas extras no fim. A capa continua primeiro.
+- Teste de tela novo: ordem salva diferente da padrão (tela extra primeiro, Econômico antes do Geral) e o PDF
+  segue essa ordem.
 
 ## v32 — 17/11/2026 — Capa do PDF sem os quadros de indicadores
 
