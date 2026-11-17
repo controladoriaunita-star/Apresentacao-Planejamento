@@ -86,3 +86,27 @@ export function normalizarLayout(entrada, { estrito = false } = {}) {
   }
   return normalizarLayout(LAYOUT_PADRAO);
 }
+
+/**
+ * v31 — Escala da fonte de cada quadro (botões A− / A+ do Dev): 1 = fonte da tela; de 0,6 a 1,6 em passos de 0,1.
+ * Vale para todas as apresentações e para o PDF. Só guarda os quadros com escala diferente de 1.
+ */
+export const ESCALA_FONTE = Object.freeze({ min: 0.6, max: 1.6, passo: 0.1 });
+
+export const ajustarEscala = (v) => {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 1;
+  return Math.round(limitar(n, ESCALA_FONTE.min, ESCALA_FONTE.max) * 10) / 10;
+};
+
+/** Escalas válidas: só quadros conhecidos, valores dentro dos limites; as iguais a 1 são descartadas. */
+export function normalizarEscalas(entrada) {
+  const saida = {};
+  if (!entrada || typeof entrada !== 'object' || Array.isArray(entrada)) return saida;
+  for (const { id } of QUADROS) {
+    if (!(id in entrada)) continue;
+    const e = ajustarEscala(entrada[id]);
+    if (e !== 1) saida[id] = e;
+  }
+  return saida;
+}

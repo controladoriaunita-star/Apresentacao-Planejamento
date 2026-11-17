@@ -174,6 +174,22 @@
 .rg-detalhe:hover { border-color: var(--color-primary); color: var(--color-primary); }
 .rg.editando .rg-detalhe, .impressao .rg-detalhe { display: none; }
 
+/* v31 — Botões A− / % / A+ (só Dev): fonte de cada quadro, no estilo do "Detalhe" */
+.rg-fonte {
+  display: inline-flex; align-items: center; margin-left: 4px; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--surface); overflow: hidden; font: 600 max(11px, 0.72em)/1.4 var(--font-sans); white-space: nowrap;
+}
+.rg-fonte button { border: 0; background: none; color: var(--ink-700); font: inherit; padding: 2px 7px; cursor: pointer; }
+.rg-fonte button:hover { color: var(--color-primary); }
+.rg-fonte .rg-fonte-valor { padding: 2px 3px; min-width: 3.2em; color: var(--ink-500, var(--ink-700)); font-variant-numeric: tabular-nums; }
+.rg-fonte-solta { position: absolute; top: 6px; left: 10px; z-index: 1; }
+/* discretos na apresentação: aparecem ao passar o mouse (ou focar) no quadro */
+.rg-fonte { opacity: 0; transition: opacity 0.15s; }
+.rg-cartao:hover .rg-fonte, .rg-fonte:focus-within { opacity: 1; }
+.rg:not(.rg-tela) .rg-fonte, .rg.editando .rg-fonte, .impressao .rg-fonte { display: none; }
+/* a escala do quadro vale também para o título (a fonte do conteúdo é definida no JS) */
+.rg.com-escala .rg-cartao { font-size: calc(1em * var(--escala-fonte, 1)); }
+
 /* v29 — Detalhe do gráfico: tela cheia, tabela dos meses à esquerda (rola na vertical) e o gráfico à direita */
 .detalhe-grafico { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; gap: 14px; padding: clamp(12px, 2vw, 24px); background: var(--bg); }
 .detalhe-grafico-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
