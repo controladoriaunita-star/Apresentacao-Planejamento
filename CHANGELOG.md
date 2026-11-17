@@ -5,13 +5,20 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | v32 (publicada em 17/11/2026) |
-| Dev (local) | v33 (em validação) |
+| Dev (local) | v34 (em validação) |
 
-## v33 — 11/11/2026 — barra de rolagem no menu de abas
+## v34 — 17/11/2026 — barra de rolagem no menu de abas
 
 - Com muitas abas/novas telas, o menu do topo passa a mostrar uma barra de rolagem horizontal fina em telas menores
   (antes rolava com a barra oculta e as abas pareciam cortadas). Só `public/css/layout.css`. Com o cabeçalho em duas
   linhas (v29) as abas quebram linha e a barra não aparece.
+
+## v33 — 17/11/2026 — PDF na ordem das abas da apresentação
+
+- Exportar PDF: as seções (lista da janela, sumário da capa e folhas) saem na **mesma ordem das abas definida em
+  "Editar layout"** — antes saíam sempre na ordem padrão, com as telas extras no fim. A capa continua primeiro.
+- Teste de tela novo: ordem salva diferente da padrão (tela extra primeiro, Econômico antes do Geral) e o PDF
+  segue essa ordem.
 
 ## v32 — 17/11/2026 — Capa do PDF sem os quadros de indicadores
 
