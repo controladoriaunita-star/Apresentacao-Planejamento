@@ -5,7 +5,13 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | v31 (publicada em 17/11/2026) |
-| Dev (local) | v31 |
+| Dev (local) | v32 (em validação) |
+
+## v32 — 17/11/2026 — Capa do PDF sem os quadros de indicadores
+
+- Capa do PDF: os três quadros de indicadores (Avanço físico realizado, Planejado acumulado e Desvio) ficam
+  ocultos por enquanto. A capa mantém logo, cliente, obra, mês de fechamento e o sumário. Para voltar, basta
+  `INDICADORES_NA_CAPA = true` em `pages/exportar-pdf.js`.
 
 ## v31 — 17/11/2026 — Fontes dos gráficos e escala por quadro
 
