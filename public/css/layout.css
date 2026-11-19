@@ -2,7 +2,7 @@
 .app-header { position: sticky; top: 0; z-index: 30; background: var(--color-secondary); border-bottom: 2px solid var(--color-primary); }
 .app-header .in { display: flex; align-items: center; gap: 20px; height: var(--header-h); padding: 0 24px; }
 .app-header .logo { height: 28px; display: block; }
-.app-header nav { display: flex; gap: 4px; overflow-x: auto; min-width: 0; flex: 1; scrollbar-width: none; }
+.app-header nav { display: flex; gap: 4px; overflow-x: auto; min-width: 0; flex: 1; scrollbar-width: thin; scrollbar-color: var(--ink-500) transparent; } /* abas demais: barra de rolagem horizontal */
 .app-header nav a { color: var(--ink-300); text-decoration: none; font-weight: 500; font-size: 13px; padding: 6px 10px; border-radius: var(--r-control); white-space: nowrap; }
 .app-header nav a:hover { color: var(--surface); background: var(--header-hover); }
 .app-header nav a[aria-current='page'] { color: var(--surface); background: var(--header-hover); box-shadow: inset 0 -2px 0 var(--color-primary); }
