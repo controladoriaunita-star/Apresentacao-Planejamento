@@ -7,6 +7,7 @@ import { filtrarMatriz } from '../../public/js/domain/acesso.js';
 import { ABAS } from '../../public/js/domain/colunas.js';
 import { associarObrasConhecidas, cadastrosDePlanilha, normalizarCadastro } from '../../public/js/domain/cadastro-obra.js';
 import { normalizarEscalas, normalizarLayout } from '../../public/js/domain/layout-resumo.js';
+import { normalizarOcultas } from '../../public/js/domain/colunas-ocultas.js';
 import { normalizarNomes } from '../../public/js/domain/nomes-colunas.js';
 import { normalizarOrdemAbas } from '../../public/js/domain/ordem-abas.js';
 import { chaveObra } from '../../public/js/domain/normalizar.js';
@@ -18,6 +19,8 @@ const DOC_LAYOUT = 'layout-resumo-geral';
 const DOC_ORDEM_ABAS = 'ordem-abas';
 /** v29 — Documento com os nomes das colunas do Resumo Físico e Econômico definidos pelo Dev. */
 const DOC_NOMES_COLUNAS = 'nomes-colunas';
+/** v34 — Documento com as colunas do Físico e do Econômico que o Dev oculta na apresentação Cliente. */
+const DOC_COLUNAS_OCULTAS = 'colunas-ocultas';
 /** v31 — Documento com a escala da fonte de cada quadro do Resumo Geral (botões A− / A+ do Dev). */
 const DOC_ESCALAS = 'escalas-fonte-resumo-geral';
 
@@ -45,6 +48,7 @@ export function registrarDados(rotas, { planilhas, incc, cadastro, acidentes, ar
       escalasResumoGeral: (await armazem.ler(DOC_ESCALAS).catch(() => null))?.escalas ?? {},
       ordemAbas: (await armazem.ler(DOC_ORDEM_ABAS).catch(() => null))?.ordem ?? null,
       nomesColunas: (await armazem.ler(DOC_NOMES_COLUNAS).catch(() => null))?.nomes ?? {},
+      colunasOcultas: (await armazem.ler(DOC_COLUNAS_OCULTAS).catch(() => null))?.ocultas ?? [],
     };
   }
 
@@ -104,6 +108,15 @@ export function registrarDados(rotas, { planilhas, incc, cadastro, acidentes, ar
     const normalizados = normalizarNomes(nomes);
     await armazem.gravar(DOC_NOMES_COLUNAS, { nomes: normalizados, atualizadoEm: new Date().toISOString(), por: usuario.email });
     enviarJson(req, res, 200, { nomes: normalizados });
+  });
+
+  /** v34 — Colunas do Físico e do Econômico ocultas na apresentação Cliente (tela e PDF): só o Dev define. */
+  rotas.adicionar('PUT', '/api/layouts/colunas-ocultas', { permissao: 'administrar' }, async ({ req, res, usuario }) => {
+    const { ocultas } = await lerJson(req);
+    if (!Array.isArray(ocultas)) throw erro(400, 'Informe a lista de colunas ocultas.');
+    const normalizadas = normalizarOcultas(ocultas);
+    await armazem.gravar(DOC_COLUNAS_OCULTAS, { ocultas: normalizadas, atualizadoEm: new Date().toISOString(), por: usuario.email });
+    enviarJson(req, res, 200, { ocultas: normalizadas });
   });
 
   rotas.adicionar('GET', '/api/incc', { permissao: 'ver' }, async ({ req, res }) => {

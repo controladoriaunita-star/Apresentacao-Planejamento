@@ -210,6 +210,19 @@ test('nomes das colunas (v29): só o dev salva, só chaves conhecidas, e todos r
   await dev('PUT', '/api/layouts/nomes-colunas', { nomes: {} });
 });
 
+test('colunas ocultas no Cliente (v34): só o dev define; chaves desconhecidas saem', async () => {
+  assert.deepEqual((await viewer('GET', '/api/dados/resumo')).dados.colunasOcultas, [], 'sem nada oculto');
+  const ocultas = ['economico.iec', 'fisico.pesoAtraso', 'fisico.inexistente'];
+  assert.equal((await viewer('PUT', '/api/layouts/colunas-ocultas', { ocultas })).status, 403);
+  assert.equal((await planejamento('PUT', '/api/layouts/colunas-ocultas', { ocultas })).status, 403);
+  assert.equal((await dev('PUT', '/api/layouts/colunas-ocultas', { ocultas: {} })).status, 400);
+  const salvo = await dev('PUT', '/api/layouts/colunas-ocultas', { ocultas });
+  assert.equal(salvo.status, 200);
+  assert.deepEqual(salvo.dados.ocultas, ['fisico.pesoAtraso', 'economico.iec']);
+  assert.deepEqual((await viewer('GET', '/api/dados/resumo')).dados.colunasOcultas, ['fisico.pesoAtraso', 'economico.iec']);
+  await dev('PUT', '/api/layouts/colunas-ocultas', { ocultas: [] });
+});
+
 test('comentários por tela (v29): equipe interna lê, só o dev escreve e apaga, por obra e mês', async () => {
   const q = 'obra=Residencial%20Alpha&mes=2026-03';
   assert.equal((await viewer('GET', `/api/comentarios-telas?${q}`)).status, 403, 'Viewer não vê');

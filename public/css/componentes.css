@@ -255,6 +255,9 @@
 .nomes-original { display: flex; flex-direction: column; min-width: 0; }
 .nomes-original small { color: var(--muted); font-size: 11px; }
 .nomes-linha input { height: 38px; }
+/* v34 — "Colunas do cliente": caixas agrupadas como no cabeçalho da tabela */
+.colunas-ocultas-grupo { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px 16px; margin: 0; padding: 10px 14px 12px; border: 1px solid var(--border-soft); border-radius: 12px; }
+.colunas-ocultas-grupo legend { padding: 0 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
 @media (max-width: 640px) { .nomes-linha { grid-template-columns: 1fr auto; } .nomes-original { grid-column: 1 / -1; } }
 
 /* v29 — Comentários por tela (equipe interna): painel lateral */
