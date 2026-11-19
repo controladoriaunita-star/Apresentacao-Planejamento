@@ -5,7 +5,20 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | v32 (publicada em 17/11/2026) |
-| Dev (local) | v33 |
+| Dev (local) | v34 |
+
+## v34 — 19/11/2026 — Dev oculta colunas do Físico e do Econômico no Cliente
+
+- **Dev — "Colunas do cliente"**: botão no Resumo Físico e no Resumo Econômico, só para o Dev e só na apresentação
+  Cliente. Abre a lista de colunas agrupada como no cabeçalho; as desmarcadas ficam ocultas para o cliente, na tela
+  e no **PDF** (que monta os resumos com as mesmas funções da tela). Na Obra aparecem todas. Cada tabela mantém ao
+  menos uma coluna visível; vale para todas as obras.
+- No Físico a faixa de grupos do cabeçalho passa a ser calculada pelas colunas visíveis (antes os grupos tinham
+  tamanho fixo de 3, 8, 4 e 2 colunas). As colunas "Sem correção" do Econômico continuam ocultas no Cliente por
+  regra fixa (v28) e não entram na lista.
+- `PUT /api/layouts/colunas-ocultas` (só Dev) e `colunasOcultas` em `/dados/resumo` (documento `colunas-ocultas`
+  no armazém, sem migration) — `domain/colunas-ocultas.js`, `ui/editor-colunas-ocultas.js`.
+- Testes: domínio, contrato da rota, tela (oculta no Cliente e a Obra continua completa) e PDF sem as colunas.
 
 ## v33 — 17/11/2026 — PDF na ordem das abas da apresentação
 

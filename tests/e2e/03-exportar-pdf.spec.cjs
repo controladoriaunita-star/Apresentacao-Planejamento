@@ -175,6 +175,43 @@ test('Exportar PDF: seções e folhas na ordem das abas definida na apresentaç�
   }
 });
 
+const salvarOcultas = (page, ocultas) => page.evaluate((o) => fetch('/api/layouts/colunas-ocultas', {
+  method: 'PUT', headers: { 'x-requested-with': 'fetch', 'content-type': 'application/json' }, body: JSON.stringify({ ocultas: o }),
+}).then((r) => r.status), ocultas);
+
+test('Exportar PDF (v34): colunas ocultas pelo Dev no Cliente também saem do PDF', async ({ page }) => {
+  await page.addInitScript(() => { window.print = () => { window.__impressoes = (window.__impressoes ?? 0) + 1; }; });
+  await entrar(page, DEV);
+  expect(await salvarOcultas(page, ['fisico.iec', 'fisico.pesoAtraso', 'economico.iec'])).toBe(200);
+  try {
+    await page.goto('/#/cliente/inicio');
+    await page.reload();
+    await page.locator('[data-teste="exportar-pdf"]').click();
+    const modal = page.getByRole('dialog', { name: /Exportar PDF/ });
+    await modal.getByLabel('Obra').selectOption({ label: 'Residencial Alpha' });
+    const secoes = modal.getByRole('group', { name: 'Seções do PDF' });
+    for (const nome of await secoes.locator('label').allTextContents()) {
+      if (!['Resumo Físico', 'Resumo Econômico'].includes(nome)) await secoes.getByLabel(nome, { exact: true }).uncheck();
+    }
+    await modal.getByRole('button', { name: 'Gerar PDF' }).click();
+    await expect.poll(() => page.evaluate(() => window.__impressoes ?? 0), { timeout: 60000 }).toBe(1);
+
+    const doc = page.locator('[data-teste="impressao"]');
+    const fisico = doc.locator('[data-secao="resumo-fisico"] thead');
+    await expect(fisico).toContainText('Peso planejado');
+    await expect(fisico).not.toContainText('Peso atraso');
+    await expect(fisico.locator('tr:not(.grupo) th', { hasText: /^IEC$/ })).toHaveCount(0);
+    const economico = doc.locator('[data-secao="resumo-economico"] thead');
+    await expect(economico).toContainText('Resultado projetado');
+    await expect(economico.locator('tr:not(.grupo) th', { hasText: /^IEC$/ })).toHaveCount(0);
+    // continuam numa página cada, ajustadas como antes
+    await expect(doc.locator('[data-secao="resumo-fisico"] > div')).toHaveAttribute('data-zoom', /\d/);
+    await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+  } finally {
+    await salvarOcultas(page, []);
+  }
+});
+
 test('Exportar PDF não aparece para o Viewer', async ({ page }) => {
   await entrar(page, VIEWER);
   await page.goto('/#/cliente/inicio');

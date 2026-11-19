@@ -10,9 +10,11 @@ import {
   COLUNAS_ECONOMICO, DETALHES_ECONOMICO, INDICADORES_ECONOMICO, calcularResumoEconomico,
 } from '../domain/resumo-economico.js';
 import { estado } from '../core/estado.js';
+import { colunaOculta } from '../domain/colunas-ocultas.js';
 import { nomeColuna } from '../domain/nomes-colunas.js';
 import { validarEconomico } from '../domain/validador-economico.js';
 import { kpi, marcadorComentario, seloCompetencia, vazio } from '../ui/componentes.js';
+import { botaoColunasOcultas } from '../ui/editor-colunas-ocultas.js';
 import { botaoNomesColunas } from '../ui/editor-nomes-colunas.js';
 import { obraUnica } from '../ui/filtros.js';
 import { icone } from '../ui/icones.js';
@@ -54,7 +56,8 @@ export function renderResumoEconomico(alvo, ctx) {
   const { obra, seletor } = obraUnica(base, () => renderResumoEconomico(alvo, ctx), filtro);
   if (!obra) return montar(alvo, vazio('Selecione uma obra no filtro'));
   const r = calcularResumoEconomico(base, obra.chave, filtro.referencia);
-  const colunas = colunasDaVisao(ctx.visao);
+  // v34: no Cliente também saem as colunas que o Dev ocultou (domain/colunas-ocultas.js) — vale para o PDF.
+  const colunas = colunasDaVisao(ctx.visao).filter((c) => !colunaOculta(estado.bruto?.colunasOcultas, ctx.visao, `economico.${c.campo}`));
   // v29: títulos com os nomes definidos pelo Dev (domain/nomes-colunas.js); sem nome definido, o original.
   const nomes = estado.bruto?.nomesColunas;
   const tituloColuna = (c) => tituloComUnidade(nomeColuna(nomes, `economico.coluna.${c.campo}`, c.titulo), c.tipo);
@@ -93,6 +96,7 @@ export function renderResumoEconomico(alvo, ctx) {
       MOSTRAR_TOPO ? farolEconomico(validarEconomico(base, obra.chave, filtro.referencia)) : null),
     h('div', { class: 'row' },
       botaoNomesColunas('economico', () => renderResumoEconomico(alvo, ctx)),
+      botaoColunasOcultas('economico', ctx.visao, () => renderResumoEconomico(alvo, ctx)),
       r.linhas.length ? h('div', { class: 'row' },
         h('button', { class: 'btn ghost sm', type: 'button', onclick: () => r.linhas.forEach((l) => alternar(l.item, true)) }, icone('expandir', { tamanho: 16 }), 'Expandir tudo'),
         h('button', { class: 'btn ghost sm', type: 'button', onclick: () => r.linhas.forEach((l) => alternar(l.item, false)) }, icone('recolher', { tamanho: 16 }), 'Recolher tudo')) : null,

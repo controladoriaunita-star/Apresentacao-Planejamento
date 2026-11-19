@@ -4,12 +4,14 @@
 import { h, montar } from '../core/dom.js';
 import { classeSinal, fmtMes, fmtMoeda, fmtNumero, fmtPercentual, fmtVariacao, VAZIO } from '../core/formato.js';
 import { estado } from '../core/estado.js';
+import { colunaOculta } from '../domain/colunas-ocultas.js';
 import { COLUNAS_FISICO, GRUPOS_FISICO, nomeColuna } from '../domain/nomes-colunas.js';
 import { calcularResumoFisico, itemPai } from '../domain/resumo-fisico.js';
 import { podeRetirar, simularSemItens } from '../domain/simulacao-fisico.js';
 import {
   abrirModal, alerta, carregando, marcadorComentario, seloCompetencia, status, vazio,
 } from '../ui/componentes.js';
+import { botaoColunasOcultas } from '../ui/editor-colunas-ocultas.js';
 import { botaoNomesColunas } from '../ui/editor-nomes-colunas.js';
 import { obraUnica } from '../ui/filtros.js';
 import { icone } from '../ui/icones.js';
@@ -55,7 +57,7 @@ export async function renderResumoFisico(alvo, ctx) {
     tab.sincronizarRetirados();
     atualizarSimulacao();
   };
-  const tab = tabela(r, { abertos, pais, retirados: sim.retirados, aoRetirar: atualizarSimulacao });
+  const tab = tabela(r, { visao, abertos, pais, retirados: sim.retirados, aoRetirar: atualizarSimulacao });
   const planilha = h('div', { class: `sheet resumo-tabela colunas-iguais compacta ${lerExtras() ? '' : 'sem-extras'} ${sim.ativa ? 'simulando' : ''}` }, tab.elemento);
   const textoSimular = () => (sim.ativa ? 'Encerrar simulação' : 'Simular sem atividades');
   const botaoSimular = h('button', {
@@ -87,6 +89,7 @@ export async function renderResumoFisico(alvo, ctx) {
       botaoSimular,
       botaoExtras,
       botaoNomesColunas('fisico', () => renderResumoFisico(alvo, ctx)),
+      botaoColunasOcultas('fisico', visao, () => renderResumoFisico(alvo, ctx)),
       h('button', { class: 'btn ghost sm', type: 'button', onclick: () => tab.alternarTudo(true) }, icone('expandir', { tamanho: 16 }), 'Expandir tudo'),
       h('button', { class: 'btn ghost sm', type: 'button', onclick: () => tab.alternarTudo(false) }, icone('recolher', { tamanho: 16 }), 'Recolher tudo'))),
     painel,
@@ -117,30 +120,45 @@ const pct = (v) => fmtPercentual(v, 1);
  * para não perder a rolagem). Na simulação, cada item ganha uma caixa "retirar" e a linha simulada fica
  * logo abaixo da linha da obra (as duas só aparecem com a classe `simulando` na planilha).
  */
-function tabela(r, { abertos, pais, retirados, aoRetirar }) {
+function tabela(r, { visao, abertos, pais, retirados, aoRetirar }) {
   // v29: títulos com os nomes definidos pelo Dev (domain/nomes-colunas.js); sem nome definido, o original.
   const nomes = estado.bruto?.nomesColunas;
   const titulo = (id) => nomeColuna(nomes, `fisico.coluna.${id}`, COLUNAS_FISICO.find((c) => c.id === id).titulo);
   const grupo = (id) => nomeColuna(nomes, `fisico.grupo.${id}`, GRUPOS_FISICO.find((g) => g.id === id).titulo);
+  // Grupos da faixa de cima do cabeçalho, na ordem da tabela: título e classe (extra = projeção, cur = mês).
+  const GRUPOS = {
+    projecao: { titulo: grupo('projecao'), classe: 'extra' },
+    referencia: { titulo: fmtMes(r.referencia), classe: 'cur' },
+    seguinte: { titulo: fmtMes(r.seguinte), classe: '' },
+    pesos: { titulo: grupo('pesos'), classe: '' },
+  };
+  const col = (id, grupoId, fn) => ({ id, grupo: grupoId, titulo: titulo(id), fn, classe: GRUPOS[grupoId].classe });
   const cols = [
-    [titulo('orcamento'), (l) => fmtMoeda(l.orcamento), 'extra'],
-    [titulo('orcamentoProjetado'), (l) => fmtMoeda(l.economico?.orcamentoProjetado), 'extra'],
-    [titulo('iec'), (l) => (l.economico?.iec ? fmtNumero(l.economico.iec, 3) : VAZIO), 'extra'],
-    [titulo('realizadoAcm'), (l) => pct(l.realizadoAcm), 'cur'],
-    [titulo('realizadoMes'), (l) => pct(l.realizadoMes), 'cur'],
-    [titulo('planejadoInicial'), (l) => pct(l.planejadoInicial), 'cur'],
-    [titulo('planejadoAcm'), (l) => pct(l.planejadoAcm), 'cur'],
-    [titulo('planejadoMes'), (l) => pct(l.planejadoMes), 'cur'],
-    [titulo('acerto'), (l) => pct(l.acerto), 'cur'],
-    [titulo('cronograma'), (l) => pct(l.cronograma), 'cur'],
-    [titulo('adiantamento'), (l) => adiantamento(l.adiantamento), 'cur'],
-    [titulo('proximoPlanejadoMes'), (l) => pct(l.proximo.planejadoMes)],
-    [titulo('proximoPlanejadoAcm'), (l) => pct(l.proximo.planejadoAcm)],
-    [titulo('proximoPrevisto'), (l) => pct(l.proximo.previsto)],
-    [titulo('proximoAdiantamento'), (l) => adiantamento(l.proximo.adiantamento)],
-    [titulo('pesoAtraso'), (l) => (l.pesoAtraso === null ? VAZIO : fmtVariacao(l.pesoAtraso, 2))],
-    [titulo('pesoPlanejado'), (l) => fmtPercentual(l.pesoPlanejado, 2)],
-  ];
+    col('orcamento', 'projecao', (l) => fmtMoeda(l.orcamento)),
+    col('orcamentoProjetado', 'projecao', (l) => fmtMoeda(l.economico?.orcamentoProjetado)),
+    col('iec', 'projecao', (l) => (l.economico?.iec ? fmtNumero(l.economico.iec, 3) : VAZIO)),
+    col('realizadoAcm', 'referencia', (l) => pct(l.realizadoAcm)),
+    col('realizadoMes', 'referencia', (l) => pct(l.realizadoMes)),
+    col('planejadoInicial', 'referencia', (l) => pct(l.planejadoInicial)),
+    col('planejadoAcm', 'referencia', (l) => pct(l.planejadoAcm)),
+    col('planejadoMes', 'referencia', (l) => pct(l.planejadoMes)),
+    col('acerto', 'referencia', (l) => pct(l.acerto)),
+    col('cronograma', 'referencia', (l) => pct(l.cronograma)),
+    col('adiantamento', 'referencia', (l) => adiantamento(l.adiantamento)),
+    col('proximoPlanejadoMes', 'seguinte', (l) => pct(l.proximo.planejadoMes)),
+    col('proximoPlanejadoAcm', 'seguinte', (l) => pct(l.proximo.planejadoAcm)),
+    col('proximoPrevisto', 'seguinte', (l) => pct(l.proximo.previsto)),
+    col('proximoAdiantamento', 'seguinte', (l) => adiantamento(l.proximo.adiantamento)),
+    col('pesoAtraso', 'pesos', (l) => (l.pesoAtraso === null ? VAZIO : fmtVariacao(l.pesoAtraso, 2))),
+    col('pesoPlanejado', 'pesos', (l) => fmtPercentual(l.pesoPlanejado, 2)),
+  // v34: no Cliente saem as colunas que o Dev ocultou (domain/colunas-ocultas.js) — vale para o PDF.
+  ].filter((c) => !colunaOculta(estado.bruto?.colunasOcultas, visao, `fisico.${c.id}`));
+  // Faixa de grupos: colunas visíveis consecutivas do mesmo grupo.
+  const faixas = [];
+  for (const c of cols) {
+    if (faixas.at(-1)?.grupo === c.grupo) faixas.at(-1).span++;
+    else faixas.push({ grupo: c.grupo, span: 1 });
+  }
   const seta = (l) => {
     if (l.nivel !== 1) return null;
     if (!pais.has(l.item)) return h('span', { class: 'arvore-espaco' });
@@ -165,7 +183,7 @@ function tabela(r, { abertos, pais, retirados, aoRetirar }) {
       },
     });
   };
-  const celulas = (l) => cols.map(([, fn, classeCol]) => h('td', { class: classeCol ?? '' }, l ? fn(l) : VAZIO));
+  const celulas = (l) => cols.map((c) => h('td', { class: c.classe }, l ? c.fn(l) : VAZIO));
   const linha = (l, classe) => {
     const atributos = { class: `${classe} ${retirados.has(l.item) ? 'retirada' : ''}`, dataset: l.nivel === 2 ? { filhoDe: itemPai(l.item) } : {} };
     return h('tr', atributos,
@@ -191,16 +209,13 @@ function tabela(r, { abertos, pais, retirados, aoRetirar }) {
     r.linhas.map((l) => linha(l, `nivel-${l.nivel} ${l.nivel === 2 && !abertos.has(itemPai(l.item)) ? 'oculto' : ''}`)));
 
   // v28: número de colunas visíveis com e sem a projeção econômica (largura mínima da tabela, css/paginas.css).
-  const extras = cols.filter(([, , classe]) => classe === 'extra').length;
+  const extras = cols.filter((c) => c.classe === 'extra').length;
   const elemento = h('table', { style: `--colunas: ${cols.length}; --colunas-sem-extras: ${cols.length - extras}` },
     h('thead', {},
       h('tr', { class: 'grupo' },
         h('th', { class: 'first', rowspan: 2 }, 'Serviço'),
-        h('th', { colspan: 3, class: 'extra' }, grupo('projecao')),
-        h('th', { colspan: 8, class: 'cur' }, fmtMes(r.referencia)),
-        h('th', { colspan: 4 }, fmtMes(r.seguinte)),
-        h('th', { colspan: 2 }, grupo('pesos'))),
-      h('tr', {}, cols.map(([titulo, , classe]) => h('th', { class: classe ?? '' }, titulo)))),
+        faixas.map((f) => h('th', { colspan: f.span, class: GRUPOS[f.grupo].classe }, GRUPOS[f.grupo].titulo))),
+      h('tr', {}, cols.map((c) => h('th', { class: c.classe }, c.titulo)))),
     corpo);
   return {
     elemento,

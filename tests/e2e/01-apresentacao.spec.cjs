@@ -447,6 +447,32 @@ test('Dev (v29): renomeia uma coluna do Econômico (vale na Obra e no Cliente) e
   await expect(cabecalho).not.toContainText('Custo incorrido');
 });
 
+test('Dev (v34): oculta colunas só na apresentação Cliente; a Obra continua com todas', async ({ page }) => {
+  await entrar(page, DEV);
+  await page.goto('/#/obra/resumo-fisico');
+  await expect(page.locator('.resumo-tabela thead')).toContainText('Peso atraso');
+  await expect(page.locator('[data-teste="colunas-ocultas"]')).toHaveCount(0); // só na apresentação Cliente
+
+  await page.goto('/#/cliente/resumo-fisico');
+  await page.locator('[data-teste="colunas-ocultas"]').click();
+  const janela = page.getByRole('dialog', { name: /Colunas do cliente/ });
+  await janela.getByLabel('Mostrar Peso atraso (Pesos)').uncheck();
+  await janela.getByRole('button', { name: 'Salvar' }).click();
+  await expect(janela).toHaveCount(0);
+  const cabecalho = page.locator('.resumo-tabela thead');
+  await expect(cabecalho).not.toContainText('Peso atraso');
+  await expect(cabecalho.locator('tr.grupo th', { hasText: 'Pesos' })).toHaveAttribute('colspan', '1');
+
+  await page.goto('/#/obra/resumo-fisico');
+  await expect(page.locator('.resumo-tabela thead')).toContainText('Peso atraso');
+
+  await page.goto('/#/cliente/resumo-fisico');
+  await page.locator('[data-teste="colunas-ocultas"]').click();
+  await janela.getByLabel('Mostrar Peso atraso (Pesos)').check();
+  await janela.getByRole('button', { name: 'Salvar' }).click();
+  await expect(page.locator('.resumo-tabela thead')).toContainText('Peso atraso');
+});
+
 test('Dev (v29): comentário da tela fica gravado na obra e no mês', async ({ page }) => {
   await entrar(page, DEV);
   await page.goto('/#/obra/resumo-fisico');
