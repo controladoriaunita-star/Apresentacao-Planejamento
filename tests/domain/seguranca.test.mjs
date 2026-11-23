@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  analisarImportacao, calcularIndicadores, chaveDeduplicacao, diasValidos, mesesDoGrafico, parteCorpoPadrao, primeiros, serieMensalPorTipo,
+  analisarImportacao, calcularIndicadores, calcularPiramideBird, chaveDeduplicacao, diasValidos, filtrarObras, mesesDoGrafico, parteCorpoPadrao, primeiros, serieMensalPorTipo,
   siglaTipo, tabelaPorPeriodo, validarAcidente,
 } from '../../public/js/domain/seguranca.js';
 
@@ -85,6 +85,17 @@ test('importação: de-para de obra e aviso quando incorporação diverge do cad
   assert.match(r.linhas[0].avisos[0], /vale a do cadastro: "Metrocasa"/);
 });
 
+test('busca de obra no de-para: parte do nome, sem acento, várias palavras e cliente', () => {
+  const obras = [{ obra: 'HB Sacomã', cliente: 'Habita' }, { obra: 'MC Vila Ema II', cliente: 'Metrocasa' }, { obra: 'MC Vila dos Remédios', cliente: 'Metrocasa' }, { obra: 'Vila Nova', cliente: 'Teen' }];
+  const nomes = (t) => filtrarObras(obras, t).map((o) => o.obra);
+  assert.deepEqual(nomes('sacoma'), ['HB Sacomã']);
+  assert.deepEqual(nomes('vila rem'), ['MC Vila dos Remédios']);
+  assert.deepEqual(nomes('metrocasa ema'), ['MC Vila Ema II']);
+  assert.equal(nomes('vila')[0], 'Vila Nova', 'quem começa com o texto vem primeiro');
+  assert.equal(nomes('').length, 4);
+  assert.deepEqual(nomes('inexistente'), []);
+});
+
 test('indicadores reproduzem as tabelas dinâmicas do Dashboard-01/02', () => {
   const base = { faseObra: 'Estrutura', funcao: 'Pedreiro', empresa: 'Persona', parteCorpo: 'Dedo', obra: 'A' };
   const acidentes = [
@@ -101,6 +112,8 @@ test('indicadores reproduzem as tabelas dinâmicas do Dashboard-01/02', () => {
   assert.deepEqual(i.porEmpresa, [{ rotulo: 'Persona', valor: 3 }], 'grafias com espaço sobrando contam juntas');
   assert.deepEqual(i.porObra.map((o) => o.rotulo), ['A', 'B']);
   assert.equal(calcularIndicadores([]).mediaDias, null);
+  // Como a média da tabela dinâmica (Tab02): acidente sem dias informados fica fora do divisor.
+  assert.equal(calcularIndicadores([...acidentes, { ...base, data: '2025-04-01', tipo: 'SPT', diasAfastamento: null }]).mediaDias, 5);
 });
 
 test('10 primeiros incluem os empatados com o 10º (como o filtro do Excel)', () => {
@@ -134,4 +147,23 @@ test('meses do gráfico: 1 mês antes do primeiro, 1 depois do último, mínimo 
   assert.deepEqual([curto.length, curto[0], curto.at(-1)], [12, '2025-07', '2026-06'], 'completa para trás até 12 meses');
   const vazio = mesesDoGrafico([], { referencia: '2026-09' });
   assert.deepEqual([vazio.length, vazio[0], vazio.at(-1)], [12, '2025-10', '2026-09']);
+});
+
+test('pirâmide de Bird: âncora no nível mais alto com ocorrência, esperado e proporção observada', () => {
+  const p = calcularPiramideBird({ FT: 0, CPT: 67, SPT: 34, TRJ: 4 });
+  assert.equal(p.total, 105);
+  assert.equal(p.ancora, 2);
+  const [grave, leve, dano, quase] = p.niveis;
+  assert.equal(Math.round(grave.esperado * 10) / 10, 6.7);
+  assert.equal(leve.proporcaoObservada, 10);
+  assert.equal(dano.esperado, 201);
+  assert.ok(Math.abs(quase.esperado - 4020) < 1e-9);
+  assert.ok(Math.abs(dano.cobertura - 34 / 201) < 1e-9);
+  assert.ok(Math.abs(p.gravidade - 67 / 105) < 1e-9);
+  assert.ok(Math.abs(p.basePorLesao - 4 / 67) < 1e-9);
+  const comFatal = calcularPiramideBird({ FT: 1, CPT: 5, SPT: 0, TRJ: 0 });
+  assert.equal(comFatal.ancora, 1);
+  assert.equal(comFatal.niveis[1].esperado, 10);
+  const vazio = calcularPiramideBird({});
+  assert.deepEqual([vazio.total, vazio.ancora, vazio.gravidade], [0, null, null]);
 });

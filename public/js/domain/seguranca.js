@@ -149,6 +149,20 @@ export function encontrarObra(nome, incorporacao, cadastros, mapa = {}) {
     ?? null;
 }
 
+/**
+ * Busca de obra enquanto o usuário digita: todas as palavras precisam aparecer no nome ou no cliente
+ * (sem diferenciar acento e caixa). Nomes que começam com o texto vêm primeiro.
+ */
+export function filtrarObras(cadastros, texto) {
+  const busca = semAcento(texto);
+  const palavras = busca.split(' ').filter(Boolean);
+  return (cadastros ?? [])
+    .filter((c) => { const alvo = semAcento(`${c.obra} ${c.cliente ?? ''}`); return palavras.every((p) => alvo.includes(p)); })
+    .map((c, i) => ({ c, i, inicio: busca && semAcento(c.obra).startsWith(busca) ? 0 : 1 }))
+    .sort((a, b) => a.inicio - b.inicio || a.i - b.i)
+    .map(({ c }) => c);
+}
+
 /** Incorporador e método construtivo de uma obra, sempre do Cadastro de obras. */
 export function dadosDaObra(cadastro) {
   return { obra: cadastro?.obra ?? null, chaveObra: cadastro?.chave ?? null, incorporador: cadastro?.cliente ?? null, metodoConstrutivo: cadastro?.sistemaEstrutural ?? null };
@@ -273,12 +287,14 @@ export function calcularIndicadores(acidentes) {
   const lista = acidentes ?? [];
   const total = lista.length;
   const somaDias = lista.reduce((s, a) => s + (Number(a.diasAfastamento) || 0), 0);
+  // Média como a tabela dinâmica do Excel (Tab02): acidentes sem dias informados ficam fora do divisor.
+  const comDias = lista.filter((a) => a.diasAfastamento !== null && a.diasAfastamento !== undefined && a.diasAfastamento !== '').length;
   const porMes = MESES_CURTOS.map((rotulo, i) => ({ rotulo, valor: lista.filter((a) => Number(String(a.data).slice(5, 7)) === i + 1).length }));
   const anos = contarPor(lista, (a) => String(a.data).slice(0, 4)).sort((a, b) => a.rotulo.localeCompare(b.rotulo));
   const porTipo = SIGLAS_TIPO.map((sigla) => ({ rotulo: sigla, valor: lista.filter((a) => a.tipo === sigla).length }));
   return {
     total,
-    mediaDias: total ? somaDias / total : null,
+    mediaDias: comDias ? somaDias / comDias : null,
     totalDias: somaDias,
     porMes,
     porAno: anos,
@@ -288,6 +304,61 @@ export function calcularIndicadores(acidentes) {
     porFuncao: primeiros(contarPor(lista, agrupado('funcao'))),
     porEmpresa: primeiros(contarPor(lista, agrupado('empresa'))),
     porParteCorpo: primeiros(contarPor(lista, agrupado('parteCorpo'))),
+    // Pirâmide de Bird: contagem por tipo em cada ano (evolução dos níveis).
+    porAnoTipo: anos.map(({ rotulo: ano }) => ({
+      ano, ...Object.fromEntries(SIGLAS_TIPO.map((s) => [s, lista.filter((a) => a.tipo === s && String(a.data).startsWith(ano)).length])),
+    })),
+  };
+}
+
+// ── Pirâmide de Bird ─────────────────────────────────────────────────────
+/**
+ * Níveis da pirâmide de Bird (1969: 1 : 10 : 30 : 600) e o tipo de acidente que alimenta cada um.
+ * Mapeamento definido pela Unità em 09/11/2026: FT no topo, CPT, SPT e TRJ na base.
+ */
+export const PIRAMIDE_BIRD = Object.freeze([
+  { nivel: 1, tipo: 'FT', nome: 'Acidente grave', descricao: 'Fatal ou incapacitante', proporcao: 1 },
+  { nivel: 2, tipo: 'CPT', nome: 'Acidente com lesão leve', descricao: 'Lesão com perda de tempo', proporcao: 10 },
+  { nivel: 3, tipo: 'SPT', nome: 'Acidente com dano material', descricao: 'Sem lesão, dano à propriedade', proporcao: 30 },
+  { nivel: 4, tipo: 'TRJ', nome: 'Quase acidente', descricao: 'Incidente sem lesão nem dano', proporcao: 600 },
+]);
+
+/**
+ * Indicadores da pirâmide a partir da contagem por tipo ({FT, CPT, SPT, TRJ}).
+ * - Âncora: o nível mais alto com ocorrência. Dele sai o "esperado por Bird" dos demais
+ *   (ex.: 67 lesões leves → esperados 6,7 graves, 201 danos materiais e 4.020 quase acidentes).
+ * - Proporção observada: cada nível dividido pelo mesmo fator, comparável com 1 : 10 : 30 : 600.
+ * - Cobertura: observado ÷ esperado (abaixo de 100% = menos registros do que Bird prevê).
+ * - Gravidade: % das ocorrências nos dois níveis de cima (grave + lesão).
+ * - Base por acidente com lesão: quase acidentes ÷ (graves + lesões leves); Bird espera 600 ÷ 11 ≈ 54,5.
+ */
+export function calcularPiramideBird(contagem) {
+  const qtd = (tipo) => Number(contagem?.[tipo]) || 0;
+  const total = PIRAMIDE_BIRD.reduce((s, n) => s + qtd(n.tipo), 0);
+  const ancora = PIRAMIDE_BIRD.find((n) => qtd(n.tipo) > 0) ?? null;
+  const fator = ancora ? qtd(ancora.tipo) / ancora.proporcao : null;
+  const niveis = PIRAMIDE_BIRD.map((n) => {
+    const ocorrencias = qtd(n.tipo);
+    const esperado = fator === null ? null : n.proporcao * fator;
+    return {
+      ...n,
+      ocorrencias,
+      percentual: total ? ocorrencias / total : null,
+      proporcaoObservada: fator ? ocorrencias / fator : null,
+      esperado,
+      cobertura: esperado ? ocorrencias / esperado : null,
+      ancora: n === ancora,
+    };
+  });
+  const comLesao = qtd('FT') + qtd('CPT');
+  return {
+    total,
+    ancora: ancora?.nivel ?? null,
+    niveis,
+    gravidade: total ? comLesao / total : null,
+    basePorLesao: comLesao ? qtd('TRJ') / comLesao : null,
+    basePorLesaoBird: 600 / 11,
+    coberturaBase: niveis[3].cobertura,
   };
 }
 

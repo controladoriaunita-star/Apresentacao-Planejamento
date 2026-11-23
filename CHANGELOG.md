@@ -5,7 +5,40 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | v34 (publicada em 19/11/2026) |
-| Dev (local) | v34 |
+| Dev (local) | v35 (em validação) |
+
+## v35 — 23/11/2026 — Segurança do Trabalho: Pirâmide de Bird e de-para de obras com busca
+
+Trazido do repositório lucaspinheirost-jpg/Apresentacao-Planejamento (lá numerado v23 e v24).
+
+### Pirâmide de Bird, carga de exemplo e média de dias
+
+- **Pirâmide de Bird** como primeiro botão do **Dashboard Segurança** (antes de "Nº de acidentes por período", e
+  aberto por padrão). Usa os mesmos filtros de obras e ano do Dashboard (`pages/piramide-bird.js`).
+- Níveis definidos pela Unità: FT = acidente grave, CPT = lesão leve, SPT = dano material, TRJ = quase acidente
+  (`PIRAMIDE_BIRD` em `domain/seguranca.js`), proporção de Bird 1 : 10 : 30 : 600.
+- Indicadores: total, proporção observada (na mesma escala de Bird), índice de gravidade, quase acidentes por
+  acidente com lesão, esperado por Bird em cada nível (a partir do nível mais alto com ocorrência), registradas ÷
+  esperadas, evolução por ano e um quadro "Como ler".
+- `calcularIndicadores` passa a devolver `porAnoTipo` (contagem por tipo em cada ano). Sem mudança de banco.
+- **Carga de exemplo da planilha "Controle de Acidentes-Dashboard.xlsx"** (13/11/2026) para o modo demonstração:
+  `tests/fixtures/seguranca-exemplo.mjs` lê a aba Dados (em `../Dados/`, fora do git) e gera o Cadastro de obras
+  (27 obras; Cliente = Incorporação, Sistema estrutural = Método Construtivo) e **todas as 142 linhas** como
+  acidentes — inclusive as 37 incompletas que a importação recusa, com os campos vazios como na planilha — para os
+  números do app baterem com o Dashboard-01/02 do Excel (142 · CPT 98 · SPT 39 · TRJ 5 · média 6,18 dias).
+  `npm run exemplo` grava a carga sozinho quando `data/exemplo` está vazia; `npm run exemplo:carga` recria a carga e
+  guarda o que havia em `data/exemplo/backup-<data-hora>/`. Teste: `tests/domain/carga-exemplo.test.mjs` (pulado
+  quando a planilha não está na máquina, ex.: Vercel).
+- **Média de dias de afastamento** como a tabela dinâmica do Excel (Tab02): acidentes sem dias informados ficam
+  fora do divisor (antes contavam como zero). Sem efeito nos dados cadastrados pelo app, onde os dias são obrigatórios.
+
+### De-para de obras com busca
+
+- Importação de acidentes: cada nome da planilha sem obra no cadastro ganha um **campo com busca** (`ui/busca-obra.js`,
+  `filtrarObras`): digitar parte do nome ou do cliente filtra a lista, sem diferenciar acento e caixa; setas e Enter escolhem.
+- O de-para agora é **preenchido por inteiro e gravado de uma vez** (botão *Gravar associações*). Os nomes não somem ao
+  serem preenchidos e podem ser corrigidos; *Importar* fica bloqueado enquanto houver alteração não gravada.
+- As associações valem para a importação em andamento. Sem mudança de banco.
 
 ## v34 — 19/11/2026 — Dev oculta colunas do Físico e do Econômico no Cliente
 

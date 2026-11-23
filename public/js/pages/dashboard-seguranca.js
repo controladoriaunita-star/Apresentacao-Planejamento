@@ -16,11 +16,14 @@ import { alerta, card, carregando, ocuparAteRodape, vazio } from '../ui/componen
 import { filtroExcel } from '../ui/filtro-excel.js';
 import { graficoCategorias } from '../ui/graficos.js';
 import { icone } from '../ui/icones.js';
+import { conteudoPiramideBird } from './piramide-bird.js';
 
 const TIPO = Object.fromEntries(TIPOS_ACIDENTE.map((t) => [t.sigla, t]));
 
 /** Indicadores na ordem dos botões. `dados(ind)` → [{rotulo, valor}]. */
 const INDICADORES = [
+  // v35: Pirâmide de Bird — conteúdo próprio (pages/piramide-bird.js), não é um gráfico de categorias.
+  { id: 'bird', nome: 'Pirâmide de Bird', dica: 'Proporção 1 : 10 : 30 : 600 — FT grave · CPT lesão leve · SPT dano material · TRJ quase acidente', especial: conteudoPiramideBird },
   { id: 'periodo', nome: 'Nº de acidentes por período', dica: 'Acidentes por mês do ano (jan–dez), somando os anos selecionados', dados: (i) => i.porMes, tipo: 'line', ranking: false },
   { id: 'tipo', nome: 'Classificação do acidente', dica: 'CPT, SPT, TRJ e FT', dados: (i) => i.porTipo, cores: true },
   { id: 'fase', nome: 'Acidentes por fase de obra', dica: 'Fase em que a obra estava no dia do acidente', dados: (i) => i.porFase },
@@ -31,7 +34,8 @@ const INDICADORES = [
   { id: 'empresa', nome: 'Acidentes por empresa contratada', dica: '10 empresas com mais acidentes (empates incluídos)', dados: (i) => i.porEmpresa, horizontal: true },
 ];
 
-const preferencias = { obras: null, anos: [], indicador: 'periodo' }; // lembradas enquanto o app estiver aberto
+// Lembradas enquanto o app estiver aberto; obras e anos valem também para a Pirâmide de Bird.
+export const preferencias = { obras: null, anos: [], indicador: 'bird' };
 
 export async function renderDashboardSeguranca(alvo) {
   const cadastros = estado.cadastros().filter((c) => c.id).sort((a, b) => a.obra.localeCompare(b.obra, 'pt-BR'));
@@ -105,13 +109,20 @@ export async function renderDashboardSeguranca(alvo) {
   function desenharIndicador() {
     const def = INDICADORES.find((i) => i.id === preferencias.indicador) ?? INDICADORES[0];
     for (const b of botoes.children) b.setAttribute('aria-selected', String(b.textContent === def.nome));
+    const titulo = h('div', { class: 'seg-painel-titulo' }, h('div', {}, h('h3', {}, def.nome), h('p', { class: 'muted small' }, def.dica)), h('span', { class: 'badge b-neutral' }, periodo));
+    // Pirâmide de Bird: conteúdo próprio, com altura natural (pirâmide, leitura e tabelas).
+    painel.classList.toggle('seg-painel-livre', Boolean(def.especial));
+    if (def.especial) {
+      painel.style.minHeight = '';
+      return montar(painel, titulo, def.especial(ind));
+    }
     const itens = def.dados(ind);
     // Barras horizontais com o dobro da grossura: o quadro cresce com o número de itens (rola a página se preciso).
     painel.style.minHeight = def.horizontal ? `${Math.max(420, itens.length * 52 + 150)}px` : '';
     const area = h('div', { class: 'grafico-area seg-painel-grafico' });
     const coresCategorias = def.cores ? itens.map((t) => TIPO[t.rotulo].cor) : null;
     montar(painel,
-      h('div', { class: 'seg-painel-titulo' }, h('div', {}, h('h3', {}, def.nome), h('p', { class: 'muted small' }, def.dica)), h('span', { class: 'badge b-neutral' }, periodo)),
+      titulo,
       h('div', { class: `seg-painel-corpo ${def.ranking === false ? 'sem-ranking' : ''}` },
         area,
         def.ranking === false ? null : ranking(itens, ind.total, coresCategorias)));
