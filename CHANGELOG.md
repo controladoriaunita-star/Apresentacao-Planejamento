@@ -5,7 +5,12 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | v36.2 (publicada em 25/11/2026) |
-| Dev (local) | v36.2 |
+| Dev (local) | v36.3 |
+
+## v36.3 — 25/11/2026 — Clientes com e-mail de qualquer domínio
+
+- Usuário com tipo de login **Senha do app** (clientes) pode ser cadastrado com e-mail de qualquer domínio.
+  `DOMINIO_EMAIL` passa a valer só para **Conta Microsoft** (que precisa existir no 365) e para o primeiro acesso.
 
 ## v36.2 — 25/11/2026 — Link do e-mail direto para o app
 
