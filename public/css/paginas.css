@@ -719,6 +719,13 @@ body.sem-rolagem { overflow: hidden; }
   .seg-filtro-data, .seg-filtro-busca { width: 100%; }
   .seg-tabela-modelo { max-height: none; }
 }
+/* v36.4 — TxC e fotos: filtros e seleção para excluir várias imagens */
+.filtros-midia { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-bottom: 12px; }
+.filtros-midia .field { width: 240px; max-width: 100%; }
+.filtros-midia > .muted { padding-bottom: 12px; }
+.filtros-midia > .btn { margin-left: auto; }
+.selecao-midia { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.selecao-midia input { width: 16px; height: 16px; flex: none; accent-color: var(--color-primary); cursor: pointer; }
 
 /* Pirâmide de Bird (Dashboard Segurança → botão "Pirâmide de Bird"), dentro do painel do indicador */
 .seg-painel.seg-painel-livre { height: auto !important; }

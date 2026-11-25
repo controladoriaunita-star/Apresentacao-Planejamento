@@ -4,7 +4,7 @@ Cada versão só é fechada com `npm run verificar` passando.
 
 | Ambiente | Versão |
 |---|---|
-| Produção | v36.3 (publicada em 25/11/2026) |
+| Produção | v36.4 (publicada em 25/11/2026) |
 | Dev (local) | v37 (em validação) |
 
 ## v37 — 25/11/2026 — Segurança do Trabalho: Pirâmide de Bird e de-para de obras com busca
@@ -39,6 +39,13 @@ Trazido do repositório lucaspinheirost-jpg/Apresentacao-Planejamento (lá numer
 - O de-para agora é **preenchido por inteiro e gravado de uma vez** (botão *Gravar associações*). Os nomes não somem ao
   serem preenchidos e podem ser corrigidos; *Importar* fica bloqueado enquanto houver alteração não gravada.
 - As associações valem para a importação em andamento. Sem mudança de banco.
+
+## v36.4 — 25/11/2026 — TxC e fotos: filtros e exclusão em lote
+
+- Administração → TxC e fotos: filtros por **obra** e por **mês** (nas duas abas, Tempo x Caminho e
+  Acompanhamento fotográfico), com a contagem de imagens exibidas.
+- Caixas de seleção em cada imagem e "selecionar todas" (da lista filtrada) com o botão **Excluir selecionadas**.
+  Só exclui o que está visível no filtro atual; usa a mesma exclusão de antes, imagem por imagem.
 
 ## v36.3 — 25/11/2026 — Clientes com e-mail de qualquer domínio
 
