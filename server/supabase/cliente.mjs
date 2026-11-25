@@ -85,7 +85,15 @@ export class ClienteSupabase {
    */
   async gerarLink(tipo, email, endereco) {
     const r = await this.#chamar('/auth/v1/admin/generate_link', { metodo: 'POST', corpo: { type: tipo, email, redirect_to: endereco } });
-    return { link: r.action_link ?? r.properties?.action_link, id: r.id ?? r.user?.id };
+    return { link: r.action_link ?? r.properties?.action_link, hash: r.hashed_token ?? r.properties?.hashed_token, id: r.id ?? r.user?.id };
+  }
+
+  /**
+   * v36.2 — Troca o token do link (token_hash) por uma sessão. Só acontece quando a pessoa salva a senha: os
+   * leitores de link dos e-mails (Outlook/antivírus) abrem a página do app, mas não gastam o token.
+   */
+  verificarLink(tipo, tokenHash) {
+    return this.#chamar('/auth/v1/verify', { metodo: 'POST', chave: this.anonKey, corpo: { type: tipo, token_hash: tokenHash } });
   }
 
   atualizarUsuarioAuth(id, campos) {

@@ -13,6 +13,15 @@ Cada versão só é fechada com `npm run verificar` passando.
   (antes rolava com a barra oculta e as abas pareciam cortadas). Só `public/css/layout.css`. Com o cabeçalho em duas
   linhas (v29) as abas quebram linha e a barra não aparece.
 
+## v36.2 — 25/11/2026 — Link do e-mail direto para o app
+
+- O link dos e-mails do 365 (convite e nova senha) vai **direto ao app** (`#token_hash=…&type=…`), sem passar pelo
+  `/auth/v1/verify` do Supabase. O token de uso único só é gasto quando a pessoa clica em "Salvar senha e entrar"
+  (`POST /auth/v1/verify` com `token_hash`). Antes, os leitores de link do Outlook/antivírus abriam o link antes da
+  pessoa e o queimavam ("link expirou"), e o retorno dependia da lista de Redirect URLs do Supabase.
+- Links antigos (`#access_token=…`) continuam funcionando. Supabase sem link no `generate_link` vira erro claro em
+  vez de "Pedido enviado" sem e-mail.
+
 ## v36.1 — 25/11/2026 — Diagnóstico dos e-mails de acesso
 
 - `GET /api/saude` informa `emails`: `"365"` (com `EMAIL_REMETENTE`) ou `"supabase"` — mostra na hora por onde a

@@ -33,8 +33,13 @@ describe('e-mails de acesso pelo Microsoft 365 (supabase)', () => {
     return new Response(null, { status: 202 });
   };
 
-  /** Token que o link do e-mail leva (o Supabase o devolve ao app no endereço, como hoje). */
-  const tokenDo = (html) => decodeURIComponent(html.match(/token=([^&"]+)/)[1].replaceAll('&amp;', '&'));
+  /** v36.2: o link do e-mail vai direto ao app com `#token_hash=…&type=…` → corpo de /definir-senha. */
+  const linkDo = (html) => {
+    const href = html.match(/href="([^"]+)"/)[1].replaceAll('&amp;', '&');
+    const p = new URLSearchParams(href.split('#')[1]);
+    return { href, tokenHash: p.get('token_hash'), tipo: p.get('type') };
+  };
+  const definir = (html, senha) => { const { tokenHash, tipo } = linkDo(html); return { tokenHash, tipo, senha }; };
 
   before(async () => {
     srv = await subirServidor({
@@ -60,10 +65,10 @@ describe('e-mails de acesso pelo Microsoft 365 (supabase)', () => {
     assert.match(e.assunto, /acesso/i);
     assert.match(e.html, /Criar minha senha/);
     assert.match(e.html, /Olá, Cliente &lt;Teste&gt;\./, 'nome escapado');
-    assert.match(e.html, /redirect_to=http%3A%2F%2F127\.0\.0\.1%3A\d+%2F/, 'o link volta para o próprio app');
+    assert.match(linkDo(e.html).href, /^http:\/\/127\.0\.0\.1:\d+\/#token_hash=[^&]+&type=invite$/, 'o link vai direto ao app, sem passar pelo Supabase');
 
     const nova = cliente(srv.base, srv.fetchExterno);
-    assert.equal((await nova('POST', '/api/auth/definir-senha', { token: tokenDo(e.html), senha: 'senha-cliente-1' })).status, 200);
+    assert.equal((await nova('POST', '/api/auth/definir-senha', definir(e.html, 'senha-cliente-1'))).status, 200);
     assert.equal((await nova('GET', '/api/auth/sessao')).dados.usuario.email, 'cli@unita.com.br');
   });
 
@@ -77,7 +82,10 @@ describe('e-mails de acesso pelo Microsoft 365 (supabase)', () => {
     assert.deepEqual([e.para, e.assunto], ['cli@unita.com.br', 'Nova senha — Apresentação de obras Unità']);
     assert.match(e.html, /Criar nova senha/);
     const c = cliente(srv.base, srv.fetchExterno);
-    assert.equal((await c('POST', '/api/auth/definir-senha', { token: tokenDo(e.html), senha: 'senha-cliente-2' })).status, 200);
+    assert.equal((await c('POST', '/api/auth/definir-senha', definir(e.html, 'senha-cliente-2'))).status, 200);
+    const reuso = await cliente(srv.base, srv.fetchExterno)('POST', '/api/auth/definir-senha', definir(e.html, 'senha-cliente-3'));
+    assert.equal(reuso.status, 400, 'o link é de uso único');
+    assert.match(reuso.dados.erro, /expirou ou já foi usado/);
     assert.equal((await cliente(srv.base)('POST', '/api/auth/login', { email: 'cli@unita.com.br', senha: 'senha-cliente-2' })).status, 200, 'entra com a senha nova');
   });
 

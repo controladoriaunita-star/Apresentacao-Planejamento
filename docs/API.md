@@ -35,7 +35,7 @@ precisa reproduzir. Os cenários obrigatórios estão em `tests/api/contrato.mjs
 | POST | `/auth/configurar` | pública, só sem usuários | `{ nome, email, senha }` → 201 `{ usuario }` (papel dev). 409 se já configurado |
 | PUT | `/auth/senha` | conta | `{ senhaAtual, novaSenha }` → `{ ok }` |
 | POST | `/auth/recuperar` | pública | `{ email }` → `{ ok }` (igual exista ou não o e-mail; envia o link de nova senha). Local: 400. Conta no limite de 8/min |
-| POST | `/auth/definir-senha` | pública | `{ token, senha }` → `{ usuario }` + cookie. `token` = `access_token` que o link do e-mail traz no endereço (`#access_token=…&type=invite\|recovery`). 400 token inválido/vencido; 403 usuário inativo. Local: 400 |
+| POST | `/auth/definir-senha` | pública | `{ token, senha }` ou `{ tokenHash, tipo, senha }` → `{ usuario }` + cookie. `token` = `access_token` do link do Supabase (`#access_token=…&type=invite\|recovery`); `tokenHash`/`tipo` = link do e-mail do 365 (v36.2, `#token_hash=…&type=invite\|recovery`), trocado por sessão só nesta chamada. 400 token inválido/vencido; 403 usuário inativo. Local: 400 |
 
 `usuario` = `{ id, nome, email, papel, ativo, criadoEm, ultimoAcesso?, obras?, apresentacoes? }` (nunca o hash).
 Sem `obras`/`apresentacoes` (usuários anteriores à v26) = todas as obras, Obra e Cliente.
