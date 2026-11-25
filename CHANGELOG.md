@@ -5,7 +5,15 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | v36 (publicada em 25/11/2026) |
-| Dev (local) | v36 |
+| Dev (local) | v36.1 |
+
+## v36.1 — 25/11/2026 — Diagnóstico dos e-mails de acesso
+
+- `GET /api/saude` informa `emails`: `"365"` (com `EMAIL_REMETENTE`) ou `"supabase"` — mostra na hora por onde a
+  produção está enviando.
+- Os e-mails enviados pelo 365 ficam com cópia em **Itens Enviados** da caixa remetente.
+- Log de cada pedido (Vercel → Logs, `[e-mail de acesso]`, e-mail mascarado): enviado pelo 365, entregue ao Supabase
+  ou ignorado (sem cadastro, inativo ou conta Microsoft), e o erro do 365 quando falha.
 
 ## v36 — 25/11/2026 — E-mails de acesso dos clientes pelo Microsoft 365
 

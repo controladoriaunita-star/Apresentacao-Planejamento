@@ -61,7 +61,7 @@ export class ClienteGraph {
 
   /**
    * v36 — Envia um e-mail HTML a partir da caixa `remetente` do Microsoft 365 (permissão de aplicativo Mail.Send).
-   * Não guarda cópia em Itens Enviados.
+   * Guarda cópia em Itens Enviados da caixa remetente (v36.1: para conferir o que o app enviou).
    */
   async enviarEmail({ remetente, para, assunto, html }) {
     const res = await this.fetch(`${GRAPH}/users/${encodeURIComponent(remetente)}/sendMail`, {
@@ -69,7 +69,7 @@ export class ClienteGraph {
       headers: { authorization: `Bearer ${await this.#tokenDeAcesso()}`, 'content-type': 'application/json' },
       body: JSON.stringify({
         message: { subject: assunto, body: { contentType: 'HTML', content: html }, toRecipients: [{ emailAddress: { address: para } }] },
-        saveToSentItems: false,
+        saveToSentItems: true,
       }),
       signal: AbortSignal.timeout(TEMPO_LIMITE_MS),
     });
