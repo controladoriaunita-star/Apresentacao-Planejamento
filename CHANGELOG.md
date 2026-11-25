@@ -4,7 +4,7 @@ Cada versão só é fechada com `npm run verificar` passando.
 
 | Ambiente | Versão |
 |---|---|
-| Produção | v36.3 (publicada em 25/11/2026) |
+| Produção | v36.4 (publicada em 25/11/2026) |
 | Dev (local) | v38 (em validação) |
 
 ## v38 — 25/11/2026 — barra de rolagem no menu de abas
@@ -12,6 +12,13 @@ Cada versão só é fechada com `npm run verificar` passando.
 - Com muitas abas/novas telas, o menu do topo passa a mostrar uma barra de rolagem horizontal fina em telas menores
   (antes rolava com a barra oculta e as abas pareciam cortadas). Só `public/css/layout.css`. Com o cabeçalho em duas
   linhas (v29) as abas quebram linha e a barra não aparece.
+
+## v36.4 — 25/11/2026 — TxC e fotos: filtros e exclusão em lote
+
+- Administração → TxC e fotos: filtros por **obra** e por **mês** (nas duas abas, Tempo x Caminho e
+  Acompanhamento fotográfico), com a contagem de imagens exibidas.
+- Caixas de seleção em cada imagem e "selecionar todas" (da lista filtrada) com o botão **Excluir selecionadas**.
+  Só exclui o que está visível no filtro atual; usa a mesma exclusão de antes, imagem por imagem.
 
 ## v36.3 — 25/11/2026 — Clientes com e-mail de qualquer domínio
 
