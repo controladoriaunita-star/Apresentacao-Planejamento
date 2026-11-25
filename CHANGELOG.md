@@ -4,7 +4,7 @@ Cada versão só é fechada com `npm run verificar` passando.
 
 | Ambiente | Versão |
 |---|---|
-| Produção | v36.2 (publicada em 25/11/2026) |
+| Produção | v36.3 (publicada em 25/11/2026) |
 | Dev (local) | v36.3 |
 
 ## v36.3 — 25/11/2026 — Clientes com e-mail de qualquer domínio
