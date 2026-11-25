@@ -75,7 +75,7 @@ migrado ficam duplicados por e-mail — o script pula e-mails que já existem.
 | `STORE` | `supabase` |
 | `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | do passo 1 |
 | `SESSION_SECRET` | texto aleatório longo (trocar encerra todas as sessões) |
-| `DOMINIO_EMAIL` | opcional; padrão `unitaengenharia.com.br` (só esses e-mails entram) |
+| `DOMINIO_EMAIL` | opcional; padrão `unitaengenharia.com.br` (exigido para Conta Microsoft; clientes com Senha do app: qualquer domínio) |
 | `MS_GRAPH_TENANT_ID`, `MS_GRAPH_CLIENT_ID`, `MS_GRAPH_CLIENT_SECRET` | mesmos do `.env.local` |
 | `MS_GRAPH_DRIVE_ID`, `MS_GRAPH_ITEM_ID` | os da planilha (ver `.env.example`) |
 | `AUTH_MODE`, `APP_URL` | v35 — login com a conta Microsoft; ver "Login com a conta Microsoft" abaixo |
@@ -87,7 +87,7 @@ migrado ficam duplicados por e-mail — o script pula e-mails que já existem.
 ## Login e convites
 
 - **Novo colaborador**: o Dev abre *Administração → Usuários → Novo usuário* e informa nome, e-mail
-  `@unitaengenharia.com.br` e papel (padrão Viewer). O Supabase envia o convite; o link abre o app numa tela para a
+  `@unitaengenharia.com.br` (cliente com *Senha do app*: e-mail de qualquer domínio) e papel (padrão Viewer). O Supabase envia o convite; o link abre o app numa tela para a
   pessoa criar a senha, e ela já entra. *Editar → Reenviar e-mail de acesso* manda o link de novo (ou o de nova
   senha, para quem já entrou).
 - **Esqueci minha senha**: na tela de login; chega um link para criar uma nova senha.

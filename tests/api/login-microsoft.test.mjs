@@ -86,6 +86,17 @@ for (const store of ['local', 'supabase']) {
       assert.equal(lista.find((u) => u.email === 'cli@unita.com.br').login, 'senha');
     });
 
+    test('v36.3: cliente ("Senha do app") pode ter e-mail de qualquer domínio; conta Microsoft só do DOMINIO_EMAIL', async () => {
+      const fora = await dev('POST', '/api/usuarios', { nome: 'Fora', email: 'fora@gmail.com', papel: 'viewer' });
+      assert.equal(fora.status, 400, 'conta Microsoft de outro domínio');
+      assert.match(fora.dados.erro, /@unita\.com\.br/);
+      const corpo = { nome: 'Cliente Externo', email: 'Contato@Construtora-Cliente.com', papel: 'viewer', login: 'senha', ...(store === 'local' ? { senha: 'senha-cliente-9' } : {}) };
+      const r = await dev('POST', '/api/usuarios', corpo);
+      assert.equal(r.status, 201, JSON.stringify(r.dados));
+      assert.equal(r.dados.email, 'contato@construtora-cliente.com');
+      if (store === 'supabase') assert.equal(srv.supabase.emails.at(-1).email, 'contato@construtora-cliente.com', 'recebe o convite');
+    });
+
     test('conta Microsoft não entra com senha; cliente entra com senha', async () => {
       const r = await cliente(srv.base)('POST', '/api/auth/login', { email: 'dev@unita.com.br', senha: 'senha-forte-1' });
       assert.equal(r.status, 403);

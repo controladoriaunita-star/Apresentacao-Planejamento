@@ -4,7 +4,7 @@ Cada versão só é fechada com `npm run verificar` passando.
 
 | Ambiente | Versão |
 |---|---|
-| Produção | v36.2 (publicada em 25/11/2026) |
+| Produção | v36.3 (publicada em 25/11/2026) |
 | Dev (local) | v37 (em validação) |
 
 ## v37 — 25/11/2026 — Segurança do Trabalho: Pirâmide de Bird e de-para de obras com busca
@@ -39,6 +39,11 @@ Trazido do repositório lucaspinheirost-jpg/Apresentacao-Planejamento (lá numer
 - O de-para agora é **preenchido por inteiro e gravado de uma vez** (botão *Gravar associações*). Os nomes não somem ao
   serem preenchidos e podem ser corrigidos; *Importar* fica bloqueado enquanto houver alteração não gravada.
 - As associações valem para a importação em andamento. Sem mudança de banco.
+
+## v36.3 — 25/11/2026 — Clientes com e-mail de qualquer domínio
+
+- Usuário com tipo de login **Senha do app** (clientes) pode ser cadastrado com e-mail de qualquer domínio.
+  `DOMINIO_EMAIL` passa a valer só para **Conta Microsoft** (que precisa existir no 365) e para o primeiro acesso.
 
 ## v36.2 — 25/11/2026 — Link do e-mail direto para o app
 

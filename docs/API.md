@@ -11,7 +11,7 @@ precisa reproduzir. Os cenários obrigatórios estão em `tests/api/contrato.mjs
 | Regra | Detalhe |
 |---|---|
 | Sessão | Cookie `sessao` = `base64url(JSON {u, exp}) + "." + HMAC-SHA256(segredo)`. HttpOnly, 12 h. Em HTTPS `SameSite=None; Secure; Partitioned` (o app abre no iframe do Portal Unità); em http, `SameSite=Lax`. |
-| Domínio | Só e-mails `@DOMINIO_EMAIL` (padrão `unitaengenharia.com.br`) no primeiro acesso e na criação de usuários; outro → 400. |
+| Domínio | Só e-mails `@DOMINIO_EMAIL` (padrão `unitaengenharia.com.br`) no primeiro acesso e na criação de usuários do tipo Conta Microsoft; outro → 400. Tipo `senha` (clientes): qualquer domínio (v36.3). |
 | CSRF | Todo método ≠ GET exige o cabeçalho `X-Requested-With: fetch`; sem ele → 403. |
 | Permissão | 401 sem sessão; 403 se o papel não tem a capacidade. Papel relido do cadastro a cada requisição. |
 | Papéis | `dev` (tudo) · `planejamento` (ver, verSeguranca, editarSeguranca, editarConteudo) · `seguranca` (verSeguranca, editarSeguranca) · `viewer` (ver, verSeguranca). Todos têm `conta`. |
