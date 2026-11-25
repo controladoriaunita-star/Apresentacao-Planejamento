@@ -2,7 +2,7 @@
  * Login, primeiro acesso (criação do primeiro usuário Dev quando ainda não há nenhum), "esqueci minha senha" e a
  * volta do link do e-mail (convite ou nova senha), que traz o token no endereço: `#access_token=…&type=invite`.
  * v35: com o login Microsoft ativo, o botão "Entrar com a conta Microsoft" vem primeiro; e-mail e senha ficam para
- * quem não tem conta no 365 (clientes).
+ * quem não tem conta no 365 (clientes) e só abrem no botão "Cliente".
  */
 import { api } from '../core/api.js';
 import { h, montar } from '../core/dom.js';
@@ -74,11 +74,19 @@ export function renderLogin(alvo, { precisaConfigurar, convite, microsoft, aviso
     (precisaConfigurar ? nome : email).focus();
     return;
   }
+  // Clientes: o formulário de e-mail e senha só aparece depois do botão "Cliente".
+  form.prepend(h('p', { class: 'muted', style: { margin: 0 } }, 'Acesso de clientes: e-mail e senha do app.'));
+  form.style.display = 'none';
+  const botaoCliente = h('button', { class: 'btn', type: 'button', style: { width: '100%' }, onclick: () => {
+    botaoCliente.style.display = 'none';
+    form.style.display = '';
+    email.focus();
+  } }, 'Cliente');
   telaAcesso(alvo, h('div', { class: 'stack' },
     aviso ? alerta('warning', aviso) : null,
     blocoMicrosoft(aoEntrar),
     h('div', { class: 'separador-login' }, 'ou'),
-    h('p', { class: 'muted', style: { margin: 0 } }, 'Clientes e usuários sem conta Microsoft:'),
+    botaoCliente,
     form));
 }
 
