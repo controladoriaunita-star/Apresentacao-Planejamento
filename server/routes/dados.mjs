@@ -177,7 +177,8 @@ export function registrarDados(rotas, { planilhas, incc, cadastro, acidentes, ar
   });
 
   rotas.adicionar('GET', '/api/saude', { permissao: null }, async ({ req, res }) => {
-    enviarJson(req, res, 200, { ok: true, fonte: config.fonteDados, armazenamento: config.store });
+    // v36.1: `emails` diz por onde saem convite e nova senha ("365" com EMAIL_REMETENTE; senão "supabase").
+    enviarJson(req, res, 200, { ok: true, fonte: config.fonteDados, armazenamento: config.store, emails: config.emailRemetente ? '365' : 'supabase' });
   });
 }
 
