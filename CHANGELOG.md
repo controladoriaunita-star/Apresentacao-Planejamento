@@ -40,6 +40,14 @@ Trazido do repositório lucaspinheirost-jpg/Apresentacao-Planejamento (lá numer
   serem preenchidos e podem ser corrigidos; *Importar* fica bloqueado enquanto houver alteração não gravada.
 - As associações valem para a importação em andamento. Sem mudança de banco.
 
+## v36.1 — 25/11/2026 — Diagnóstico dos e-mails de acesso
+
+- `GET /api/saude` informa `emails`: `"365"` (com `EMAIL_REMETENTE`) ou `"supabase"` — mostra na hora por onde a
+  produção está enviando.
+- Os e-mails enviados pelo 365 ficam com cópia em **Itens Enviados** da caixa remetente.
+- Log de cada pedido (Vercel → Logs, `[e-mail de acesso]`, e-mail mascarado): enviado pelo 365, entregue ao Supabase
+  ou ignorado (sem cadastro, inativo ou conta Microsoft), e o erro do 365 quando falha.
+
 ## v36 — 25/11/2026 — E-mails de acesso dos clientes pelo Microsoft 365
 
 - **"Esqueci minha senha", convite e "Reenviar e-mail de acesso"** passam a sair pelo Microsoft 365, da caixa

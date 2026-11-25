@@ -28,7 +28,7 @@ describe('e-mails de acesso pelo Microsoft 365 (supabase)', () => {
     assert.equal(init.headers.authorization, 'Bearer token-graph');
     if (falhar) return new Response(JSON.stringify({ error: { code: 'ErrorAccessDenied', message: 'Access is denied.' } }), { status: 403 });
     const { message, saveToSentItems } = JSON.parse(init.body);
-    assert.equal(saveToSentItems, false);
+    assert.equal(saveToSentItems, true, 'cópia em Itens Enviados');
     enviados.push({ remetente: decodeURIComponent(m[1]), para: message.toRecipients[0].emailAddress.address, assunto: message.subject, html: message.body.content });
     return new Response(null, { status: 202 });
   };
@@ -46,6 +46,10 @@ describe('e-mails de acesso pelo Microsoft 365 (supabase)', () => {
     assert.equal((await dev('POST', '/api/auth/configurar', { nome: 'Dev', email: 'dev@unita.com.br', senha: 'senha-forte-1' })).status, 201);
   });
   after(() => srv.fechar());
+
+  test('/api/saude informa que os e-mails saem pelo 365', async () => {
+    assert.equal((await cliente(srv.base)('GET', '/api/saude')).dados.emails, '365');
+  });
 
   test('convite de cliente sai pelo 365, não pelo Supabase, e o link cria a senha', async () => {
     const r = await dev('POST', '/api/usuarios', { nome: 'Cliente <Teste>', email: 'cli@unita.com.br', papel: 'viewer', login: 'senha' });

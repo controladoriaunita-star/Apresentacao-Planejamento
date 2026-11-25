@@ -68,6 +68,10 @@ export function validarTipoLogin(login) {
   if (login !== undefined && !TIPOS_LOGIN.includes(login)) throw erro(400, 'Tipo de login inválido.');
 }
 
+/** v36.1 — Log (Vercel → Logs) de cada e-mail de acesso, com o endereço mascarado: "cli…@empresa.com". */
+const mascarar = (email) => String(email ?? '').replace(/^(.{1,3})[^@]*@/, '$1…@');
+const registrarEmail = (evento, email) => console.info(`[e-mail de acesso] ${evento} → ${mascarar(email)}`);
+
 /** Só grava o tipo "senha": o padrão do banco é "microsoft" (assim criar usuários não depende da migration 006). */
 const loginInicial = (login) => (login === 'senha' ? { login } : {});
 
@@ -224,11 +228,12 @@ export class AutenticacaoSupabase {
 
   /** v36 — Entrega o link pelo 365 (não faz nada quando o Supabase já enviou). */
   async #entregar(tipo, { email, nome }, link) {
-    if (!this.correio || !link) return;
+    if (!this.correio || !link) return registrarEmail(`${tipo} entregue ao Supabase (sem EMAIL_REMETENTE)`, email);
     try {
       await this.correio.enviarAcesso(tipo, { email, nome, link });
+      registrarEmail(`${tipo} enviado pelo 365 (${this.correio.remetente})`, email);
     } catch (e) {
-      console.error('[e-mail de acesso]', e.message);
+      console.error('[e-mail de acesso]', mascarar(email), e.message);
       throw erro(502, e.message);
     }
   }
@@ -333,7 +338,7 @@ export class AutenticacaoSupabase {
     const id = criado.id ?? criado.user?.id;
     const perfil = await this.perfis.inserir({ id, nome: nome.trim(), email: normalizarEmail(email), papel, ativo: true, ...acessoInicial(resto), ...loginInicial(login) });
     try {
-      await this.#entregar('invite', perfil, criado.link);
+      if (!senha) await this.#entregar('invite', perfil, criado.link); // com senha não há convite
     } catch (e) {
       throw erro(502, `Usuário criado, mas o convite não foi enviado (${e.message}) Use "Reenviar e-mail de acesso".`);
     }
@@ -366,7 +371,10 @@ export class AutenticacaoSupabase {
   /** "Esqueci minha senha": só envia para usuários ativos e não revela se o e-mail existe. */
   async recuperarSenha(email, endereco) {
     const perfil = await this.perfis.buscarPor('email', normalizarEmail(email));
-    if (!perfil?.ativo || soMicrosoft(this.config, perfil)) return;
+    if (!perfil?.ativo || soMicrosoft(this.config, perfil)) {
+      const motivo = !perfil ? 'e-mail sem cadastro' : !perfil.ativo ? 'usuário inativo' : 'usuário entra com a conta Microsoft';
+      return registrarEmail(`recovery ignorado: ${motivo}`, email);
+    }
     const { link } = await this.#linkDeAcesso('recovery', perfil.email, endereco);
     try {
       await this.#entregar('recovery', perfil, link);
