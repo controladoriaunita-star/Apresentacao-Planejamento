@@ -3,6 +3,8 @@
  * Com o Supabase (`estado.convite`) o Dev não define senha: o usuário recebe um convite por e-mail e cria a sua.
  * v26: para o papel Viewer, escolhe quais obras (todas ou só as marcadas) e qual apresentação (Obra, Cliente ou
  * ambas) a pessoa vê — regras em domain/acesso.js, aplicadas pelo servidor.
+ * v35: tipo de login — conta Microsoft (padrão, Office 365) ou senha do app (quem não tem conta no 365, ex.: clientes).
+ * Com o login Microsoft ativo, quem é "Microsoft" não tem senha nem convite no app.
  */
 import { api } from '../core/api.js';
 import { h, montar } from '../core/dom.js';
@@ -26,12 +28,13 @@ export async function renderAdminUsuarios(alvo) {
         h('div', {}, h('h1', {}, 'Usuários'), h('p', {}, Object.values(PAPEIS).map((p) => `${p.nome}: ${p.descricao}`).join(' · '))),
         h('button', { class: 'btn primary', type: 'button', onclick: () => abrirForm({}, desenhar) }, 'Novo usuário')),
       h('div', { class: 'sheet' }, h('table', { class: 'lista-admin' },
-        h('thead', {}, h('tr', {}, h('th', { class: 'first' }, 'Nome'), h('th', {}, 'E-mail'), h('th', {}, 'Papel'), h('th', {}, 'Acesso'), h('th', {}, 'Situação'), h('th', {}, 'Último acesso'), h('th', {}))),
+        h('thead', {}, h('tr', {}, h('th', { class: 'first' }, 'Nome'), h('th', {}, 'E-mail'), h('th', {}, 'Papel'), h('th', {}, 'Acesso'), h('th', {}, 'Login'), h('th', {}, 'Situação'), h('th', {}, 'Último acesso'), h('th', {}))),
         h('tbody', {}, usuarios.map((u) => h('tr', {},
           h('td', { class: 'first' }, u.nome),
           h('td', { class: 'esq' }, u.email),
           h('td', { class: 'esq' }, PAPEIS[u.papel]?.nome ?? u.papel),
           h('td', { class: 'esq' }, resumoAcesso(u)),
+          h('td', { class: 'esq' }, TIPOS_LOGIN[tipoLogin(u)]),
           h('td', {}, situacao(u)),
           h('td', { class: 'muted' }, fmtDataHora(u.ultimoAcesso)),
           h('td', { class: 'acoes' },
@@ -48,8 +51,13 @@ export async function renderAdminUsuarios(alvo) {
 
 function situacao(u) {
   if (!u.ativo) return badge('Inativo', 'neutral');
-  return estado.convite && !u.ultimoAcesso ? badge('Convite enviado', 'warning') : badge('Ativo', 'success');
+  return estado.convite && !u.ultimoAcesso && !usaMicrosoft(tipoLogin(u)) ? badge('Convite enviado', 'warning') : badge('Ativo', 'success');
 }
+
+// v35 — tipo de login (campo ausente = conta Microsoft, como no servidor)
+const TIPOS_LOGIN = { microsoft: 'Conta Microsoft', senha: 'Senha do app' };
+const tipoLogin = (u) => (u.login === 'senha' ? 'senha' : 'microsoft');
+const usaMicrosoft = (tipo) => estado.microsoft && tipo === 'microsoft';
 
 /** "Todas as obras · Obra e Cliente", "2 obras · Somente Cliente"… (só o Viewer é restrito). */
 function resumoAcesso(u) {
@@ -122,6 +130,8 @@ function abrirForm(inicial, aoSalvar) {
   const papel = h('select', {}, Object.entries(PAPEIS).map(([k, p]) => h('option', { value: k, selected: k === (inicial.papel ?? 'viewer') }, p.nome)));
   const senha = h('input', { type: 'password', autocomplete: 'new-password', placeholder: editando ? 'Deixe vazio para manter' : 'Mínimo de 8 caracteres' });
   const ativo = h('input', { type: 'checkbox', checked: inicial.ativo !== false });
+  const tipoInicial = tipoLogin(inicial);
+  const login = h('select', {}, Object.entries(TIPOS_LOGIN).map(([k, rotulo]) => h('option', { value: k, selected: k === tipoInicial }, k === 'microsoft' ? `${rotulo} (Office 365)` : `${rotulo} (sem conta 365)`)));
   const acessoViewer = seletorAcesso(inicial);
   const mostrarAcesso = () => { acessoViewer.elemento.hidden = papel.value !== 'viewer'; };
   papel.addEventListener('change', mostrarAcesso);
@@ -139,10 +149,20 @@ function abrirForm(inicial, aoSalvar) {
       })
       : alerta('info', 'Convite por e-mail', 'A pessoa recebe um e-mail com o link para criar a própria senha.'))
     : campo(editando ? 'Nova senha' : 'Senha inicial', senha, 'Combine a senha com a pessoa por um canal seguro.');
+  const avisoMicrosoft = alerta('info', 'Entra com a conta Microsoft', 'Usa o e-mail e a senha do Office 365 — o app não guarda senha nem envia convite.');
+  const blocoAcesso = h('div', {}, acesso);
+  const mostrarLogin = () => {
+    const microsoft = usaMicrosoft(login.value);
+    blocoAcesso.hidden = microsoft;
+    avisoMicrosoft.hidden = !microsoft;
+  };
+  login.addEventListener('change', mostrarLogin);
+  mostrarLogin();
   const m = abrirModal({
     titulo: editando ? `Editar ${inicial.nome}` : 'Novo usuário',
     conteudo: h('div', { class: 'stack' }, erro,
-      campo('Nome', nome), campo('E-mail', email), campo('Papel', papel), acessoViewer.elemento, acesso,
+      campo('Nome', nome), campo('E-mail', email), campo('Papel', papel), acessoViewer.elemento,
+      campo('Tipo de login', login, 'Senha do app: só para quem não tem conta no Office 365 (ex.: clientes).'), avisoMicrosoft, blocoAcesso,
       editando ? h('label', { class: 'check' }, ativo, 'Usuário ativo') : null),
     acoes: [
       h('button', { class: 'btn ghost', type: 'button', onclick: () => m.fechar() }, 'Cancelar'),
@@ -150,10 +170,12 @@ function abrirForm(inicial, aoSalvar) {
         montar(erro);
         try {
           const liberado = papel.value === 'viewer' ? acessoViewer.valor() : {}; // os outros papéis veem tudo
-          if (editando) await api.put(`/usuarios/${inicial.id}`, { nome: nome.value, papel: papel.value, ativo: ativo.checked, ...liberado, ...(senha.value ? { senha: senha.value } : {}) });
-          else await api.post('/usuarios', { nome: nome.value, email: email.value, papel: papel.value, ...liberado, ...(estado.convite ? {} : { senha: senha.value }) });
+          const comSenha = !usaMicrosoft(login.value);
+          const tipo = login.value !== tipoInicial ? { login: login.value } : {}; // só envia se mudou
+          if (editando) await api.put(`/usuarios/${inicial.id}`, { nome: nome.value, papel: papel.value, ativo: ativo.checked, ...liberado, ...tipo, ...(comSenha && senha.value ? { senha: senha.value } : {}) });
+          else await api.post('/usuarios', { nome: nome.value, email: email.value, papel: papel.value, login: login.value, ...liberado, ...(estado.convite || !comSenha ? {} : { senha: senha.value }) });
           m.fechar();
-          toast('success', 'Usuário salvo', !editando && estado.convite ? `Convite enviado para ${email.value}.` : null);
+          toast('success', 'Usuário salvo', !editando && estado.convite && comSenha ? `Convite enviado para ${email.value}.` : null);
           aoSalvar();
         } catch (e) {
           montar(erro, alerta('error', 'Não foi possível salvar', e.message));

@@ -22,7 +22,7 @@ const TIPO = Object.fromEntries(TIPOS_ACIDENTE.map((t) => [t.sigla, t]));
 
 /** Indicadores na ordem dos botões. `dados(ind)` → [{rotulo, valor}]. */
 const INDICADORES = [
-  // v35: Pirâmide de Bird — conteúdo próprio (pages/piramide-bird.js), não é um gráfico de categorias.
+  // v37: Pirâmide de Bird — conteúdo próprio (pages/piramide-bird.js), não é um gráfico de categorias.
   { id: 'bird', nome: 'Pirâmide de Bird', dica: 'Proporção 1 : 10 : 30 : 600 — FT grave · CPT lesão leve · SPT dano material · TRJ quase acidente', especial: conteudoPiramideBird },
   { id: 'periodo', nome: 'Nº de acidentes por período', dica: 'Acidentes por mês do ano (jan–dez), somando os anos selecionados', dados: (i) => i.porMes, tipo: 'line', ranking: false },
   { id: 'tipo', nome: 'Classificação do acidente', dica: 'CPT, SPT, TRJ e FT', dados: (i) => i.porTipo, cores: true },

@@ -51,7 +51,7 @@ registro já gravado (o gravado é mantido; para corrigir, editar o acidente).
 |---|---|---|
 | Administração → Segurança do Trabalho | `#/admin/seguranca` | próprios (obras, período, tipo, pesquisa), paginação no servidor (50/página) |
 | Dashboard Segurança (sub-aba de Administração → Segurança do Trabalho) | `#/admin/seguranca-dashboard` | Obras do Cadastro de obras (padrão: todas) e segmentador Ano. Um indicador por vez (botões), ocupando o resto da tela |
-| Pirâmide de Bird (v35 — primeiro botão do Dashboard Segurança) | `#/admin/seguranca-dashboard` | Mesmos filtros do Dashboard. Níveis: FT grave · CPT lesão leve · SPT dano material · TRJ quase acidente (`PIRAMIDE_BIRD`, `calcularPiramideBird`) |
+| Pirâmide de Bird (v37 — primeiro botão do Dashboard Segurança) | `#/admin/seguranca-dashboard` | Mesmos filtros do Dashboard. Níveis: FT grave · CPT lesão leve · SPT dano material · TRJ quase acidente (`PIRAMIDE_BIRD`, `calcularPiramideBird`) |
 | Segurança do Trabalho | `#/obra/seguranca-trabalho`, `#/cliente/seguranca-trabalho` | Tela cheia (Apresentar): sempre a obra do filtro geral. Fora: seletor "Obra exibida" (filtro geral, todas ou uma obra) |
 
 Período do gráfico mês a mês (`mesesDoGrafico`): de 1 mês antes do primeiro acidente até 1 mês depois do último,

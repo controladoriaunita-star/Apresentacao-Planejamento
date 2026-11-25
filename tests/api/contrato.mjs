@@ -30,7 +30,7 @@ after(() => srv.fechar());
 
 test('primeiro acesso cria o Dev e depois fica bloqueado', async () => {
   let r = await anonimo('GET', '/api/auth/sessao');
-  assert.deepEqual(r.dados, { usuario: null, precisaConfigurar: true, convite: store === 'supabase' });
+  assert.deepEqual(r.dados, { usuario: null, precisaConfigurar: true, convite: store === 'supabase', microsoft: false });
 
   r = await anonimo('POST', '/api/auth/configurar', { nome: 'Fora', email: 'fora@gmail.com', senha: 'senha-forte-1' });
   assert.equal(r.status, 400, 'só e-mails do DOMINIO_EMAIL');

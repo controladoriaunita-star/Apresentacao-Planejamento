@@ -5,9 +5,9 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | v34 (publicada em 19/11/2026) |
-| Dev (local) | v35 (em validação) |
+| Dev (local) | v37 (em validação) |
 
-## v35 — 23/11/2026 — Segurança do Trabalho: Pirâmide de Bird e de-para de obras com busca
+## v37 — 25/11/2026 — Segurança do Trabalho: Pirâmide de Bird e de-para de obras com busca
 
 Trazido do repositório lucaspinheirost-jpg/Apresentacao-Planejamento (lá numerado v23 e v24).
 
@@ -39,6 +39,24 @@ Trazido do repositório lucaspinheirost-jpg/Apresentacao-Planejamento (lá numer
 - O de-para agora é **preenchido por inteiro e gravado de uma vez** (botão *Gravar associações*). Os nomes não somem ao
   serem preenchidos e podem ser corrigidos; *Importar* fica bloqueado enquanto houver alteração não gravada.
 - As associações valem para a importação em andamento. Sem mudança de banco.
+
+## v35 — 25/11/2026 — Login com a conta Microsoft (Office 365)
+
+- **Equipe entra com a conta Microsoft**: botão "Entrar com a conta Microsoft" na tela de login (OpenID Connect,
+  feito todo no servidor, sem biblioteca — `server/auth/microsoft.mjs`). Usa o registro do Entra ID que o app já
+  tem (`MS_GRAPH_*`; `ENTRA_*` opcionais). Só entra quem está cadastrado e ativo no app com o mesmo e-mail; conta
+  de outra organização é recusada. A sessão continua sendo o cookie `sessao` do app (12 h).
+- **Clientes continuam com senha**: novo campo **Tipo de login** em Administração → Usuários — *Conta Microsoft*
+  (padrão, inclusive para todos os usuários atuais) ou *Senha do app* (quem não tem conta no 365). Com o login
+  Microsoft ligado, a conta Microsoft não entra com senha, não recebe convite nem "esqueci minha senha" e "Minha
+  conta" não troca senha. Criar usuário Microsoft não envia convite.
+- **Dentro do Portal Unità**: a Microsoft não abre em iframe, então o login abre num pop-up e o app entra sozinho
+  no iframe (verificador sorteado pelo iframe + pedido no Storage, uso único, 10 min — um link forjado não serve).
+- **Liga só com `AUTH_MODE=entra`**: sem a variável, tudo funciona exatamente como na v34. Ordem segura de ativação
+  e como voltar atrás em `docs/SUPABASE_VERCEL.md`.
+- **Migration 006** (`perfis.login`, padrão `'microsoft'`): só acrescenta a coluna; nenhum dado muda.
+- Testes: `tests/api/login-microsoft.test.mjs` (local e Supabase, Microsoft simulada — redirect, pop-up, erros,
+  regras de senha e de convite); o servidor de teste ignora `AUTH_MODE` da Vercel para o build não quebrar.
 
 ## v34 — 19/11/2026 — Dev oculta colunas do Físico e do Econômico no Cliente
 

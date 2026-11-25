@@ -3,10 +3,11 @@
  * - Local: arquivos em DATA_DIR/<nome>.json.
  * - Supabase: objetos no Storage em `sistema/<nome>.json` — compartilhados entre as instâncias da Vercel
  *   (que não têm disco persistente).
- * Interface: ler(nome) → objeto | null · gravar(nome, objeto)
+ * Interface: ler(nome) → objeto | null · gravar(nome, objeto) · remover(nome)
+ * v35: também guarda por alguns minutos o resultado do login Microsoft feito no pop-up (Portal Unità).
  */
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
+import { rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 const arquivoSeguro = (nome) => nome.replace(/[^\w/-]+/g, '_');
@@ -26,6 +27,10 @@ export class ArmazemLocal {
     mkdirSync(dirname(caminho), { recursive: true });
     await writeFile(caminho, JSON.stringify(objeto));
   }
+
+  async remover(nome) {
+    await rm(join(this.dataDir, `${arquivoSeguro(nome)}.json`), { force: true });
+  }
 }
 
 export class ArmazemSupabase {
@@ -40,5 +45,9 @@ export class ArmazemSupabase {
 
   async gravar(nome, objeto) {
     await this.cliente.gravarObjeto(`sistema/${arquivoSeguro(nome)}.json`, Buffer.from(JSON.stringify(objeto)));
+  }
+
+  async remover(nome) {
+    await this.cliente.removerArquivos([`sistema/${arquivoSeguro(nome)}.json`]);
   }
 }
