@@ -58,4 +58,27 @@ export class ClienteGraph {
     const corpo = await res.json();
     return corpo.values ?? [];
   }
+
+  /**
+   * v36 — Envia um e-mail HTML a partir da caixa `remetente` do Microsoft 365 (permissão de aplicativo Mail.Send).
+   * Não guarda cópia em Itens Enviados.
+   */
+  async enviarEmail({ remetente, para, assunto, html }) {
+    const res = await this.fetch(`${GRAPH}/users/${encodeURIComponent(remetente)}/sendMail`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${await this.#tokenDeAcesso()}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        message: { subject: assunto, body: { contentType: 'HTML', content: html }, toRecipients: [{ emailAddress: { address: para } }] },
+        saveToSentItems: false,
+      }),
+      signal: AbortSignal.timeout(TEMPO_LIMITE_MS),
+    });
+    if (res.ok) return;
+    if (res.status === 401 || res.status === 403) this.#token = null;
+    const corpo = await res.json().catch(() => ({}));
+    const motivo = res.status === 403
+      ? 'o aplicativo não tem a permissão Mail.Send (ou não pode usar esta caixa)'
+      : (corpo.error?.message ?? `HTTP ${res.status}`);
+    throw new ErroGraph(`Não foi possível enviar o e-mail pelo Microsoft 365: ${motivo}.`, res.status);
+  }
 }

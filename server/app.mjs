@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import { acessoDe } from '../public/js/domain/acesso.js';
 import { pode } from '../public/js/domain/permissoes.js';
 import { AutenticacaoLocal, AutenticacaoSupabase } from './auth/autenticacao.mjs';
+import { CorreioMicrosoft } from './auth/correio.mjs';
 import { LoginMicrosoft } from './auth/microsoft.mjs';
 import { servirEstatico } from './http/estaticos.mjs';
 import { enviarJson, ErroHttp } from './http/respostas.mjs';
@@ -113,7 +114,7 @@ function dependenciasSupabase(config, fetchImpl) {
   const armazem = new ArmazemSupabase(cliente);
   return {
     config,
-    autenticacao: new AutenticacaoSupabase(config, cliente),
+    autenticacao: new AutenticacaoSupabase(config, cliente, new CorreioMicrosoft(config, fetchImpl)), // v36: e-mails pelo 365
     cadastro: new ColecaoSupabase(cliente, 'cadastro_obras', { mapa: linhaCadastro, ordem: 'obra.asc' }),
     midias: new ColecaoSupabase(cliente, 'midias'),
     telas: new ColecaoSupabase(cliente, 'telas'),

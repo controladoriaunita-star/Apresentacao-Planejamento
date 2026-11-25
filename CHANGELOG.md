@@ -5,7 +5,18 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | v35 (publicada em 25/11/2026) |
-| Dev (local) | v35 |
+| Dev (local) | v36 |
+
+## v36 — 25/11/2026 — E-mails de acesso dos clientes pelo Microsoft 365
+
+- **"Esqueci minha senha", convite e "Reenviar e-mail de acesso"** passam a sair pelo Microsoft 365, da caixa
+  `EMAIL_REMETENTE` (Microsoft Graph, mesmo registro do Entra ID do SharePoint, permissão `Mail.Send`). Antes o
+  Supabase enviava, mas sem SMTP próprio só entregava aos membros do projeto — o e-mail não chegava aos clientes.
+- O Supabase só gera o link (`/auth/v1/admin/generate_link`); o link continua voltando ao app para criar a senha.
+- E-mail em português, com a marca da Unità (`server/auth/correio.mjs`). Falha no envio dá mensagem clara; ao
+  criar usuário, o cadastro fica salvo e o Dev reenvia depois.
+- **Liga só com `EMAIL_REMETENTE`**: sem a variável tudo segue como na v35. Passos em `docs/SUPABASE_VERCEL.md`.
+- Testes: `tests/api/email-365.test.mjs` (Supabase e Graph simulados).
 
 ## v35 — 25/11/2026 — Login com a conta Microsoft (Office 365)
 

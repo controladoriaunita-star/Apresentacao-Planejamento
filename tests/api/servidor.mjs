@@ -21,14 +21,14 @@ export async function subirServidor({ store = 'local', env = {}, fetchMicrosoft 
       VERCEL: '', COOKIE_SECURE: 'false', // o build da Vercel roda os testes com VERCEL=1: o servidor de teste é http
       SUPABASE_URL: supabase?.url ?? '', SUPABASE_ANON_KEY: CHAVES.anon, SUPABASE_SERVICE_ROLE_KEY: CHAVES.servico,
       // O build da Vercel roda os testes com as variáveis de produção: o login Microsoft só liga quando o teste pede.
-      AUTH_MODE: '', APP_URL: '',
+      AUTH_MODE: '', APP_URL: '', EMAIL_REMETENTE: '',
       ...env,
     },
     config: { dataDir },
   });
   const fetchImpl = (url, init) => {
     if (supabase && String(url).startsWith(supabase.url)) return supabase.fetch(url, init);
-    if (fetchMicrosoft && String(url).startsWith('https://login.microsoftonline.com/')) return fetchMicrosoft(url, init);
+    if (fetchMicrosoft && /^https:\/\/(login\.microsoftonline\.com|graph\.microsoft\.com)\//.test(String(url))) return fetchMicrosoft(url, init);
     return fetch(url, init);
   };
   const servidor = createServer(criarApp(config, { fetchImpl }));
