@@ -64,6 +64,9 @@ export const tipoLogin = (usuario) => (usuario?.login === 'senha' ? 'senha' : 'm
 /** Só pode entrar pela Microsoft: o login Microsoft está ativo e o usuário não é do tipo "senha". */
 const soMicrosoft = (config, usuario) => microsoftAtivo(config) && tipoLogin(usuario) === 'microsoft';
 
+/** v36.3: o domínio (DOMINIO_EMAIL) só vale para contas Microsoft; clientes ("Senha do app") podem ter e-mail de qualquer domínio. */
+const dominioExigido = (config, dados) => (tipoLogin(dados) === 'senha' ? null : config.dominioEmail);
+
 export function validarTipoLogin(login) {
   if (login !== undefined && !TIPOS_LOGIN.includes(login)) throw erro(400, 'Tipo de login inválido.');
 }
@@ -170,7 +173,7 @@ export class AutenticacaoLocal {
   async criar(dados) {
     validarTipoLogin(dados.login);
     const semSenha = soMicrosoft(this.config, dados); // conta Microsoft: o app não guarda senha
-    exigirDados(dados, { dominio: this.config.dominioEmail, comPapel: true, comSenha: !semSenha });
+    exigirDados(dados, { dominio: dominioExigido(this.config, dados), comPapel: true, comSenha: !semSenha });
     const email = normalizarEmail(dados.email);
     if (await this.usuarios.buscarPor('email', email)) throw erro(409, 'Já existe um usuário com este e-mail.');
     return usuarioPublico(await this.usuarios.inserir({
@@ -354,7 +357,7 @@ export class AutenticacaoSupabase {
 
   async criar(dados, endereco) {
     validarTipoLogin(dados.login);
-    exigirDados(dados, { dominio: this.config.dominioEmail, comPapel: true, comSenha: false });
+    exigirDados(dados, { dominio: dominioExigido(this.config, dados), comPapel: true, comSenha: false });
     return this.#criarNoAuth({ ...dados, senha: null }, endereco);
   }
 
