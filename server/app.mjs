@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import { acessoDe } from '../public/js/domain/acesso.js';
 import { pode } from '../public/js/domain/permissoes.js';
 import { AutenticacaoLocal, AutenticacaoSupabase } from './auth/autenticacao.mjs';
+import { LoginMicrosoft } from './auth/microsoft.mjs';
 import { servirEstatico } from './http/estaticos.mjs';
 import { enviarJson, ErroHttp } from './http/respostas.mjs';
 import { Roteador } from './http/roteador.mjs';
@@ -34,6 +35,7 @@ import { ClienteSupabase } from './supabase/cliente.mjs';
 export function criarApp(config, { fetchImpl } = {}) {
   mkdirSync(config.dataDir, { recursive: true });
   const deps = config.store === 'supabase' ? dependenciasSupabase(config, fetchImpl) : dependenciasLocais(config, fetchImpl);
+  deps.loginMicrosoft = new LoginMicrosoft(config, { autenticacao: deps.autenticacao, armazem: deps.armazem, fetchImpl }); // v35
 
   const rotas = new Roteador();
   registrarAuth(rotas, deps);

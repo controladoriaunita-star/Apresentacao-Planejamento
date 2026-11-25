@@ -21,8 +21,14 @@
  *   identificar(req) → { usuario, cookie? } · sair(req) → cookie
  *   listar() · criar(dados, endereco) · atualizar(id, campos) · remover(id) · trocarSenha(usuario, atual, nova)
  *   enviarAcesso(id, endereco) · recuperarSenha(email, endereco) · definirSenha(token, senha) → { usuario, cookie }
+ *   usuarioPorEmail(email) · sessaoMicrosoft(usuario) → { usuario, cookie }   (v35 — login Microsoft)
+ *
+ * v35: cada usuário tem `login` = "microsoft" (padrão: conta do Office 365, sem senha no app) ou "senha" (quem não
+ * tem conta no 365, ex.: clientes). Com o login Microsoft ativo (microsoftAtivo), quem é "microsoft" não entra mais
+ * com senha nem recebe convite ou link de nova senha. Desligado (sem AUTH_MODE=entra), tudo funciona como antes.
  */
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { microsoftAtivo } from '../config.mjs';
 import { erro } from '../http/respostas.mjs';
 import { papelValido } from '../../public/js/domain/permissoes.js';
 import { ColecaoJson } from '../store/json-store.mjs';
@@ -43,6 +49,24 @@ export function usuarioPublico({ senhaHash, ...resto }) {
 }
 
 const normalizarEmail = (email) => String(email ?? '').trim().toLowerCase();
+
+// ── v35: tipo de login ───────────────────────────────────────────────
+export const TIPOS_LOGIN = Object.freeze(['microsoft', 'senha']);
+const MSG_MICROSOFT = 'Seu acesso é pela conta Microsoft. Use o botão "Entrar com a conta Microsoft".';
+const MSG_SENHA_365 = 'Sua senha é a da conta Microsoft: troque-a no Office 365.';
+
+/** Campo ausente (usuários de antes da v35 / antes da migration 006) = conta Microsoft. */
+export const tipoLogin = (usuario) => (usuario?.login === 'senha' ? 'senha' : 'microsoft');
+
+/** Só pode entrar pela Microsoft: o login Microsoft está ativo e o usuário não é do tipo "senha". */
+const soMicrosoft = (config, usuario) => microsoftAtivo(config) && tipoLogin(usuario) === 'microsoft';
+
+export function validarTipoLogin(login) {
+  if (login !== undefined && !TIPOS_LOGIN.includes(login)) throw erro(400, 'Tipo de login inválido.');
+}
+
+/** Só grava o tipo "senha": o padrão do banco é "microsoft" (assim criar usuários não depende da migration 006). */
+const loginInicial = (login) => (login === 'senha' ? { login } : {});
 
 /**
  * Acesso de um usuário novo. Só grava o que foge do padrão (todas as obras, Obra e Cliente): assim o app
@@ -65,12 +89,12 @@ function exigirDados({ nome, email, senha, papel }, { dominio, comSenha = true, 
 }
 
 /** Cookie assinado: base64url(JSON) + "." + HMAC-SHA256. */
-function assinar(segredo, dados) {
+export function assinar(segredo, dados) {
   const corpo = Buffer.from(JSON.stringify(dados)).toString('base64url');
   return `${corpo}.${createHmac('sha256', segredo).update(corpo).digest('base64url')}`;
 }
 
-function verificar(segredo, token) {
+export function verificar(segredo, token) {
   if (typeof token !== 'string' || !token.includes('.')) return null;
   const [corpo, assinatura] = token.split('.');
   const esperada = Buffer.from(createHmac('sha256', segredo).update(corpo).digest('base64url'));
@@ -105,7 +129,18 @@ export class AutenticacaoLocal {
 
   async entrar(email, senha) {
     const usuario = await this.usuarios.buscarPor('email', normalizarEmail(email));
+    if (usuario?.ativo && soMicrosoft(this.config, usuario)) throw erro(403, MSG_MICROSOFT);
     if (!usuario || !usuario.ativo || !conferirSenha(senha, usuario.senhaHash)) return null;
+    return this.sessaoMicrosoft(usuario);
+  }
+
+  async usuarioPorEmail(email) {
+    const usuario = await this.usuarios.buscarPor('email', normalizarEmail(email));
+    return usuario?.ativo ? usuario : null;
+  }
+
+  /** Abre a sessão de um usuário já identificado (senha conferida ou conta Microsoft validada). */
+  async sessaoMicrosoft(usuario) {
     await this.usuarios.atualizar(usuario.id, { ultimoAcesso: new Date().toISOString() });
     return { usuario: usuarioPublico(usuario), cookie: this.#cookie(usuario) };
   }
@@ -126,10 +161,15 @@ export class AutenticacaoLocal {
   }
 
   async criar(dados) {
-    exigirDados(dados, { dominio: this.config.dominioEmail, comPapel: true });
+    validarTipoLogin(dados.login);
+    const semSenha = soMicrosoft(this.config, dados); // conta Microsoft: o app não guarda senha
+    exigirDados(dados, { dominio: this.config.dominioEmail, comPapel: true, comSenha: !semSenha });
     const email = normalizarEmail(dados.email);
     if (await this.usuarios.buscarPor('email', email)) throw erro(409, 'Já existe um usuário com este e-mail.');
-    return usuarioPublico(await this.usuarios.inserir({ nome: dados.nome.trim(), email, papel: dados.papel, ativo: true, ...acessoInicial(dados), senhaHash: gerarHash(dados.senha) }));
+    return usuarioPublico(await this.usuarios.inserir({
+      nome: dados.nome.trim(), email, papel: dados.papel, ativo: true, ...acessoInicial(dados), ...loginInicial(dados.login),
+      senhaHash: semSenha ? null : gerarHash(dados.senha),
+    }));
   }
 
   async atualizar(id, campos) {
@@ -146,6 +186,7 @@ export class AutenticacaoLocal {
   }
 
   async trocarSenha(usuario, atual, nova) {
+    if (soMicrosoft(this.config, usuario)) throw erro(400, MSG_SENHA_365);
     if (!conferirSenha(atual, usuario.senhaHash)) throw erro(400, 'A senha atual não confere.');
     await this.usuarios.atualizar(usuario.id, { senhaHash: gerarHash(nova) });
   }
@@ -170,6 +211,11 @@ export class AutenticacaoSupabase {
     return cookieSessao(assinar(this.config.segredoSessao, dados), { seguro: this.config.cookieSeguro });
   }
 
+  /** v35: sessão de quem entrou pela Microsoft — sem tokens do Supabase Auth, vale 12 h (`m` = Microsoft). */
+  #cookieMicrosoft(perfil) {
+    return cookieSessao(assinar(this.config.segredoSessao, { u: perfil.id, m: 1, exp: Date.now() + DURACAO_MS }), { seguro: this.config.cookieSeguro });
+  }
+
   async precisaConfigurar() {
     return (await this.perfis.listar()).length === 0;
   }
@@ -177,13 +223,18 @@ export class AutenticacaoSupabase {
   async configurar(dados) {
     exigirDados(dados, { dominio: this.config.dominioEmail });
     if (!(await this.precisaConfigurar())) throw erro(409, 'O primeiro acesso já foi configurado.');
-    await this.#criarNoAuth({ ...dados, papel: 'dev' });
+    const perfil = await this.#criarNoAuth({ ...dados, papel: 'dev' });
+    if (soMicrosoft(this.config, perfil)) return this.sessaoMicrosoft(perfil); // v35: o Dev já entra; depois, pela Microsoft
     const resultado = await this.entrar(dados.email, dados.senha);
     if (!resultado) throw erro(500, 'Usuário criado, mas o login falhou. Tente entrar novamente.');
     return resultado;
   }
 
   async entrar(email, senha) {
+    if (microsoftAtivo(this.config)) {
+      const perfil = await this.perfis.buscarPor('email', normalizarEmail(email));
+      if (perfil?.ativo && soMicrosoft(this.config, perfil)) throw erro(403, MSG_MICROSOFT);
+    }
     let sessao;
     try {
       sessao = await this.cliente.entrarComSenha(normalizarEmail(email), senha);
@@ -197,9 +248,24 @@ export class AutenticacaoSupabase {
     return { usuario: perfil, cookie: this.#cookie(sessao) };
   }
 
+  async usuarioPorEmail(email) {
+    const perfil = await this.perfis.buscarPor('email', normalizarEmail(email));
+    return perfil?.ativo ? perfil : null;
+  }
+
+  async sessaoMicrosoft(perfil) {
+    await this.perfis.atualizar(perfil.id, { ultimoAcesso: new Date().toISOString() });
+    return { usuario: perfil, cookie: this.#cookieMicrosoft(perfil) };
+  }
+
   async identificar(req) {
     const dados = verificar(this.config.segredoSessao, lerCookie(req, NOME_COOKIE));
     if (!dados?.u) return null;
+    if (dados.m) { // sessão do login Microsoft: não há token do Supabase para renovar
+      if (!(dados.exp > Date.now())) return null;
+      const perfil = await this.perfis.obter(dados.u);
+      return perfil?.ativo ? { usuario: perfil } : null;
+    }
     let cookie = null;
     if (!(dados.exp > Date.now() + 30_000)) {
       // Token de acesso vencendo: renova com o refresh token e devolve um cookie novo.
@@ -225,8 +291,10 @@ export class AutenticacaoSupabase {
   }
 
   /** Com senha: usuário já confirmado (primeiro acesso). Sem senha: convite por e-mail que volta a `endereco`. */
-  async #criarNoAuth({ nome, email, papel, senha, ...resto }, endereco) {
+  async #criarNoAuth({ nome, email, papel, senha, login, ...resto }, endereco) {
     let criado;
+    // v35: conta Microsoft entra pelo 365 — fica no Auth com senha aleatória (ninguém a conhece) e sem convite.
+    if (!senha && soMicrosoft(this.config, { login })) senha = `${randomBytes(24).toString('base64url')}Aa1!`;
     try {
       criado = senha
         ? await this.cliente.criarUsuarioAuth(normalizarEmail(email), senha)
@@ -236,10 +304,11 @@ export class AutenticacaoSupabase {
       throw e;
     }
     const id = criado.id ?? criado.user?.id;
-    return this.perfis.inserir({ id, nome: nome.trim(), email: normalizarEmail(email), papel, ativo: true, ...acessoInicial(resto) });
+    return this.perfis.inserir({ id, nome: nome.trim(), email: normalizarEmail(email), papel, ativo: true, ...acessoInicial(resto), ...loginInicial(login) });
   }
 
   async criar(dados, endereco) {
+    validarTipoLogin(dados.login);
     exigirDados(dados, { dominio: this.config.dominioEmail, comPapel: true, comSenha: false });
     return this.#criarNoAuth({ ...dados, senha: null }, endereco);
   }
@@ -248,6 +317,7 @@ export class AutenticacaoSupabase {
   async enviarAcesso(id, endereco) {
     const perfil = await this.perfis.obter(id);
     if (!perfil) throw erro(404, 'Usuário não encontrado.');
+    if (soMicrosoft(this.config, perfil)) throw erro(400, 'Este usuário entra com a conta Microsoft: não há e-mail de acesso a enviar.');
     try {
       await this.cliente.convidar(perfil.email, endereco);
     } catch (e) {
@@ -259,7 +329,7 @@ export class AutenticacaoSupabase {
   /** "Esqueci minha senha": só envia para usuários ativos e não revela se o e-mail existe. */
   async recuperarSenha(email, endereco) {
     const perfil = await this.perfis.buscarPor('email', normalizarEmail(email));
-    if (perfil?.ativo) await this.cliente.recuperarSenha(perfil.email, endereco);
+    if (perfil?.ativo && !soMicrosoft(this.config, perfil)) await this.cliente.recuperarSenha(perfil.email, endereco);
   }
 
   /** Link do e-mail (convite ou nova senha): o token prova o dono do e-mail; grava a senha e já entra. */
@@ -274,6 +344,7 @@ export class AutenticacaoSupabase {
     }
     const perfil = await this.perfis.obter(dono.id);
     if (!perfil?.ativo) throw erro(403, 'Seu acesso está desativado. Fale com o Dev.');
+    if (soMicrosoft(this.config, perfil)) throw erro(403, MSG_MICROSOFT);
     await this.cliente.atualizarUsuarioAuth(perfil.id, { password: senha });
     const resultado = await this.entrar(perfil.email, senha);
     if (!resultado) throw erro(500, 'Senha gravada, mas o login falhou. Tente entrar novamente.');
@@ -298,6 +369,7 @@ export class AutenticacaoSupabase {
   }
 
   async trocarSenha(usuario, atual, nova) {
+    if (soMicrosoft(this.config, usuario)) throw erro(400, MSG_SENHA_365);
     try {
       await this.cliente.entrarComSenha(usuario.email, atual);
     } catch {

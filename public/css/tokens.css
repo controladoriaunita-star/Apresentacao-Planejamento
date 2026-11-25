@@ -10,6 +10,12 @@
   --color-brand-black: #000000;
   --color-brand-ink: #231f20;
 
+  /* Logo da Microsoft no botão "Entrar com a conta Microsoft" (v35) — cores oficiais do logo */
+  --microsoft-1: #f25022;
+  --microsoft-2: #7fba00;
+  --microsoft-3: #00a4ef;
+  --microsoft-4: #ffb900;
+
   /* Semânticas */
   --color-primary: var(--color-brand-orange);
   --color-primary-hover: #e04700;

@@ -40,6 +40,15 @@ export function carregarConfig(sobrescrever = {}) {
       driveId: env.MS_GRAPH_DRIVE_ID || '',
       itemId: env.MS_GRAPH_ITEM_ID || '',
     },
+    // v35 — login com a conta Microsoft (Entra ID). Só liga com AUTH_MODE=entra; sem ENTRA_* usa o mesmo
+    // registro de aplicativo do Graph (MS_GRAPH_*). APP_URL monta a Redirect URI (vazio = domínio da requisição).
+    microsoft: {
+      ligado: (env.AUTH_MODE ?? '').trim().toLowerCase() === 'entra',
+      tenantId: (env.ENTRA_TENANT_ID || env.MS_GRAPH_TENANT_ID || '').trim(),
+      clientId: (env.ENTRA_CLIENT_ID || env.MS_GRAPH_CLIENT_ID || '').trim(),
+      clientSecret: (env.ENTRA_CLIENT_SECRET || env.MS_GRAPH_CLIENT_SECRET || '').trim(),
+      appUrl: (env.APP_URL || '').trim().replace(/\/+$/, ''),
+    },
     incc: {
       serieSgs: env.INCC_SGS_SERIE || '192',
       atualizarOnline: env.INCC_ONLINE !== 'false',
@@ -52,6 +61,12 @@ export function carregarConfig(sobrescrever = {}) {
 export function supabaseConfigurado(config) {
   const s = config.supabase;
   return Boolean(s.url && s.anonKey && s.serviceKey);
+}
+
+/** Login Microsoft ativo: AUTH_MODE=entra e o registro do Entra completo. Desligado, tudo fica como antes (senha). */
+export function microsoftAtivo(config) {
+  const m = config.microsoft;
+  return Boolean(m?.ligado && m.tenantId && m.clientId && m.clientSecret);
 }
 
 export function graphConfigurado(config) {

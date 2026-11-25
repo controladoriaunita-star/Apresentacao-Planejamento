@@ -17,15 +17,20 @@ precisa reproduzir. Os cenários obrigatórios estão em `tests/api/contrato.mjs
 | Papéis | `dev` (tudo) · `planejamento` (ver, verSeguranca, editarSeguranca, editarConteudo) · `seguranca` (verSeguranca, editarSeguranca) · `viewer` (ver, verSeguranca). Todos têm `conta`. |
 | Acesso por obra (v26) | Só para o papel `viewer`: `usuario.obras` (null = todas; lista de chaves = só essas; `[]` = nenhuma) e `usuario.apresentacoes` (`"ambas"` \| `"obra"` \| `"cliente"`). O servidor filtra **todas** as leituras: linhas das planilhas e do físico, cadastro, mídias, telas, arquivos e acidentes. Com só `"cliente"`, as colunas `"- Obra"` das planilhas (as que têm variante `"- Cliente"` em `public/js/domain/colunas.js`) não saem. Regras em `public/js/domain/acesso.js`. Os outros papéis veem tudo. |
 | Senhas | Supabase: no Supabase Auth. Local: PBKDF2-SHA256, 210.000 iterações (`pbkdf2$<iter>$<sal b64>$<hash b64>`). |
-| Cookie (Supabase) | Além do id, guarda os tokens do Supabase Auth; a API renova o token vencido e devolve um cookie novo. |
+| Cookie (Supabase) | Além do id, guarda os tokens do Supabase Auth; a API renova o token vencido e devolve um cookie novo. Login Microsoft (v35): só o id, válido por 12 h. |
+| Login Microsoft (v35) | Com `AUTH_MODE=entra`, `usuario.login` = `"microsoft"` (padrão; entra pela conta do Office 365 e não usa senha do app — login com senha, troca de senha, convite e "esqueci minha senha" recusam ou ignoram) ou `"senha"` (e-mail e senha do app, ex.: clientes sem conta no 365). Desligado, tudo funciona como antes. Regras em `server/auth/microsoft.mjs` e `server/auth/autenticacao.mjs`. |
 | Compressão | JSON > 2 KB sai com gzip se o cliente aceitar. |
 
 ## Autenticação
 
 | Método | Caminho | Permissão | Corpo → Resposta |
 |---|---|---|---|
-| GET | `/auth/sessao` | pública | → `{ usuario \| null, precisaConfigurar, convite }` (`convite`: novos usuários entram por e-mail — Supabase) |
-| POST | `/auth/login` | pública | `{ email, senha }` → `{ usuario }` + cookie. 401 se errado; 429 após 8 tentativas/min por IP |
+| GET | `/auth/sessao` | pública | → `{ usuario \| null, precisaConfigurar, convite, microsoft }` (`convite`: novos usuários entram por e-mail — Supabase; `microsoft`: login com a conta Microsoft ativo) |
+| POST | `/auth/login` | pública | `{ email, senha }` → `{ usuario }` + cookie. 401 se errado; 403 se o usuário entra pela conta Microsoft (v35); 429 após 8 tentativas/min por IP |
+| GET | `/auth/microsoft/entrar` | pública | v35 — 302 para a Microsoft + cookie `sessao_oidc` (10 min). Navegação de página inteira, não fetch |
+| GET | `/auth/microsoft/callback` | pública | v35 — Redirect URI cadastrada no Entra ID. Aba própria → 302 `/` + cookie de sessão; pop-up → 302 `/?login-microsoft=fim`; erro → `?erro-login=<mensagem>` |
+| POST | `/auth/microsoft/preparar` | pública | v35, pop-up do Portal — `{ pedido }` (SHA-256 hex do verificador sorteado pelo iframe) → `{ url }` da Microsoft + cookie `sessao_oidc` |
+| POST | `/auth/microsoft/concluir` | pública | v35, iframe do Portal — `{ verificador }` → 200 `{ usuario }` + cookie (uso único) · 202 `{ pendente }` · 403 com a mensagem de erro do login |
 | POST | `/auth/logout` | pública | → `{ ok }` e expira o cookie |
 | POST | `/auth/configurar` | pública, só sem usuários | `{ nome, email, senha }` → 201 `{ usuario }` (papel dev). 409 se já configurado |
 | PUT | `/auth/senha` | conta | `{ senhaAtual, novaSenha }` → `{ ok }` |
@@ -40,9 +45,9 @@ Sem `obras`/`apresentacoes` (usuários anteriores à v26) = todas as obras, Obra
 | Método | Caminho | Corpo → Resposta |
 |---|---|---|
 | GET | `/usuarios` | → `usuario[]` |
-| POST | `/usuarios` | `{ nome, email, papel, senha, obras?, apresentacoes? }` → 201 `usuario`. `obras`: `null` (todas) ou lista de nomes/chaves, gravada pela chave; `apresentacoes`: `"ambas"` (padrão) \| `"obra"` \| `"cliente"`; outro valor → 400. 409 e-mail repetido; 400 validação. Supabase: sem `senha` — envia o convite por e-mail |
+| POST | `/usuarios` | `{ nome, email, papel, senha, login?, obras?, apresentacoes? }` → 201 `usuario`. `login` (v35): `"microsoft"` (padrão; com o login Microsoft ativo, sem senha nem convite) \| `"senha"`. `obras`: `null` (todas) ou lista de nomes/chaves, gravada pela chave; `apresentacoes`: `"ambas"` (padrão) \| `"obra"` \| `"cliente"`; outro valor → 400. 409 e-mail repetido; 400 validação. Supabase: sem `senha` — envia o convite por e-mail |
 | POST | `/usuarios/:id/acesso` | → `{ ok }`. Reenvia o convite (ou o link de nova senha, se o e-mail já foi confirmado). Local: 400 |
-| PUT | `/usuarios/:id` | `{ nome?, papel?, ativo?, senha?, obras?, apresentacoes? }` → `usuario` (vale na hora, sem novo login). 400 se o Dev tentar se desativar/rebaixar |
+| PUT | `/usuarios/:id` | `{ nome?, papel?, ativo?, senha?, login?, obras?, apresentacoes? }` → `usuario` (vale na hora, sem novo login). 400 se o Dev tentar se desativar/rebaixar |
 | DELETE | `/usuarios/:id` | → `{ ok }`. 400 para o próprio usuário |
 
 ## Dados das apresentações

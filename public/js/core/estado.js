@@ -16,6 +16,7 @@ const fisicos = new Map(); // `${visao}|${obra}` → Promise<Map>
 export const estado = {
   usuario: null,
   convite: false, // Supabase: novos usuários entram por convite por e-mail (sem senha definida pelo Dev)
+  microsoft: false, // v35: login com a conta Microsoft ativo (usuários do tipo "microsoft" não usam senha)
   bruto: null,
   filtro: lerFiltroSalvo(),
   carregando: false,

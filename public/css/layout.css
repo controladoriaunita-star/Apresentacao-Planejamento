@@ -40,6 +40,12 @@ main.conteudo.cheio { padding: 0; }
 .login .padrao { position: absolute; left: 0; bottom: -8px; width: 160%; max-width: none; opacity: 0.08; pointer-events: none; }
 .login .card { width: min(420px, 100%); padding: 32px; position: relative; }
 .login .logo { height: 48px; display: block; margin-bottom: 24px; }
+/* v35 — login com a conta Microsoft */
+.botao-microsoft { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.logo-microsoft { display: inline-grid; grid-template-columns: 8px 8px; gap: 2px; flex: none; }
+.logo-microsoft i { width: 8px; height: 8px; display: block; }
+.separador-login { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; margin: 4px 0; }
+.separador-login::before, .separador-login::after { content: ''; flex: 1; border-top: 1px solid var(--border); }
 
 /* Modo apresentação (tela cheia): esconde filtros e administração */
 body.apresentando .filtros, body.apresentando .so-edicao { display: none !important; }
