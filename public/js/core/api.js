@@ -2,7 +2,7 @@
  * Cliente do contrato REST (docs/API.md). Trocar o backend (Node → PHP) não muda nada aqui:
  * basta que o PHP responda nos mesmos caminhos. `BASE_API` permite hospedar a API em subpasta.
  */
-const BASE_API = document.querySelector('meta[name="api-base"]')?.content || '/api';
+export const BASE_API = document.querySelector('meta[name="api-base"]')?.content || '/api';
 
 export class ErroApi extends Error {
   constructor(status, mensagem) {

@@ -1,10 +1,13 @@
 /**
  * Login, primeiro acesso (criação do primeiro usuário Dev quando ainda não há nenhum), "esqueci minha senha" e a
  * volta do link do e-mail (convite ou nova senha), que traz o token no endereço: `#access_token=…&type=invite`.
+ * v35: com o login Microsoft ativo, o botão "Entrar com a conta Microsoft" vem primeiro; e-mail e senha ficam para
+ * quem não tem conta no 365 (clientes).
  */
 import { api } from '../core/api.js';
 import { h, montar } from '../core/dom.js';
 import { alerta, campo } from '../ui/componentes.js';
+import { dentroDeIframe, entrarComMicrosoft, prepararPopup } from './login-microsoft.js';
 
 /**
  * Lê (e apaga do endereço) o retorno do link do e-mail do Supabase: `{ token, tipo }` ou `{ erro }`; null se não houver.
@@ -45,11 +48,12 @@ function formulario(botao, enviar, ...conteudo) {
   } }, erro, ...conteudo, botao);
 }
 
-export function renderLogin(alvo, { precisaConfigurar, convite, aviso, aoEntrar }) {
+export function renderLogin(alvo, { precisaConfigurar, convite, microsoft, aviso, aoEntrar }) {
+  const comMicrosoft = microsoft && !precisaConfigurar; // v35: Unità pela Microsoft; senha só para quem não tem 365
   const nome = h('input', { autocomplete: 'name', required: true });
   const email = h('input', { type: 'email', autocomplete: 'username', required: true });
   const senha = h('input', { type: 'password', autocomplete: precisaConfigurar ? 'new-password' : 'current-password', required: true });
-  const botao = h('button', { class: 'btn primary', type: 'submit', style: { width: '100%' } }, precisaConfigurar ? 'Criar acesso Dev' : 'Entrar');
+  const botao = h('button', { class: comMicrosoft ? 'btn' : 'btn primary', type: 'submit', style: { width: '100%' } }, precisaConfigurar ? 'Criar acesso Dev' : (comMicrosoft ? 'Entrar com senha' : 'Entrar'));
 
   const form = formulario(botao, async () => {
     const r = precisaConfigurar
@@ -58,15 +62,82 @@ export function renderLogin(alvo, { precisaConfigurar, convite, aviso, aoEntrar 
     aoEntrar(r.usuario);
   },
   precisaConfigurar ? alerta('info', 'Primeiro acesso', 'Crie o usuário Dev, que depois cadastra os demais.') : null,
-  aviso ? alerta('warning', aviso) : null,
+  aviso && !comMicrosoft ? alerta('warning', aviso) : null,
   precisaConfigurar ? campo('Nome', nome) : null,
   campo('E-mail', email),
   campo('Senha', senha, precisaConfigurar ? 'Mínimo de 8 caracteres' : null));
   if (convite && !precisaConfigurar) {
-    form.append(h('button', { class: 'btn ghost sm', type: 'button', onclick: () => renderEsqueci(alvo, { email: email.value, voltar: () => renderLogin(alvo, { precisaConfigurar, convite, aoEntrar }) }) }, 'Esqueci minha senha'));
+    form.append(h('button', { class: 'btn ghost sm', type: 'button', onclick: () => renderEsqueci(alvo, { email: email.value, voltar: () => renderLogin(alvo, { precisaConfigurar, convite, microsoft, aoEntrar }) }) }, 'Esqueci minha senha'));
   }
-  telaAcesso(alvo, form);
-  (precisaConfigurar ? nome : email).focus();
+  if (!comMicrosoft) {
+    telaAcesso(alvo, form);
+    (precisaConfigurar ? nome : email).focus();
+    return;
+  }
+  telaAcesso(alvo, h('div', { class: 'stack' },
+    aviso ? alerta('warning', aviso) : null,
+    blocoMicrosoft(aoEntrar),
+    h('div', { class: 'separador-login' }, 'ou'),
+    h('p', { class: 'muted', style: { margin: 0 } }, 'Clientes e usuários sem conta Microsoft:'),
+    form));
+}
+
+/** v35 — "Entrar com a conta Microsoft": navega na aba própria; no iframe do portal, espera o pop-up. */
+function blocoMicrosoft(aoEntrar) {
+  const mensagem = h('div');
+  let cancelado = false;
+  const logo = h('span', { class: 'logo-microsoft', 'aria-hidden': 'true' },
+    [1, 2, 3, 4].map((n) => h('i', { style: { background: `var(--microsoft-${n})` } })));
+  const botao = h('button', { class: 'btn primary botao-microsoft', type: 'button', onclick: async () => {
+    cancelado = false;
+    botao.disabled = true;
+    montar(mensagem, dentroDeIframe()
+      ? h('div', { class: 'stack' },
+        alerta('info', 'Conclua o login na janela da Microsoft', 'Depois de entrar, a janela fecha e o app abre aqui.'),
+        h('button', { class: 'btn ghost sm', type: 'button', onclick: () => { cancelado = true; montar(mensagem); botao.disabled = false; } }, 'Cancelar'))
+      : null);
+    try {
+      const usuario = await entrarComMicrosoft({ cancelado: () => cancelado });
+      if (usuario) return aoEntrar(usuario);
+    } catch (e) {
+      montar(mensagem, alerta('error', e.message));
+    }
+    botao.disabled = false;
+  } }, logo, 'Entrar com a conta Microsoft');
+  return h('div', { class: 'stack' },
+    h('p', { class: 'muted', style: { margin: 0 } }, 'Equipe Unità: entre com a sua conta do Office 365.'),
+    mensagem,
+    botao);
+}
+
+/**
+ * v35 — Pop-up do login Microsoft aberto pelo iframe do Portal Unità.
+ * `popup`: recebe o pedido do iframe e segue para a Microsoft. `fim`: volta da Microsoft (o iframe já entra sozinho).
+ */
+export function renderPopupMicrosoft(alvo, { modo, erro }) {
+  const fechar = h('button', { class: 'btn ghost sm', type: 'button', onclick: () => window.close() }, 'Fechar esta janela');
+  if (modo === 'fim') {
+    telaAcesso(alvo, h('div', { class: 'stack' },
+      erro ? alerta('error', 'Não foi possível entrar', erro) : alerta('success', 'Login concluído', 'O app já está abrindo no portal. Esta janela vai fechar.'),
+      fechar));
+    if (!erro) setTimeout(() => window.close(), 1200);
+    return;
+  }
+  const corpo = h('div', { class: 'stack' }, alerta('info', 'Abrindo o login da Microsoft…'));
+  telaAcesso(alvo, corpo);
+  prepararPopup()
+    .then((url) => { location.href = url; })
+    .catch((e) => montar(corpo, alerta('error', 'Não foi possível abrir o login', e.message), fechar));
+}
+
+/** v35 — Lê (e apaga do endereço) os parâmetros do retorno do login Microsoft: `?login-microsoft=` e `?erro-login=`. */
+export function retornoMicrosoft() {
+  const params = new URLSearchParams(location.search);
+  const modo = params.get('login-microsoft');
+  const erro = params.get('erro-login');
+  if (!modo && !erro) return null;
+  if (modo !== 'popup') history.replaceState(null, '', location.pathname + location.hash);
+  return { modo, erro };
 }
 
 function renderEsqueci(alvo, { email: inicial, voltar }) {

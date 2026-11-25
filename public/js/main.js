@@ -35,7 +35,7 @@ import { renderAdminUsuarios } from './pages/admin-usuarios.js';
 import { renderConta } from './pages/conta.js';
 import { renderGaleria } from './pages/galeria.js';
 import { renderInicio } from './pages/inicio.js';
-import { renderDefinirSenha, renderLogin, retornoDoEmail } from './pages/login.js';
+import { renderDefinirSenha, renderLogin, renderPopupMicrosoft, retornoDoEmail, retornoMicrosoft } from './pages/login.js';
 import { renderResumoEconomico } from './pages/resumo-economico.js';
 import { renderResumoFisico } from './pages/resumo-fisico.js';
 import { renderResumoGeral } from './pages/resumo-geral.js';
@@ -253,6 +253,8 @@ new MutationObserver(() => ajustarCabecalho()).observe(raiz, { childList: true }
 
 // ── Inicialização ────────────────────────────────────────────────────
 async function iniciar() {
+  const microsoft = retornoMicrosoft(); // v35: pop-up do portal ou erro na volta da Microsoft
+  if (microsoft?.modo === 'popup' || microsoft?.modo === 'fim') return renderPopupMicrosoft(raiz, microsoft);
   const retorno = retornoDoEmail(); // link do convite / nova senha
   const aoEntrar = (usuario) => { estado.usuario = usuario; carregarTudo(); };
   montar(raiz, carregando(3));
@@ -263,8 +265,9 @@ async function iniciar() {
     return montar(raiz, h('main', { class: 'conteudo' }, alerta('error', 'Servidor indisponível', e.message)));
   }
   estado.convite = sessao.convite;
+  estado.microsoft = Boolean(sessao.microsoft);
   if (retorno?.token) return renderDefinirSenha(raiz, { ...retorno, aoEntrar });
-  if (!sessao.usuario) return renderLogin(raiz, { precisaConfigurar: sessao.precisaConfigurar, convite: sessao.convite, aviso: retorno?.erro, aoEntrar });
+  if (!sessao.usuario) return renderLogin(raiz, { precisaConfigurar: sessao.precisaConfigurar, convite: sessao.convite, microsoft: estado.microsoft, aviso: retorno?.erro ?? microsoft?.erro, aoEntrar });
   estado.usuario = sessao.usuario;
   carregarTudo();
 }
