@@ -220,7 +220,14 @@ export class AutenticacaoSupabase {
    * link e o app o envia pelo 365; sem ele, o próprio Supabase envia, como antes. → { id, link? }
    */
   async #linkDeAcesso(tipo, email, endereco) {
-    if (this.correio) return this.cliente.gerarLink(tipo, email, endereco);
+    if (this.correio) {
+      // v36.2: o link vai direto ao app (#token_hash=…), sem passar pelo /verify do Supabase — leitores de link do
+      // Outlook não gastam o token de uso único e não depende da lista de Redirect URLs do Supabase.
+      const gerado = await this.cliente.gerarLink(tipo, email, endereco);
+      if (gerado.hash) gerado.link = `${endereco}#${new URLSearchParams({ token_hash: gerado.hash, type: tipo })}`;
+      if (!gerado.link) throw erro(502, 'O Supabase não devolveu o link de acesso.');
+      return gerado;
+    }
     if (tipo === 'invite') return this.cliente.convidar(email, endereco);
     await this.cliente.recuperarSenha(email, endereco);
     return {};
@@ -384,12 +391,15 @@ export class AutenticacaoSupabase {
   }
 
   /** Link do e-mail (convite ou nova senha): o token prova o dono do e-mail; grava a senha e já entra. */
-  async definirSenha(token, senha) {
+  async definirSenha(token, senha, { tokenHash, tipo } = {}) {
     const problema = validarSenha(senha);
     if (problema) throw erro(400, problema);
     let dono;
     try {
-      dono = await this.cliente.usuarioDoToken(String(token ?? ''));
+      dono = tokenHash // v36.2: link do e-mail do 365 (token_hash); o antigo (#access_token) continua valendo
+        ? (await this.cliente.verificarLink(tipo === 'invite' ? 'invite' : 'recovery', String(tokenHash))).user
+        : await this.cliente.usuarioDoToken(String(token ?? ''));
+      if (!dono?.id) throw new Error('sem usuário');
     } catch {
       throw erro(400, 'O link expirou ou já foi usado. Peça um novo ao Dev ou use "Esqueci minha senha".');
     }
