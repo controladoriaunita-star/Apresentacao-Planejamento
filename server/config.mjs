@@ -49,6 +49,8 @@ export function carregarConfig(sobrescrever = {}) {
       clientSecret: (env.ENTRA_CLIENT_SECRET || env.MS_GRAPH_CLIENT_SECRET || '').trim(),
       appUrl: (env.APP_URL || '').trim().replace(/\/+$/, ''),
     },
+    // v36 — caixa do Microsoft 365 que envia convites e "esqueci minha senha" (vazio = o Supabase envia).
+    emailRemetente: (env.EMAIL_REMETENTE || '').trim().toLowerCase(),
     incc: {
       serieSgs: env.INCC_SGS_SERIE || '192',
       atualizarOnline: env.INCC_ONLINE !== 'false',
