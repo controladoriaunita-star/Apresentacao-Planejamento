@@ -4,7 +4,7 @@ Cada versão só é fechada com `npm run verificar` passando.
 
 | Ambiente | Versão |
 |---|---|
-| Produção | v35 (publicada em 25/11/2026) |
+| Produção | v36 (publicada em 25/11/2026) |
 | Dev (local) | v37 (em validação) |
 
 ## v37 — 25/11/2026 — Segurança do Trabalho: Pirâmide de Bird e de-para de obras com busca
