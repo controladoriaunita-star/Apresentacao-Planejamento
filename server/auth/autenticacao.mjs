@@ -23,6 +23,9 @@
  *   enviarAcesso(id, endereco) · recuperarSenha(email, endereco) · definirSenha(token, senha) → { usuario, cookie }
  *   usuarioPorEmail(email) · sessaoMicrosoft(usuario) → { usuario, cookie }   (v35 — login Microsoft)
  *
+ * v36: com EMAIL_REMETENTE, convite e "esqueci minha senha" saem pelo Microsoft 365 (auth/correio.mjs); o Supabase
+ * só gera o link. Sem a variável, o próprio Supabase envia, como antes.
+ *
  * v35: cada usuário tem `login` = "microsoft" (padrão: conta do Office 365, sem senha no app) ou "senha" (quem não
  * tem conta no 365, ex.: clientes). Com o login Microsoft ativo (microsoftAtivo), quem é "microsoft" não entra mais
  * com senha nem recebe convite ou link de nova senha. Desligado (sem AUTH_MODE=entra), tudo funciona como antes.
@@ -200,10 +203,34 @@ export class AutenticacaoLocal {
 export class AutenticacaoSupabase {
   porConvite = true;
 
-  constructor(config, cliente) {
+  /** `correio` (v36, opcional): envia convite e nova senha pelo Microsoft 365 em vez do e-mail do Supabase. */
+  constructor(config, cliente, correio = null) {
     this.config = config;
     this.cliente = cliente;
+    this.correio = correio?.ativo ? correio : null;
     this.perfis = new ColecaoSupabase(cliente, 'perfis', { ordem: 'nome.asc' });
+  }
+
+  /**
+   * v36 — Convite ("invite", cria o usuário no Auth) ou nova senha ("recovery"). Com o correio, o Supabase só gera o
+   * link e o app o envia pelo 365; sem ele, o próprio Supabase envia, como antes. → { id, link? }
+   */
+  async #linkDeAcesso(tipo, email, endereco) {
+    if (this.correio) return this.cliente.gerarLink(tipo, email, endereco);
+    if (tipo === 'invite') return this.cliente.convidar(email, endereco);
+    await this.cliente.recuperarSenha(email, endereco);
+    return {};
+  }
+
+  /** v36 — Entrega o link pelo 365 (não faz nada quando o Supabase já enviou). */
+  async #entregar(tipo, { email, nome }, link) {
+    if (!this.correio || !link) return;
+    try {
+      await this.correio.enviarAcesso(tipo, { email, nome, link });
+    } catch (e) {
+      console.error('[e-mail de acesso]', e.message);
+      throw erro(502, e.message);
+    }
   }
 
   #cookie(sessao) {
@@ -298,13 +325,19 @@ export class AutenticacaoSupabase {
     try {
       criado = senha
         ? await this.cliente.criarUsuarioAuth(normalizarEmail(email), senha)
-        : await this.cliente.convidar(normalizarEmail(email), endereco);
+        : await this.#linkDeAcesso('invite', normalizarEmail(email), endereco);
     } catch (e) {
       if (e.status === 422 || e.status === 409) throw erro(409, 'Já existe um usuário com este e-mail.');
       throw e;
     }
     const id = criado.id ?? criado.user?.id;
-    return this.perfis.inserir({ id, nome: nome.trim(), email: normalizarEmail(email), papel, ativo: true, ...acessoInicial(resto), ...loginInicial(login) });
+    const perfil = await this.perfis.inserir({ id, nome: nome.trim(), email: normalizarEmail(email), papel, ativo: true, ...acessoInicial(resto), ...loginInicial(login) });
+    try {
+      await this.#entregar('invite', perfil, criado.link);
+    } catch (e) {
+      throw erro(502, `Usuário criado, mas o convite não foi enviado (${e.message}) Use "Reenviar e-mail de acesso".`);
+    }
+    return perfil;
   }
 
   async criar(dados, endereco) {
@@ -318,18 +351,28 @@ export class AutenticacaoSupabase {
     const perfil = await this.perfis.obter(id);
     if (!perfil) throw erro(404, 'Usuário não encontrado.');
     if (soMicrosoft(this.config, perfil)) throw erro(400, 'Este usuário entra com a conta Microsoft: não há e-mail de acesso a enviar.');
+    let tipo = 'invite';
+    let gerado;
     try {
-      await this.cliente.convidar(perfil.email, endereco);
+      gerado = await this.#linkDeAcesso(tipo, perfil.email, endereco);
     } catch (e) {
       if (e.status !== 422) throw e;
-      await this.cliente.recuperarSenha(perfil.email, endereco);
+      tipo = 'recovery';
+      gerado = await this.#linkDeAcesso(tipo, perfil.email, endereco);
     }
+    await this.#entregar(tipo, perfil, gerado.link);
   }
 
   /** "Esqueci minha senha": só envia para usuários ativos e não revela se o e-mail existe. */
   async recuperarSenha(email, endereco) {
     const perfil = await this.perfis.buscarPor('email', normalizarEmail(email));
-    if (perfil?.ativo && !soMicrosoft(this.config, perfil)) await this.cliente.recuperarSenha(perfil.email, endereco);
+    if (!perfil?.ativo || soMicrosoft(this.config, perfil)) return;
+    const { link } = await this.#linkDeAcesso('recovery', perfil.email, endereco);
+    try {
+      await this.#entregar('recovery', perfil, link);
+    } catch {
+      throw erro(502, 'Não foi possível enviar o e-mail agora. Tente de novo em alguns minutos.');
+    }
   }
 
   /** Link do e-mail (convite ou nova senha): o token prova o dono do e-mail; grava a senha e já entra. */

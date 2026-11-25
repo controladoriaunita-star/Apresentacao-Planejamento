@@ -78,6 +78,16 @@ export class ClienteSupabase {
     return this.#chamar(`/auth/v1/recover?${new URLSearchParams({ redirect_to: endereco })}`, { metodo: 'POST', chave: this.anonKey, corpo: { email } });
   }
 
+  /**
+   * v36 — Gera o link de convite ("invite", cria o usuário no Auth) ou de nova senha ("recovery") SEM o Supabase
+   * enviar e-mail: o app envia pelo Microsoft 365. O link volta a `endereco` com o token, como o e-mail do Supabase.
+   * → { link, id }
+   */
+  async gerarLink(tipo, email, endereco) {
+    const r = await this.#chamar('/auth/v1/admin/generate_link', { metodo: 'POST', corpo: { type: tipo, email, redirect_to: endereco } });
+    return { link: r.action_link ?? r.properties?.action_link, id: r.id ?? r.user?.id };
+  }
+
   atualizarUsuarioAuth(id, campos) {
     return this.#chamar(`/auth/v1/admin/users/${encodeURIComponent(id)}`, { metodo: 'PUT', corpo: campos });
   }

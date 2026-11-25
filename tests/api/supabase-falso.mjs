@@ -114,6 +114,21 @@ export function criarSupabaseFalso({ url = 'http://supabase.falso' } = {}) {
       if (u) enviarEmail('recovery', u, alvo.searchParams.get('redirect_to'));
       return json(200, {});
     }
+    // v36: só gera o link (o app envia o e-mail pelo 365). O token vai no próprio link, como no Supabase real.
+    if (caminho === '/auth/v1/admin/generate_link') {
+      if (!servico) return json(403, { msg: 'precisa da service role' });
+      let u = [...usuarios.values()].find((x) => x.email === corpo.email);
+      if (corpo.type === 'invite') {
+        if (u?.confirmado) return json(422, { msg: 'A user with this email address has already been registered' });
+        if (!u) {
+          u = { id: randomUUID(), email: corpo.email, senha: null, banido: false, confirmado: false };
+          usuarios.set(u.id, u);
+        }
+      } else if (!u) return json(404, { msg: 'User not found' });
+      const token = sessaoPara(u).access_token;
+      const link = `${url}/auth/v1/verify?type=${corpo.type}&token=${token}&redirect_to=${encodeURIComponent(corpo.redirect_to ?? '')}`;
+      return json(200, { id: u.id, email: u.email, action_link: link, verification_type: corpo.type });
+    }
     if (caminho.startsWith('/auth/v1/admin/users')) {
       if (!servico) return json(403, { msg: 'precisa da service role' });
       const id = decodeURIComponent(caminho.split('/')[5] ?? '');
