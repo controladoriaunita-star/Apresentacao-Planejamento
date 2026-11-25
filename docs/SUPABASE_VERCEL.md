@@ -25,9 +25,10 @@ limite de 4,5 MB por requisição da Vercel.
    usuários são convidados só pelo Dev, dentro do app.
 4. **Project Settings → API**: copie *Project URL*, a chave **anon/publishable** e a **service_role/secret**.
 5. **E-mails de convite e de nova senha** (ver [Login e convites](#login-e-convites)):
-   - **Authentication → Emails → SMTP Settings**: ligue o SMTP próprio (ex.: uma caixa do Microsoft 365 da Unità,
-     `smtp.office365.com`, porta 587). Sem isso o Supabase só envia para os membros do projeto, poucas mensagens
-     por hora.
+   - **v36 (recomendado)**: o app envia pelo Microsoft 365 com `EMAIL_REMETENTE` — ver
+     [E-mails pelo Microsoft 365](#e-mails-pelo-microsoft-365-v36). Assim o SMTP do Supabase não é necessário.
+   - Sem `EMAIL_REMETENTE`: **Authentication → Emails → SMTP Settings** precisa de um SMTP próprio. Sem isso o
+     Supabase só envia para os membros do projeto, poucas mensagens por hora.
    - **Authentication → URL Configuration**: *Site URL* = endereço de produção do app. Em *Redirect URLs*, adicione
      o de produção (`https://<app>.vercel.app/**`) e o das prévias da Vercel do time
      (`https://*-<time>.vercel.app/**`). Não use `https://*.vercel.app/**`: qualquer pessoa publica nesse domínio.
@@ -78,6 +79,7 @@ migrado ficam duplicados por e-mail — o script pula e-mails que já existem.
 | `MS_GRAPH_TENANT_ID`, `MS_GRAPH_CLIENT_ID`, `MS_GRAPH_CLIENT_SECRET` | mesmos do `.env.local` |
 | `MS_GRAPH_DRIVE_ID`, `MS_GRAPH_ITEM_ID` | os da planilha (ver `.env.example`) |
 | `AUTH_MODE`, `APP_URL` | v35 — login com a conta Microsoft; ver "Login com a conta Microsoft" abaixo |
+| `EMAIL_REMETENTE` | v36 — caixa do 365 que envia convite e nova senha; ver "E-mails pelo Microsoft 365" abaixo |
 
 4. **Deploy**. Na Vercel o cookie sai com `SameSite=None; Secure; Partitioned`, o que permite o login dentro do
    iframe do Portal Unità.
@@ -126,6 +128,24 @@ cadastrado e ativo no app, com o **mesmo e-mail** da conta Microsoft; contas de 
   bloquear o pop-up, permita pop-ups para o domínio do app.
 - **Segredo vencido** (`AADSTS7000222`) ou trocado (`AADSTS7000215`): gere outro no Entra ID e atualize a variável.
 - **`AADSTS50011`**: a URI cadastrada no Entra ID é diferente de `APP_URL` + `/api/auth/microsoft/callback`.
+
+## E-mails pelo Microsoft 365 (v36)
+
+O convite, o "Reenviar e-mail de acesso" e o "Esqueci minha senha" dos clientes (Tipo de login = Senha do app) saem
+da caixa `EMAIL_REMETENTE` pelo Microsoft Graph. O Supabase só gera o link (que continua voltando ao app para a
+pessoa criar a senha). Usa o mesmo registro do Entra ID do SharePoint (`MS_GRAPH_*`).
+
+1. **Entra ID** → Registros de aplicativo → o app do `MS_GRAPH_CLIENT_ID` → *Permissões de API* → *Adicionar* →
+   *Microsoft Graph* → **Permissões de aplicativo** → `Mail.Send` → **Conceder consentimento de administrador**.
+2. **Recomendado — limitar a uma caixa**: `Mail.Send` de aplicativo permite enviar como qualquer caixa da empresa.
+   No Exchange Online (PowerShell, por um admin), restrinja o app à caixa remetente, por exemplo com
+   `New-ApplicationAccessPolicy -AppId <MS_GRAPH_CLIENT_ID> -PolicyScopeGroupId <grupo com a caixa> -AccessRight RestrictAccess`.
+3. **Vercel** → `EMAIL_REMETENTE=planejamento.controle@unitaengenharia.com.br` → **Redeploy**.
+4. Teste: "Esqueci minha senha" com o e-mail de um cliente; o e-mail chega da caixa acima.
+
+Sem a permissão, o app mostra "Não foi possível enviar o e-mail" (e, ao criar um usuário, "Usuário criado, mas o
+convite não foi enviado" — o cadastro fica salvo e o Dev usa *Reenviar e-mail de acesso* depois). **Voltar atrás**:
+remova `EMAIL_REMETENTE` e o Supabase volta a enviar.
 
 ## Como funciona por dentro
 
