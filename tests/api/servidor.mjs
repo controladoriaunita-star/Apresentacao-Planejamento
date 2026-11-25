@@ -10,7 +10,8 @@ import { criarApp } from '../../server/app.mjs';
 import { carregarConfig } from '../../server/config.mjs';
 import { CHAVES, criarSupabaseFalso } from './supabase-falso.mjs';
 
-export async function subirServidor({ store = 'local' } = {}) {
+/** `env` acrescenta variáveis (ex.: AUTH_MODE=entra); `fetchMicrosoft` simula o login.microsoftonline.com (v35). */
+export async function subirServidor({ store = 'local', env = {}, fetchMicrosoft = null } = {}) {
   const dataDir = mkdtempSync(join(tmpdir(), 'apresentacao-teste-'));
   const supabase = store === 'supabase' ? criarSupabaseFalso() : null;
   const config = carregarConfig({
@@ -19,10 +20,17 @@ export async function subirServidor({ store = 'local' } = {}) {
       DATA_SOURCE: 'exemplo', INCC_ONLINE: 'false', SESSION_SECRET: 'segredo-de-teste', STORE: store, DOMINIO_EMAIL: 'unita.com.br',
       VERCEL: '', COOKIE_SECURE: 'false', // o build da Vercel roda os testes com VERCEL=1: o servidor de teste é http
       SUPABASE_URL: supabase?.url ?? '', SUPABASE_ANON_KEY: CHAVES.anon, SUPABASE_SERVICE_ROLE_KEY: CHAVES.servico,
+      // O build da Vercel roda os testes com as variáveis de produção: o login Microsoft só liga quando o teste pede.
+      AUTH_MODE: '', APP_URL: '',
+      ...env,
     },
     config: { dataDir },
   });
-  const fetchImpl = (url, init) => (supabase && String(url).startsWith(supabase.url) ? supabase.fetch(url, init) : fetch(url, init));
+  const fetchImpl = (url, init) => {
+    if (supabase && String(url).startsWith(supabase.url)) return supabase.fetch(url, init);
+    if (fetchMicrosoft && String(url).startsWith('https://login.microsoftonline.com/')) return fetchMicrosoft(url, init);
+    return fetch(url, init);
+  };
   const servidor = createServer(criarApp(config, { fetchImpl }));
   await new Promise((r) => servidor.listen(0, '127.0.0.1', r));
   const base = `http://127.0.0.1:${servidor.address().port}`;

@@ -77,6 +77,7 @@ migrado ficam duplicados por e-mail — o script pula e-mails que já existem.
 | `DOMINIO_EMAIL` | opcional; padrão `unitaengenharia.com.br` (só esses e-mails entram) |
 | `MS_GRAPH_TENANT_ID`, `MS_GRAPH_CLIENT_ID`, `MS_GRAPH_CLIENT_SECRET` | mesmos do `.env.local` |
 | `MS_GRAPH_DRIVE_ID`, `MS_GRAPH_ITEM_ID` | os da planilha (ver `.env.example`) |
+| `AUTH_MODE`, `APP_URL` | v35 — login com a conta Microsoft; ver "Login com a conta Microsoft" abaixo |
 
 4. **Deploy**. Na Vercel o cookie sai com `SameSite=None; Secure; Partitioned`, o que permite o login dentro do
    iframe do Portal Unità.
@@ -93,6 +94,38 @@ migrado ficam duplicados por e-mail — o script pula e-mails que já existem.
   senha. Safari bloqueia cookies dentro de iframes de outro site: lá, abrir o app numa aba.
 - **Papéis**: Dev (tudo, inclusive usuários), Planejamento (conteúdo) e Viewer (só vê). Mudar papel ou desativar
   vale na hora.
+
+## Login com a conta Microsoft (v35)
+
+Com `AUTH_MODE=entra`, a equipe entra com a conta do Office 365 (botão **Entrar com a conta Microsoft**) e quem
+não tem conta no 365 (clientes) continua com e-mail e senha do app. Cada usuário tem um **Tipo de login**
+(*Administração → Usuários*): **Conta Microsoft** (padrão de todos os usuários atuais) ou **Senha do app**.
+Quem é "Conta Microsoft" não entra mais com senha nem recebe convite / link de nova senha. Só entra quem está
+cadastrado e ativo no app, com o **mesmo e-mail** da conta Microsoft; contas de outra organização são recusadas.
+
+**Ativação sem parar o app — nesta ordem:**
+
+1. **Entra ID** (portal.azure.com → Registros de aplicativo → o app do `MS_GRAPH_CLIENT_ID`):
+   - *Autenticação → Adicionar plataforma → Web* → URI de redirecionamento
+     `https://<domínio de produção>/api/auth/microsoft/callback` (sem barra no fim; igual a `APP_URL` + o caminho).
+   - *Permissões de API*: `Microsoft Graph → openid, profile, email` (delegadas). Se a organização exigir,
+     *Conceder consentimento de administrador*.
+   - Usa o mesmo segredo do Graph (`MS_GRAPH_CLIENT_SECRET`). Para um segredo só do login, crie outro e
+     cadastre `ENTRA_CLIENT_SECRET` (e, se for outro registro, `ENTRA_TENANT_ID`/`ENTRA_CLIENT_ID`).
+2. **Supabase → SQL Editor**: rode `supabase/migrations/006_login_microsoft.sql` (só acrescenta a coluna `login`).
+3. **Publique a v35** sem `AUTH_MODE`: o app continua 100% como hoje (todos com senha).
+4. **Marque os clientes** como *Senha do app* (Administração → Usuários → Editar → Tipo de login).
+5. **Vercel → Environment Variables**: `AUTH_MODE=entra` e `APP_URL=https://<domínio de produção>` → **Redeploy**.
+6. Teste: conta da equipe pelo botão Microsoft (aba própria e dentro do Portal), cliente com senha, e um e-mail
+   sem cadastro (deve aparecer "ainda não tem acesso").
+
+**Voltar atrás**: remova `AUTH_MODE` na Vercel e faça Redeploy — todos voltam a entrar com a senha do app.
+
+- **Dentro do Portal Unità**: a Microsoft não abre em iframe; o botão abre um pop-up e, ao terminar, o app entra
+  sozinho no portal (o pedido temporário fica 10 min em `sistema/login-microsoft/` no Storage). Se o navegador
+  bloquear o pop-up, permita pop-ups para o domínio do app.
+- **Segredo vencido** (`AADSTS7000222`) ou trocado (`AADSTS7000215`): gere outro no Entra ID e atualize a variável.
+- **`AADSTS50011`**: a URI cadastrada no Entra ID é diferente de `APP_URL` + `/api/auth/microsoft/callback`.
 
 ## Como funciona por dentro
 

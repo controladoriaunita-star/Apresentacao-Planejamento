@@ -1,6 +1,7 @@
 /**
  * Gestão de usuários (somente Dev). No modo Supabase os usuários são convidados por e-mail pelo Supabase Auth.
  */
+import { validarTipoLogin } from '../auth/autenticacao.mjs';
 import { validarSenha } from '../auth/senha.mjs';
 import { enderecoDoApp } from './auth.mjs';
 import { enviarJson, erro, lerJson } from '../http/respostas.mjs';
@@ -23,8 +24,8 @@ export function registrarUsuarios(rotas, { autenticacao }) {
 
   rotas.adicionar('POST', '/api/usuarios', { permissao: 'administrar' }, async ({ req, res }) => {
     const corpo = await lerJson(req);
-    const { nome, email, papel, senha } = corpo;
-    enviarJson(req, res, 201, await autenticacao.criar({ nome, email, papel, senha, ...acessoDoCorpo(corpo) }, enderecoDoApp(req)));
+    const { nome, email, papel, senha, login } = corpo;
+    enviarJson(req, res, 201, await autenticacao.criar({ nome, email, papel, senha, login, ...acessoDoCorpo(corpo) }, enderecoDoApp(req)));
   });
 
   /** Reenvia o e-mail de acesso (convite ou link de nova senha). Só no Supabase. */
@@ -35,9 +36,13 @@ export function registrarUsuarios(rotas, { autenticacao }) {
 
   rotas.adicionar('PUT', '/api/usuarios/:id', { permissao: 'administrar' }, async ({ req, res, params, usuario }) => {
     const corpo = await lerJson(req);
-    const { nome, papel, ativo, senha } = corpo;
+    const { nome, papel, ativo, senha, login } = corpo;
     const campos = acessoDoCorpo(corpo);
     if (nome !== undefined) campos.nome = String(nome).trim();
+    if (login !== undefined) {
+      validarTipoLogin(login);
+      campos.login = login;
+    }
     if (papel !== undefined) {
       if (!papelValido(papel)) throw erro(400, 'Papel inválido.');
       campos.papel = papel;
