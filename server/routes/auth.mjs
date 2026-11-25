@@ -114,9 +114,9 @@ export function registrarAuth(rotas, { autenticacao, loginMicrosoft }) {
   rotas.adicionar('POST', '/api/auth/definir-senha', { permissao: null }, async ({ req, res }) => {
     const ip = ipDe(req);
     const recentes = conferirLimite(ip);
-    const { token, senha } = await lerJson(req);
+    const { token, senha, tokenHash, tipo } = await lerJson(req);
     try {
-      const resultado = await autenticacao.definirSenha(token, senha);
+      const resultado = await autenticacao.definirSenha(token, senha, { tokenHash, tipo });
       enviarJson(req, res, 200, { usuario: usuarioPublico(resultado.usuario) }, { 'set-cookie': resultado.cookie });
     } catch (e) {
       tentativas.set(ip, [...recentes, Date.now()]);

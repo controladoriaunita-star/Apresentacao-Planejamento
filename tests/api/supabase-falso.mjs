@@ -17,6 +17,7 @@ export function criarSupabaseFalso({ url = 'http://supabase.falso' } = {}) {
   const assinaturas = new Map(); // token → "bucket/caminho"
   const chamadas = [];
   const emails = [];
+  const links = new Map(); // token_hash → { id, tipo } (generate_link → verify)
   const enviarEmail = (tipo, usuario, endereco) => emails.push({ tipo, email: usuario.email, token: sessaoPara(usuario).access_token, endereco });
 
   const json = (status, corpo) => new Response(corpo === undefined ? null : JSON.stringify(corpo), { status, headers: { 'content-type': 'application/json' } });
@@ -125,9 +126,20 @@ export function criarSupabaseFalso({ url = 'http://supabase.falso' } = {}) {
           usuarios.set(u.id, u);
         }
       } else if (!u) return json(404, { msg: 'User not found' });
-      const token = sessaoPara(u).access_token;
-      const link = `${url}/auth/v1/verify?type=${corpo.type}&token=${token}&redirect_to=${encodeURIComponent(corpo.redirect_to ?? '')}`;
-      return json(200, { id: u.id, email: u.email, action_link: link, verification_type: corpo.type });
+      const hash = `th-${randomUUID()}`;
+      links.set(hash, { id: u.id, tipo: corpo.type });
+      const link = `${url}/auth/v1/verify?type=${corpo.type}&token=${hash}&redirect_to=${encodeURIComponent(corpo.redirect_to ?? '')}`;
+      return json(200, { id: u.id, email: u.email, action_link: link, hashed_token: hash, verification_type: corpo.type });
+    }
+    // v36.2: troca o token_hash do link por uma sessão (uso único; o tipo precisa bater).
+    if (caminho === '/auth/v1/verify' && metodo === 'POST') {
+      if (cab.apikey !== CHAVES.anon) return json(401, { msg: 'apikey inválida' });
+      const l = links.get(corpo.token_hash);
+      if (!l || l.tipo !== corpo.type) return json(403, { error_code: 'otp_expired', msg: 'Email link is invalid or has expired' });
+      links.delete(corpo.token_hash);
+      const u = usuarios.get(l.id);
+      u.confirmado = true;
+      return json(200, sessaoPara(u));
     }
     if (caminho.startsWith('/auth/v1/admin/users')) {
       if (!servico) return json(403, { msg: 'precisa da service role' });

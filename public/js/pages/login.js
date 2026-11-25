@@ -15,9 +15,11 @@ import { dentroDeIframe, entrarComMicrosoft, prepararPopup } from './login-micro
 export function retornoDoEmail() {
   const params = new URLSearchParams(location.hash.slice(1));
   const token = params.get('access_token');
+  const tokenHash = params.get('token_hash'); // v36.2: link do e-mail enviado pelo 365
   const erro = params.get('error_description');
-  if (!token && !erro) return null;
+  if (!token && !tokenHash && !erro) return null;
   history.replaceState(null, '', location.pathname + location.search);
+  if (tokenHash) return { token: tokenHash, hash: true, tipo: params.get('type') };
   if (token) return { token, tipo: params.get('type') };
   return { erro: /expired|invalid/i.test(erro) ? 'O link expirou ou já foi usado. Peça um novo.' : erro };
 }
@@ -163,13 +165,13 @@ function renderEsqueci(alvo, { email: inicial, voltar }) {
 }
 
 /** Volta do link do e-mail: a pessoa cria a senha e já entra. */
-export function renderDefinirSenha(alvo, { token, tipo, aoEntrar }) {
+export function renderDefinirSenha(alvo, { token, hash, tipo, aoEntrar }) {
   const senha = h('input', { type: 'password', autocomplete: 'new-password', required: true });
   const repetir = h('input', { type: 'password', autocomplete: 'new-password', required: true });
   const botao = h('button', { class: 'btn primary', type: 'submit', style: { width: '100%' } }, 'Salvar senha e entrar');
   telaAcesso(alvo, formulario(botao, async () => {
     if (senha.value !== repetir.value) throw new Error('As senhas não conferem.');
-    const r = await api.post('/auth/definir-senha', { token, senha: senha.value });
+    const r = await api.post('/auth/definir-senha', hash ? { tokenHash: token, tipo, senha: senha.value } : { token, senha: senha.value });
     aoEntrar(r.usuario);
   },
   alerta('info', tipo === 'invite' ? 'Bem-vindo(a)!' : 'Nova senha', tipo === 'invite' ? 'Crie a sua senha para acessar o app.' : 'Crie uma nova senha para continuar.'),
