@@ -5,7 +5,14 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | v36.4 (publicada em 25/11/2026) |
-| Dev (local) | v36.4 |
+| Dev (local) | v39 (em validação) |
+
+## v39 — 26/11/2026 — Colunas "Sem correção" de volta no Econômico do Cliente
+
+- Resumo Econômico na apresentação **Cliente**: as colunas **Resultado s/ correção** e **IEC s/ correção** voltam a
+  aparecer (estavam ocultas por regra fixa desde a v28). Agora entram em **"Colunas do cliente"** (Dev), no grupo
+  "Sem correção", e podem ser ocultadas como as demais — na tela e no PDF. Na Obra nada muda.
+- `domain/colunas-ocultas.js` e `pages/resumo-economico.js`; testes de domínio e de tela atualizados.
 
 ## v36.4 — 25/11/2026 — TxC e fotos: filtros e exclusão em lote
 

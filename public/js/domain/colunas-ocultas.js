@@ -6,14 +6,11 @@
 import { COLUNAS_FISICO } from './nomes-colunas.js';
 import { COLUNAS_ECONOMICO } from './resumo-economico.js';
 
-/** Grupos do Econômico já ocultos no Cliente por regra fixa (v28) — não entram na escolha do Dev. */
-export const GRUPOS_ECONOMICO_FIXOS_CLIENTE = Object.freeze(new Set(['Sem correção']));
-
 /** Tudo o que o Dev pode ocultar: { chave, tabela ('fisico' | 'economico'), titulo, contexto }. */
 export const OCULTAVEIS = Object.freeze([
   ...COLUNAS_FISICO.map((c) => ({ chave: `fisico.${c.id}`, tabela: 'fisico', titulo: c.titulo, contexto: c.contexto })),
-  ...COLUNAS_ECONOMICO.filter((c) => !GRUPOS_ECONOMICO_FIXOS_CLIENTE.has(c.grupo))
-    .map((c) => ({ chave: `economico.${c.campo}`, tabela: 'economico', titulo: c.titulo, contexto: c.grupo })),
+  // v39: inclui as colunas "Sem correção" (antes ocultas no Cliente por regra fixa, v28).
+  ...COLUNAS_ECONOMICO.map((c) => ({ chave: `economico.${c.campo}`, tabela: 'economico', titulo: c.titulo, contexto: c.grupo })),
 ].map(Object.freeze));
 
 const CHAVES = new Set(OCULTAVEIS.map((o) => o.chave));

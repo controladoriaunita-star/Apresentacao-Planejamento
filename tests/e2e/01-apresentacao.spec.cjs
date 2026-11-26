@@ -153,16 +153,34 @@ test('Resumo Geral (v28): o espaço do NH-NU oculto fica livre para os vizinhos 
   await expect(incc).toHaveCSS('grid-column-end', 'span 4');
 });
 
-test('Resumo Econômico (v28): colunas "Sem correção" só na Obra; no Cliente ficam ocultas', async ({ page }) => {
+test('Resumo Econômico (v39): colunas "Sem correção" aparecem no Cliente e o Dev pode ocultá-las', async ({ page }) => {
   await entrar(page, DEV);
   const tabela = page.locator('.resumo-tabela table');
   await page.goto('/#/obra/resumo-economico');
   await expect(tabela.locator('th', { hasText: 'Sem correção' })).toBeVisible();
   await expect(tabela.locator('th', { hasText: 'IEC s/ correção' })).toBeVisible();
   await page.goto('/#/cliente/resumo-economico');
-  await expect(tabela.locator('th', { hasText: 'Contratação' })).toBeVisible();
+  await expect(tabela.locator('th', { hasText: 'Sem correção' })).toBeVisible();
+  await expect(tabela.locator('th', { hasText: 'IEC s/ correção' })).toBeVisible();
+  await expect(tabela.locator('tr.total td')).toHaveCount(10); // Item + 9 colunas
+
+  await page.locator('[data-teste="colunas-ocultas"]').click();
+  const janela = page.getByRole('dialog', { name: /Colunas do cliente/ });
+  await janela.getByLabel('Mostrar Resultado s/ correção (Sem correção)').uncheck();
+  await janela.getByLabel('Mostrar IEC s/ correção (Sem correção)').uncheck();
+  await janela.getByRole('button', { name: 'Salvar' }).click();
+  await expect(janela).toHaveCount(0);
   await expect(tabela.locator('th', { hasText: /correção/ })).toHaveCount(0);
-  await expect(tabela.locator('tr.total td')).toHaveCount(8); // Item + 7 colunas
+  await expect(tabela.locator('tr.total td')).toHaveCount(8);
+  await page.goto('/#/obra/resumo-economico');
+  await expect(tabela.locator('th', { hasText: 'IEC s/ correção' })).toBeVisible(); // na Obra continuam
+
+  await page.goto('/#/cliente/resumo-economico');
+  await page.locator('[data-teste="colunas-ocultas"]').click();
+  await janela.getByLabel('Mostrar Resultado s/ correção (Sem correção)').check();
+  await janela.getByLabel('Mostrar IEC s/ correção (Sem correção)').check();
+  await janela.getByRole('button', { name: 'Salvar' }).click();
+  await expect(tabela.locator('th', { hasText: 'IEC s/ correção' })).toBeVisible();
 });
 
 test('Resumo Econômico: caixas do rodapé ficam congeladas no pé da tela', async ({ page }) => {
