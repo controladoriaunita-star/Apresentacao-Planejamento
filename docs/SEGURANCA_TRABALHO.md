@@ -39,7 +39,8 @@ registro já gravado (o gravado é mantido; para corrigir, editar o acidente).
 1. O navegador lê a planilha (aba "Dados" ou a primeira) com SheetJS, como já fazia o Cadastro de obras.
 2. `POST /api/seguranca/importacao/analisar` valida cada linha com as mesmas regras do formulário e devolve
    novo / já cadastrado / repetido na planilha / erro, com mensagens por linha. Nada é gravado.
-3. Obras com nome diferente do cadastro: de-para na tela (vale para todas as linhas daquele nome).
+3. Obras com nome diferente do cadastro: de-para na tela, com busca por digitação; o usuário preenche todos os nomes e
+   clica em *Gravar associações* (vale para todas as linhas daquele nome, nesta importação).
 4. `POST /api/seguranca/importacao` reanalisa no servidor (não confia no navegador) e grava só os novos válidos num
    único comando (no Supabase, inserção em lote com `on_conflict=chave_dedup` + `ignore-duplicates`). Linhas com erro
    não afetam nada já gravado.
@@ -50,6 +51,7 @@ registro já gravado (o gravado é mantido; para corrigir, editar o acidente).
 |---|---|---|
 | Administração → Segurança do Trabalho | `#/admin/seguranca` | próprios (obras, período, tipo, pesquisa), paginação no servidor (50/página) |
 | Dashboard Segurança (sub-aba de Administração → Segurança do Trabalho) | `#/admin/seguranca-dashboard` | Obras do Cadastro de obras (padrão: todas) e segmentador Ano. Um indicador por vez (botões), ocupando o resto da tela |
+| Pirâmide de Bird (v40 — primeiro botão do Dashboard Segurança) | `#/admin/seguranca-dashboard` | Mesmos filtros do Dashboard. Níveis: FT grave · CPT lesão leve · SPT dano material · TRJ quase acidente (`PIRAMIDE_BIRD`, `calcularPiramideBird`) |
 | Segurança do Trabalho | `#/obra/seguranca-trabalho`, `#/cliente/seguranca-trabalho` | Tela cheia (Apresentar): sempre a obra do filtro geral. Fora: seletor "Obra exibida" (filtro geral, todas ou uma obra) |
 
 Período do gráfico mês a mês (`mesesDoGrafico`): de 1 mês antes do primeiro acidente até 1 mês depois do último,

@@ -10,6 +10,7 @@ import { estado } from '../core/estado.js';
 import {
   CABECALHOS_MODELO, dadosDaObra, FASES_OBRA, PARTES_CORPO, pendenciasDaObra, TIPOS_ACIDENTE, validarAcidente,
 } from '../domain/seguranca.js';
+import { buscaObra } from '../ui/busca-obra.js';
 import { abrirModal, alerta, badge, botaoAcao, campo, carregando, confirmar, toast, vazio } from '../ui/componentes.js';
 import { filtroExcel } from '../ui/filtro-excel.js';
 import { icone } from '../ui/icones.js';
@@ -311,8 +312,71 @@ function abrirImportacao(cadastros, aoImportar) {
   let analise = null;
   const acoes = h('div', { class: 'row' });
 
+  // De-para: preenchido por inteiro em `rascunho` e só aplicado à análise ao clicar em "Gravar associações".
+  // O painel é criado uma vez por planilha, para os nomes não sumirem nem perderem o que foi digitado.
+  let rascunho = {};
+  const invalidos = new Set();
+  let painelDePara = null;
+  let statusDePara = null;
+  let botaoGravar = null;
+  let botaoImportar = null;
+  let totalDePara = 0;
+
+  const dePara = () => {
+    const chaves = new Set([...Object.keys(rascunho), ...Object.keys(mapaObras)]);
+    return { pendente: invalidos.size > 0 || [...chaves].some((k) => rascunho[k] !== mapaObras[k]), associadas: Object.keys(rascunho).length };
+  };
+
+  const atualizarDePara = () => {
+    const { pendente, associadas } = dePara();
+    if (statusDePara) {
+      statusDePara.textContent = `${associadas} de ${totalDePara} associada(s)${pendente ? ' · alterações não gravadas' : associadas ? ' · gravadas' : ''}`;
+      botaoGravar.disabled = !pendente;
+    }
+    if (botaoImportar) {
+      botaoImportar.disabled = pendente || !analise?.totais.novos;
+      botaoImportar.title = pendente ? 'Grave as associações de obras antes de importar' : '';
+    }
+  };
+
+  const gravarDePara = async () => {
+    if (invalidos.size) return toast('warning', 'Obra não encontrada', `Escolha uma obra da lista ou apague o texto em ${invalidos.size} campo(s).`);
+    const anterior = mapaObras;
+    mapaObras = { ...rascunho };
+    botaoGravar.disabled = true;
+    try {
+      await analisar();
+      toast('success', 'Associações gravadas', 'A conferência da planilha foi atualizada.');
+    } catch (e) {
+      mapaObras = anterior;
+      atualizarDePara();
+      toast('error', 'Não foi possível gravar as associações', e.message, 8000);
+    }
+    return undefined;
+  };
+
+  const criarPainelDePara = (obras) => {
+    totalDePara = obras.length;
+    statusDePara = h('span', { class: 'muted small', 'aria-live': 'polite' });
+    botaoGravar = h('button', { class: 'btn primary', type: 'button', onclick: gravarDePara }, 'Gravar associações');
+    painelDePara = h('div', { class: 'card card-pad stack seg-depara' },
+      h('div', {}, h('b', {}, 'Obras da planilha que não estão no Cadastro de obras'),
+        h('p', { class: 'muted small' }, 'Digite para buscar e associe cada nome a uma obra cadastrada (vale para todas as linhas com esse nome). Preencha o que precisar e clique em Gravar associações. Nomes em branco não serão importados.')),
+      h('div', { class: 'form-grade seg-depara-campos' }, obras.map((o) => campo(o.nome, buscaObra({
+        cadastros,
+        rotulo: o.nome,
+        aoMudar: ({ id, invalido }) => {
+          if (id) rascunho[o.chave] = id; else delete rascunho[o.chave];
+          if (invalido) invalidos.add(o.chave); else invalidos.delete(o.chave);
+          atualizarDePara();
+        },
+      })))),
+      h('div', { class: 'seg-depara-rodape' }, statusDePara, botaoGravar));
+  };
+
   const analisar = async () => {
     analise = await api.post('/seguranca/importacao/analisar', { linhas, mapaObras });
+    if (!painelDePara && analise.obrasNaoEncontradas.length) criarPainelDePara(analise.obrasNaoEncontradas);
     desenharPrevia();
   };
 
@@ -345,19 +409,13 @@ function abrirImportacao(cadastros, aoImportar) {
     const t = analise.totais;
     const situacoes = { novo: ['success', 'Novo'], existente: ['neutral', 'Já cadastrado'], repetido: ['warning', 'Repetido na planilha'], erro: ['error', 'Erro'] };
     const visiveis = analise.linhas.filter((l) => mostrar === 'todos' || l.situacao === mostrar);
-    const deParaObras = analise.obrasNaoEncontradas.length ? h('div', { class: 'card card-pad stack seg-depara' },
-      h('div', {}, h('b', {}, 'Obras da planilha que não estão no Cadastro de obras'),
-        h('p', { class: 'muted small' }, 'Associe cada nome a uma obra cadastrada (vale para todas as linhas com esse nome) ou deixe sem associação para não importar.')),
-      h('div', { class: 'form-grade' }, analise.obrasNaoEncontradas.map((o) => campo(o.nome, h('select', {
-        onchange: async (e) => { if (e.target.value) mapaObras[o.chave] = e.target.value; else delete mapaObras[o.chave]; await analisar(); },
-      }, h('option', { value: '' }, '— sem associação —'), cadastros.map((c) => h('option', { value: c.id, selected: mapaObras[o.chave] === c.id }, c.obra))))))) : null;
     montar(area,
       h('div', { class: 'seg-import-totais' },
         [['todos', 'Linhas lidas', t.lidas, ''], ['novo', 'Novos (serão importados)', t.novos, 'ok'], ['existente', 'Já cadastrados', t.existentes, ''],
           ['repetido', 'Repetidos na planilha', t.repetidos, 'aviso'], ['erro', 'Com erro', t.erros, 'ruim']]
           .map(([chave, rotulo, valor, classe]) => h('button', { type: 'button', class: `seg-import-total ${classe}`, 'aria-pressed': String(mostrar === chave), onclick: () => { mostrar = chave; desenharPrevia(); } },
             h('span', {}, rotulo), h('b', {}, fmtNumero(valor))))),
-      deParaObras,
+      painelDePara,
       t.erros ? alerta('warning', `${t.erros} linha(s) com erro não serão importadas`, 'Corrija na planilha e importe de novo — as linhas já importadas serão reconhecidas.') : null,
       visiveis.length ? h('div', { class: 'sheet seg-previa' }, h('table', {},
         h('thead', {}, h('tr', {}, ['Linha', 'Situação', 'Data', 'Obra', 'Acidentado', 'Tipo', 'Parte do corpo', 'Dias', 'Observações'].map((c) => h('th', {}, c)))),
@@ -374,9 +432,12 @@ function abrirImportacao(cadastros, aoImportar) {
         : h('p', { class: 'muted' }, 'Nenhuma linha nesta situação.'),
       visiveis.length > 500 ? h('p', { class: 'muted small' }, `Mostrando 500 de ${visiveis.length} linhas.`) : null);
     montar(acoes,
-      h('button', { class: 'btn ghost', type: 'button', onclick: () => { analise = null; mapaObras = {}; montar(area, etapa1); montar(acoes, botoesInicio()); } }, 'Escolher outra planilha'),
-      botaoAcao(`Importar ${t.novos} acidente(s)`, confirmarImportacao, 'btn primary'));
-    acoes.lastChild.disabled = !t.novos;
+      h('button', { class: 'btn ghost', type: 'button', onclick: () => {
+        analise = null; mapaObras = {}; rascunho = {}; invalidos.clear(); painelDePara = null; statusDePara = null; botaoGravar = null; botaoImportar = null;
+        montar(area, etapa1); montar(acoes, botoesInicio());
+      } }, 'Escolher outra planilha'),
+      botaoImportar = botaoAcao(`Importar ${t.novos} acidente(s)`, confirmarImportacao, 'btn primary'));
+    atualizarDePara();
   };
 
   const botoesInicio = () => [h('button', { class: 'btn ghost', type: 'button', onclick: () => m.fechar() }, 'Cancelar'), botaoAcao('Conferir planilha', ler, 'btn primary')];
