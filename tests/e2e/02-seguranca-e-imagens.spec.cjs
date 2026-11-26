@@ -87,6 +87,20 @@ test('papel Segurança: entra direto na Administração → Segurança do Trabal
   await expect(page.getByRole('dialog').getByText('Residencial Alpha').first()).toBeAttached();
   await page.getByRole('dialog').getByRole('button', { name: 'Cancelar' }).click();
 
+  // E-mails das obras (cópia da IAT/IST): o papel Segurança cadastra sem abrir o Cadastro de obras.
+  await page.getByRole('button', { name: 'E-mails das obras' }).click();
+  await page.getByRole('dialog').getByLabel('Buscar obra').fill('alpha');
+  await page.getByRole('dialog').getByRole('button', { name: /Cadastrar e-mails/ }).first().click();
+  await page.getByRole('dialog').getByLabel('Novo e-mail').fill('tst.alpha@unita.com.br');
+  await page.getByRole('dialog').getByRole('button', { name: 'Salvar e-mails' }).click();
+  await expect(page.getByText('E-mails salvos')).toBeVisible();
+  // Recarrega: "Sair" não limpa da memória os dados do Dev que entrou antes nesta mesma aba.
+  await page.reload();
+  await page.getByRole('button', { name: 'E-mails das obras' }).click();
+  await page.getByRole('dialog').getByLabel('Buscar obra').fill('alpha');
+  await expect(page.getByRole('dialog').getByRole('button', { name: /Cadastrar e-mails/ }).first()).toContainText('1');
+  await page.getByRole('dialog').getByRole('button', { name: 'Fechar' }).click();
+
   await page.getByRole('link', { name: 'Dashboard Segurança' }).click();
   await expect(page.getByRole('heading', { name: 'Dashboard Segurança' })).toBeVisible();
 

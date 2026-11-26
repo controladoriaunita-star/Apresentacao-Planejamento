@@ -155,8 +155,11 @@ export function registrarDados(rotas, { planilhas, incc, cadastro, acidentes, ar
     enviarJson(req, res, 200, salvo);
   });
 
-  /** E-mails da obra (Cadastro de obras → Cadastrar e-mails): recebem a IAT e a IST desta obra. */
-  rotas.adicionar('PUT', '/api/obras/cadastro/:id/emails', { permissao: 'editarConteudo' }, async ({ req, res, params, usuario }) => {
+  /**
+   * E-mails da obra (Cadastro de obras → Cadastrar e-mails, ou Segurança do Trabalho → E-mails das obras): recebem a
+   * IAT e a IST desta obra. Capacidade da Segurança (Dev, Planejamento e o papel Segurança), não a do cadastro.
+   */
+  rotas.adicionar('PUT', '/api/obras/cadastro/:id/emails', { permissao: 'editarSeguranca' }, async ({ req, res, params, usuario }) => {
     const { emails } = await lerJson(req);
     if (!Array.isArray(emails)) throw erro(400, 'Envie a lista de e-mails.');
     const invalidos = emails.filter((e) => !emailValido(e));
