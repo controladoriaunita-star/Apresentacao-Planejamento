@@ -29,11 +29,9 @@ const expandidos = new Set();
 const MOSTRAR_TOPO = false;
 
 /**
- * v28 — Na apresentação Cliente as colunas "Sem correção" ficam ocultas por enquanto (pedido do usuário);
- * as demais dividem a largura entre si (.colunas-iguais). Na Obra aparecem todas.
+ * v28 — As colunas "Sem correção" ficavam ocultas no Cliente por regra fixa.
+ * v39 — Voltam a aparecer no Cliente; o Dev as oculta, se quiser, em "Colunas do cliente" (como as demais).
  */
-const GRUPOS_OCULTOS_CLIENTE = new Set(['Sem correção']);
-const colunasDaVisao = (visao) => (visao === 'cliente' ? COLUNAS_ECONOMICO.filter((c) => !GRUPOS_OCULTOS_CLIENTE.has(c.grupo)) : COLUNAS_ECONOMICO);
 
 /** Colunas "IEC Obra" e "IEC s/ correção" ficam em vermelho acima de 1 (custo acima do orçado). */
 const CAMPOS_IEC = new Set(['iec', 'iecSemCorrecao']);
@@ -57,7 +55,7 @@ export function renderResumoEconomico(alvo, ctx) {
   if (!obra) return montar(alvo, vazio('Selecione uma obra no filtro'));
   const r = calcularResumoEconomico(base, obra.chave, filtro.referencia);
   // v34: no Cliente também saem as colunas que o Dev ocultou (domain/colunas-ocultas.js) — vale para o PDF.
-  const colunas = colunasDaVisao(ctx.visao).filter((c) => !colunaOculta(estado.bruto?.colunasOcultas, ctx.visao, `economico.${c.campo}`));
+  const colunas = COLUNAS_ECONOMICO.filter((c) => !colunaOculta(estado.bruto?.colunasOcultas, ctx.visao, `economico.${c.campo}`));
   // v29: títulos com os nomes definidos pelo Dev (domain/nomes-colunas.js); sem nome definido, o original.
   const nomes = estado.bruto?.nomesColunas;
   const tituloColuna = (c) => tituloComUnidade(nomeColuna(nomes, `economico.coluna.${c.campo}`, c.titulo), c.tipo);
