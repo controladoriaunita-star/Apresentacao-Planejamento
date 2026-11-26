@@ -5,7 +5,13 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | v36.4 (publicada em 25/11/2026) |
-| Dev (local) | v39 (em validação) |
+| Dev (local) | v41 (em validação) |
+
+## v41 — 26/11/2026 — barra de rolagem no menu de abas
+
+- Com muitas abas/novas telas, o menu do topo passa a mostrar uma barra de rolagem horizontal fina em telas menores
+  (antes rolava com a barra oculta e as abas pareciam cortadas). Só `public/css/layout.css`. Com o cabeçalho em duas
+  linhas (v29) as abas quebram linha e a barra não aparece.
 
 ## v39 — 26/11/2026 — Colunas "Sem correção" de volta no Econômico do Cliente
 
