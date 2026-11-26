@@ -57,6 +57,19 @@ export const CAMPOS_CADASTRO = [
 const POR_CAMPO = new Map(CAMPOS_CADASTRO.map((c) => [c.campo, c]));
 
 /** Valida e normaliza um cadastro vindo do formulário ou da importação. */
+/** E-mail válido (formato simples nome@dominio.ext). */
+export const emailValido = (v) => /^[^\s@<>(),;:"]+@[^\s@<>(),;:"]+\.[a-z]{2,}$/i.test(String(v ?? '').trim());
+
+/** E-mails da obra (recebem a IAT e a IST): sem espaços, minúsculos, sem repetição, só os válidos (até 50). */
+export function normalizarEmails(lista) {
+  const vistos = new Set();
+  for (const v of Array.isArray(lista) ? lista : []) {
+    const e = String(v ?? '').trim().toLowerCase();
+    if (emailValido(e)) vistos.add(e);
+  }
+  return [...vistos].slice(0, 50);
+}
+
 export function normalizarCadastro(entrada) {
   const saida = {};
   for (const def of CAMPOS_CADASTRO) {

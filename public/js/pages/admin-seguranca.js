@@ -8,16 +8,22 @@ import { h, montar } from '../core/dom.js';
 import { fmtData, fmtDataHora, fmtNumero, VAZIO } from '../core/formato.js';
 import { estado } from '../core/estado.js';
 import {
-  CABECALHOS_MODELO, dadosDaObra, FASES_OBRA, PARTES_CORPO, pendenciasDaObra, TIPOS_ACIDENTE, validarAcidente,
+  CABECALHOS_MODELO, CATEGORIAS_QUASE, dadosDaObra, ehPlanilhaQuase, FASES_OBRA, PARTES_CORPO, pendenciasDaObra, SIGLA_QUASE, TIPOS_ACIDENTE,
+  TIPOS_REGISTRO, validarAcidente,
 } from '../domain/seguranca.js';
+import { buscaObra } from '../ui/busca-obra.js';
 import { abrirModal, alerta, badge, botaoAcao, campo, carregando, confirmar, toast, vazio } from '../ui/componentes.js';
 import { filtroExcel } from '../ui/filtro-excel.js';
 import { icone } from '../ui/icones.js';
 import { baixarPlanilha, linhasComoObjetos } from '../ui/planilha.js';
 import { seletorArquivos } from '../ui/seletor-arquivos.js';
 
-const NOME_TIPO = Object.fromEntries(TIPOS_ACIDENTE.map((t) => [t.sigla, t.nome]));
-const COR_TIPO = { CPT: 'info', SPT: 'success', TRJ: 'primary', FT: 'error' };
+const NOME_TIPO = Object.fromEntries(TIPOS_REGISTRO.map((t) => [t.sigla, t.nome]));
+const COR_TIPO = { CPT: 'info', SPT: 'success', TRJ: 'primary', FT: 'error', QA: 'qa' };
+const ehQuase = (a) => a.tipo === SIGLA_QUASE;
+
+/** Sub-aba da tela: ocorrências (histórico), IAT ou IST — lembrada enquanto o app estiver aberto. */
+let abaAtual = 'ocorrencias';
 
 /** Filtros da tabela histórica (lembrados enquanto a aba estiver aberta). */
 const filtro = { obras: null, de: '', ate: '', tipos: [], nome: '', empresa: '', ordem: 'desc', pagina: 1 };
@@ -30,21 +36,68 @@ export async function renderAdminSeguranca(alvo) {
   const incompletos = cadastros.filter((c) => pendenciasDaObra(c).length);
   const resultado = h('div', { class: 'seg-historico' });
 
-  const recarregar = () => carregarTabela(resultado, cadastros, recarregar);
+  const recarregar = () => (abaAtual === 'ocorrencias' ? carregarTabela(resultado, cadastros, recarregar) : carregarInformativos(resultado, abaAtual));
+  const abas = h('div');
+  const desenharAbas = () => montar(abas, h('div', { class: 'seg-botoes', role: 'tablist', 'aria-label': 'Registros' },
+    [['ocorrencias', 'Ocorrências'], ['iat', 'IAT'], ['ist', 'IST']].map(([id, nome]) => h('button', {
+      type: 'button', role: 'tab', 'aria-selected': String(abaAtual === id), onclick: () => { abaAtual = id; desenharAbas(); recarregar(); },
+    }, nome))));
+  desenharAbas();
   montar(alvo,
     h('div', { class: 'titulo-pagina' },
       h('div', {}, h('h1', {}, 'Segurança do Trabalho'),
-        h('p', {}, 'Acidentes por obra: cadastro, importação da planilha de controle e histórico. Alimenta o Dashboard Segurança e a aba Segurança do Trabalho.')),
+        h('p', {}, 'Ocorrências (acidentes e quase acidentes), IAT e IST por obra: cadastro, importação das planilhas e histórico. Alimenta o Dashboard Segurança e a aba Segurança do Trabalho.')),
       h('div', { class: 'row' },
         h('a', { class: 'btn secondary', href: '#/admin/seguranca-dashboard' }, icone('escudo', { tamanho: 16 }), 'Dashboard Segurança'),
         h('button', { class: 'btn ghost', type: 'button', onclick: () => baixarModelo(cadastros) }, icone('planilha', { tamanho: 16 }), 'Baixar modelo'),
         h('button', { class: 'btn secondary', type: 'button', onclick: () => abrirImportacao(cadastros, recarregar) }, icone('enviar', { tamanho: 16 }), 'Importar planilha'),
-        h('button', { class: 'btn primary', type: 'button', onclick: () => abrirFormAcidente({}, cadastros, recarregar) }, 'Novo acidente'))),
+        h('button', { class: 'btn secondary', type: 'button', onclick: () => abrirImportacao(cadastros, recarregar, { quase: true }) }, icone('enviar', { tamanho: 16 }), 'Importar quase acidentes'),
+        h('a', { class: 'btn secondary', href: '#/admin/seguranca-iat/nova' }, 'Nova IAT'),
+        h('a', { class: 'btn secondary', href: '#/admin/seguranca-ist/nova' }, 'Nova IST'),
+        h('button', { class: 'btn primary', type: 'button', onclick: () => abrirFormAcidente({}, cadastros, recarregar) }, 'Nova Ocorrência'))),
     cadastros.length ? null : alerta('warning', 'Nenhuma obra no Cadastro de obras', 'Cadastre as obras em Administração → Cadastro de obras antes de registrar acidentes.'),
     incompletos.length ? alerta('info', `${incompletos.length} obra(s) sem Cliente ou Sistema estrutural no Cadastro de obras`,
       `Elas não recebem acidentes até o cadastro ser completado: ${incompletos.slice(0, 6).map((c) => c.obra).join(', ')}${incompletos.length > 6 ? '…' : ''}.`) : null,
+    abas,
     resultado);
   await recarregar();
+}
+
+// ── IAT e IST salvas ─────────────────────────────────────────────────────
+async function carregarInformativos(alvo, tipo) {
+  const nome = tipo.toUpperCase();
+  montar(alvo, carregando(4));
+  let lista;
+  try {
+    lista = await api.get(`/seguranca/${tipo}`);
+  } catch (e) {
+    return montar(alvo, alerta('error', `Não foi possível carregar as ${nome}`, e.message));
+  }
+  if (!lista.length) {
+    return montar(alvo, vazio(`Nenhuma ${nome} registrada`, `Use o botão "Nova ${nome}" para preencher o primeiro informativo.`,
+      h('a', { class: 'btn primary', href: `#/admin/seguranca-${tipo}/nova` }, `Nova ${nome}`)));
+  }
+  const excluirDoc = async (d) => {
+    if (!(await confirmar(`Excluir a ${nome} nº ${String(d.numero).padStart(2, '0')}?`, 'O informativo, as fotos e os anexos serão apagados.', { rotulo: 'Excluir', perigo: true }))) return;
+    try {
+      await api.del(`/seguranca/${tipo}/${d.id}`);
+      toast('success', `${nome} excluída`);
+      carregarInformativos(alvo, tipo);
+    } catch (e) {
+      toast('error', 'Não foi possível excluir', e.message);
+    }
+  };
+  montar(alvo, h('div', { class: 'sheet seg-tabela' }, h('table', { class: 'lista-admin' },
+    h('thead', {}, h('tr', {}, ['Nº', 'Data', 'Obra', tipo === 'iat' ? 'Acidentado' : 'Classificação', 'Atualizado'].map((t) => h('th', {}, t)), h('th', {}))),
+    h('tbody', {}, lista.map((d) => h('tr', {},
+      h('td', {}, String(d.numero).padStart(2, '0')),
+      h('td', { class: 'esq' }, d.data ? fmtData(d.data) : VAZIO),
+      h('td', { class: 'esq' }, d.obra ?? VAZIO),
+      h('td', { class: 'esq' }, d.titulo ?? VAZIO),
+      h('td', { class: 'esq' }, `${fmtDataHora(d.atualizadoEm)}${d.atualizadoPor ? ` · ${d.atualizadoPor}` : ''}`),
+      h('td', { class: 'acoes' },
+        h('a', { class: 'btn ghost sm', href: `#/admin/seguranca-${tipo}/${d.id}` }, 'Abrir'),
+        h('button', { class: 'btn ghost sm', type: 'button', onclick: () => excluirDoc(d) }, 'Excluir'))))))));
 }
 
 // ── Tabela histórica ─────────────────────────────────────────────────────
@@ -79,18 +132,19 @@ async function carregarTabela(alvo, cadastros, recarregar) {
         h('th', { class: 'seg-col-data' }, h('button', { class: 'seg-ordenar', type: 'button', onclick: ordenar, 'aria-label': 'Ordenar por data' },
           'Data', h('span', { 'aria-hidden': 'true' }, filtro.ordem === 'desc' ? '↓' : '↑'))),
         cab('Obra'), cab('Incorporador'), cab('Método construtivo'), cab('Fase da obra'), cab('Nome do acidentado'), cab('Função'),
-        cab('Nome da empresa'), cab('Tipo'), cab('Parte do corpo'), cab('Dias de afastamento'), cab('Resumo do acidente'), h('th', {}))),
+        cab('Nome da empresa'), cab('Tipo'), cab('Categoria (quase acidente)'), cab('Parte do corpo'), cab('Dias de afastamento'), cab('Resumo do acidente'), h('th', {}))),
       h('tbody', {}, r.itens.map((a) => h('tr', {},
         h('td', { class: 'esq seg-col-data' }, fmtData(a.data)),
         h('td', { class: 'esq' }, a.obra ?? VAZIO),
         h('td', { class: 'esq' }, a.incorporador ?? VAZIO),
         h('td', { class: 'esq' }, a.metodoConstrutivo ?? VAZIO),
-        h('td', { class: 'esq' }, a.faseObra),
-        h('td', { class: 'esq' }, a.nomeAcidentado),
-        h('td', { class: 'esq' }, a.funcao),
-        h('td', { class: 'esq' }, a.empresa),
+        h('td', { class: 'esq' }, a.faseObra ?? VAZIO),
+        h('td', { class: 'esq' }, a.nomeAcidentado || VAZIO),
+        h('td', { class: 'esq' }, a.funcao || VAZIO),
+        h('td', { class: 'esq' }, a.empresa || VAZIO),
         h('td', { class: 'esq' }, seloTipo(a.tipo)),
-        h('td', { class: 'esq' }, a.parteCorpo),
+        h('td', { class: 'esq' }, a.categoria ?? VAZIO),
+        h('td', { class: 'esq' }, a.parteCorpo ?? VAZIO),
         h('td', {}, fmtNumero(a.diasAfastamento)),
         h('td', { class: 'texto' }, h('span', { class: 'seg-resumo', title: a.resumo }, a.resumo)),
         h('td', { class: 'acoes' },
@@ -121,9 +175,9 @@ function barraFiltrosHistorico(cadastros, aplicar) {
     data('De', 'de'),
     data('Até', 'ate'),
     filtroExcel({
-      rotulo: 'Tipo do acidente', itens: TIPOS_ACIDENTE.map((t) => ({ valor: t.sigla, rotulo: `${t.sigla} – ${t.nome}` })),
-      selecionados: filtro.tipos.length ? filtro.tipos : TIPOS_ACIDENTE.map((t) => t.sigla), multiplo: true, largura: 320,
-      aoAplicar: (v) => { filtro.tipos = v.length === TIPOS_ACIDENTE.length ? [] : v; aplicar(); },
+      rotulo: 'Tipo do acidente', itens: TIPOS_REGISTRO.map((t) => ({ valor: t.sigla, rotulo: `${t.sigla} – ${t.nome}` })),
+      selecionados: filtro.tipos.length ? filtro.tipos : TIPOS_REGISTRO.map((t) => t.sigla), multiplo: true, largura: 320,
+      aoAplicar: (v) => { filtro.tipos = v.length === TIPOS_REGISTRO.length ? [] : v; aplicar(); },
     }),
     busca('Acidentado', 'nome', 'Pesquisar nome…'),
     busca('Empresa', 'empresa', 'Pesquisar empresa…'),
@@ -131,7 +185,9 @@ function barraFiltrosHistorico(cadastros, aplicar) {
 }
 
 async function excluir(a, recarregar) {
-  if (!(await confirmar('Excluir acidente?', `O acidente de ${a.nomeAcidentado} em ${fmtData(a.data)} (${a.obra}) será apagado e sai dos indicadores.`, { rotulo: 'Excluir', perigo: true }))) return;
+  const pergunta = ehQuase(a) ? ['Excluir quase acidente?', `O quase acidente de ${fmtData(a.data)} (${a.obra}) será apagado e sai dos indicadores.`]
+    : ['Excluir acidente?', `O acidente de ${a.nomeAcidentado} em ${fmtData(a.data)} (${a.obra}) será apagado e sai dos indicadores.`];
+  if (!(await confirmar(pergunta[0], pergunta[1], { rotulo: 'Excluir', perigo: true }))) return;
   try {
     await api.del(`/seguranca/acidentes/${a.id}`);
     toast('success', 'Acidente excluído');
@@ -144,15 +200,15 @@ async function excluir(a, recarregar) {
 function abrirDetalhes(a, cadastros, recarregar) {
   const item = (rotulo, valor) => h('div', {}, h('dt', {}, rotulo), h('dd', {}, valor ?? VAZIO));
   const m = abrirModal({
-    titulo: `Acidente — ${a.nomeAcidentado}`,
+    titulo: ehQuase(a) ? `Quase acidente — ${a.obra}` : `Acidente — ${a.nomeAcidentado}`,
     largo: true,
     conteudo: h('div', { class: 'stack' },
       h('dl', { class: 'detalhe-valores seg-detalhe' },
         item('Data', fmtData(a.data)), item('Obra', a.obra), item('Incorporador', a.incorporador), item('Método construtivo', a.metodoConstrutivo),
         item('Fase da obra', a.faseObra), item('Função', a.funcao), item('Nome da empresa', a.empresa), item('Tipo do acidente', `${a.tipo} – ${NOME_TIPO[a.tipo]}`),
-        item('Parte do corpo atingida', a.parteCorpo), item('Dias de afastamento', fmtNumero(a.diasAfastamento)),
+        ehQuase(a) ? item('Categoria', a.categoria) : item('Parte do corpo atingida', a.parteCorpo), ehQuase(a) ? null : item('Dias de afastamento', fmtNumero(a.diasAfastamento)),
         item('Origem', a.origem === 'importacao' ? 'Importação de planilha' : 'Cadastro manual'), item('Registrado', `${fmtDataHora(a.criadoEm)}${a.criadoPor ? ` · ${a.criadoPor}` : ''}`)),
-      h('div', { class: 'comentario-caixa' }, h('b', {}, 'Resumo do acidente'), h('p', {}, a.resumo)),
+      h('div', { class: 'comentario-caixa' }, h('b', {}, ehQuase(a) ? 'Descrição do quase acidente' : 'Resumo do acidente'), h('p', {}, a.resumo)),
       a.atualizadoEm ? h('p', { class: 'muted small' }, `Última alteração em ${fmtDataHora(a.atualizadoEm)}${a.atualizadoPor ? ` por ${a.atualizadoPor}` : ''}.`) : null),
     acoes: [
       h('button', { class: 'btn ghost', type: 'button', onclick: () => m.fechar() }, 'Fechar'),
@@ -167,7 +223,7 @@ export function abrirFormAcidente(inicial, cadastros, aoSalvar) {
   const erro = h('div');
   const disponiveis = cadastros.filter((c) => !pendenciasDaObra(c).length || c.id === inicial.obraId);
   const obra = h('select', { required: true },
-    h('option', { value: '', disabled: true, selected: !inicial.obraId }, 'Selecione a obra'),
+    h('option', { value: '', disabled: true, selected: !inicial.obraId }, inicial.obraPlanilha ? `${inicial.obraPlanilha} (nome da planilha)` : 'Selecione a obra'),
     cadastros.map((c) => {
       const faltam = pendenciasDaObra(c);
       return h('option', { value: c.id, selected: c.id === inicial.obraId, disabled: faltam.length > 0 && c.id !== inicial.obraId }, faltam.length ? `${c.obra} (complete: ${faltam.join(', ')})` : c.obra);
@@ -183,10 +239,12 @@ export function abrirFormAcidente(inicial, cadastros, aoSalvar) {
   preencherObra();
 
   const opcoes = (lista, atual, vazioTexto) => [h('option', { value: '', disabled: true, selected: !atual }, vazioTexto), ...lista.map(([v, t]) => h('option', { value: v, selected: v === atual }, t))];
-  const data = h('input', { type: 'date', value: inicial.data ?? '', max: new Date().toISOString().slice(0, 10), required: true });
+  const hoje = new Date().toISOString().slice(0, 10);
+  const data = h('input', { type: 'date', value: inicial.data ?? '', max: hoje, required: true });
   const fase = h('select', { required: true }, opcoes(FASES_OBRA.map((f) => [f, f]), inicial.faseObra, 'Selecione a fase'));
   const nome = h('input', { value: inicial.nomeAcidentado ?? '', required: true, maxlength: 160, autocomplete: 'off' });
-  const tipo = h('select', { required: true }, opcoes(TIPOS_ACIDENTE.map((t) => [t.sigla, `${t.sigla} – ${t.nome}`]), inicial.tipo, 'Selecione o tipo'));
+  const tipo = h('select', { required: true }, opcoes(TIPOS_REGISTRO.map((t) => [t.sigla, `${t.sigla} – ${t.nome}`]), inicial.tipo, 'Selecione o tipo'));
+  const categoria = h('select', {}, opcoes(CATEGORIAS_QUASE.map((c) => [c, c]), inicial.categoria, 'Selecione a categoria'));
   const funcao = h('input', { value: inicial.funcao ?? '', required: true, maxlength: 120 });
   const parte = h('select', { required: true }, opcoes(PARTES_CORPO.map((p) => [p, p]), inicial.parteCorpo, 'Selecione a parte do corpo'));
   const empresa = h('input', { value: inicial.empresa ?? '', required: true, maxlength: 160 });
@@ -198,7 +256,9 @@ export function abrirFormAcidente(inicial, cadastros, aoSalvar) {
     montar(erro);
     const corpo = {
       data: data.value, obraId: obra.value, faseObra: fase.value, nomeAcidentado: nome.value, tipo: tipo.value, funcao: funcao.value,
-      parteCorpo: parte.value, empresa: empresa.value, diasAfastamento: dias.value === '' ? null : Number(dias.value), resumo: resumo.value,
+      parteCorpo: parte.value, empresa: tipo.value === SIGLA_QUASE ? null : empresa.value, diasAfastamento: dias.value === '' ? null : Number(dias.value), resumo: resumo.value,
+      categoria: tipo.value === SIGLA_QUASE ? categoria.value : null,
+      obraPlanilha: inicial.obraPlanilha ?? null,
     };
     const { erros } = validarAcidente(corpo);
     if (erros.length) return montar(erro, alerta('error', 'Revise os campos obrigatórios', h('ul', { class: 'seg-erros' }, erros.map((e) => h('li', {}, e)))));
@@ -206,7 +266,8 @@ export function abrirFormAcidente(inicial, cadastros, aoSalvar) {
       if (editando) await api.put(`/seguranca/acidentes/${inicial.id}`, corpo);
       else await api.post('/seguranca/acidentes', corpo);
       m.fechar();
-      toast('success', editando ? 'Acidente atualizado' : 'Acidente registrado', 'Os indicadores já consideram este registro.');
+      const nomeRegistro = tipo.value === SIGLA_QUASE ? 'Quase acidente' : 'Acidente';
+      toast('success', `${nomeRegistro} ${editando ? 'atualizado' : 'registrado'}`, 'Os indicadores já consideram este registro.');
       aoSalvar?.();
     } catch (e) {
       montar(erro, alerta('error', 'Não foi possível salvar', e.message));
@@ -214,8 +275,32 @@ export function abrirFormAcidente(inicial, cadastros, aoSalvar) {
   };
 
   const obrig = (rotulo) => `${rotulo} *`;
+  const campoFase = campo(obrig('Fase da obra'), fase);
+  const campoNome = campo(obrig('Nome do acidentado'), nome);
+  const campoFuncao = campo(obrig('Função'), funcao);
+  const campoEmpresa = campo(obrig('Nome da empresa'), empresa);
+  const campoParte = campo(obrig('Parte do corpo atingida'), parte);
+  const campoDias = campo(obrig('Nº de dias de afastamento'), dias, 'Inteiro, 0 ou mais');
+  const campoResumo = campo(obrig('Resumo do acidente'), resumo);
+  const caixaCategoria = h('div', { class: 'seg-categoria-quase' }, campo(obrig('Categoria padronizada'), categoria, 'Mesmas categorias da planilha de quase acidentes'));
+  const rotular = (c, texto) => { c.firstChild.textContent = texto; };
+
+  /** Tipo "Quase acidente": abre a caixa de categorias e tira o que só existe em acidente com pessoa. */
+  const aplicarTipo = () => {
+    const quase = tipo.value === SIGLA_QUASE;
+    caixaCategoria.hidden = !quase;
+    for (const c of [campoNome, campoFuncao, campoEmpresa, campoParte, campoDias]) c.style.display = quase ? 'none' : '';
+    rotular(campoFase, quase ? 'Fase da obra' : obrig('Fase da obra'));
+    fase.options[0].disabled = !quase; // em quase acidente a fase pode ficar em branco
+    rotular(campoResumo, obrig(quase ? 'Descrição do quase acidente' : 'Resumo do acidente'));
+    resumo.placeholder = quase ? 'Descreva a condição ou o desvio encontrado.' : 'Descreva as circunstâncias: atividade, local, o que aconteceu e a consequência.';
+    data.max = quase ? `${hoje.slice(0, 7)}-${String(new Date(Date.UTC(Number(hoje.slice(0, 4)), Number(hoje.slice(5, 7)), 0)).getUTCDate()).padStart(2, '0')}` : hoje;
+  };
+  tipo.addEventListener('change', aplicarTipo);
+  aplicarTipo();
+
   const m = abrirModal({
-    titulo: editando ? 'Editar acidente' : 'Novo acidente',
+    titulo: editando ? (ehQuase(inicial) ? 'Editar quase acidente' : 'Editar acidente') : 'Nova ocorrência',
     largo: true,
     conteudo: h('div', { class: 'stack' },
       erro,
@@ -226,16 +311,17 @@ export function abrirFormAcidente(inicial, cadastros, aoSalvar) {
           campo(obrig('Obra'), obra, 'Obras do Cadastro de obras'),
           campo('Incorporador', incorporador, 'Cliente do Cadastro de obras'),
           campo('Método construtivo', metodo, 'Sistema estrutural do Cadastro de obras'),
-          campo(obrig('Fase da obra'), fase))),
+          campoFase)),
       h('div', { class: 'form-grupo' }, h('p', { class: 'sub' }, 'Acidentado e ocorrência'),
         h('div', { class: 'form-grade' },
-          campo(obrig('Nome do acidentado'), nome),
-          campo(obrig('Função'), funcao),
-          campo(obrig('Nome da empresa'), empresa),
           campo(obrig('Tipo do acidente'), tipo),
-          campo(obrig('Parte do corpo atingida'), parte),
-          campo(obrig('Nº de dias de afastamento'), dias, 'Inteiro, 0 ou mais'))),
-      campo(obrig('Resumo do acidente'), resumo)),
+          campoNome,
+          campoFuncao,
+          campoEmpresa,
+          campoParte,
+          campoDias),
+        caixaCategoria),
+      campoResumo),
     acoes: [
       h('button', { class: 'btn ghost', type: 'button', onclick: () => m.fechar() }, 'Cancelar'),
       botaoAcao('Salvar', salvar, 'btn primary'),
@@ -299,11 +385,16 @@ function serializarLinha(linha) {
   return saida;
 }
 
-function abrirImportacao(cadastros, aoImportar) {
-  const sel = seletorArquivos({ aceita: '.xlsx,.xlsm,.xls,.csv', titulo: 'Arraste a planilha de controle de acidentes ou clique para escolher', dica: 'XLSX, XLSM, XLS ou CSV — aba "Dados" (ou a primeira aba)' });
+function abrirImportacao(cadastros, aoImportar, { quase = false } = {}) {
+  const modo = quase ? 'quase' : 'acidentes';
+  const nomeRegistros = quase ? 'quase acidente(s)' : 'acidente(s)';
+  const sel = seletorArquivos(quase
+    ? { aceita: '.xlsx,.xlsm,.xls', titulo: 'Arraste a planilha de quase acidentes ou clique para escolher', dica: 'Aba "Base Consolidada": Obra, Mês, Descrição do Quase Acidente e Categoria Padronizada' }
+    : { aceita: '.xlsx,.xlsm,.xls,.csv', titulo: 'Arraste a planilha de controle de acidentes ou clique para escolher', dica: 'XLSX, XLSM, XLS ou CSV — aba "Dados" (ou a primeira aba)' });
   const area = h('div', { class: 'stack' });
   const etapa1 = h('div', { class: 'stack' },
     h('p', { class: 'muted' }, 'Os registros são conferidos antes de gravar: você vê o que é novo, o que já existe e o que tem erro. Nada é gravado até você confirmar.'),
+    quase ? h('p', { class: 'muted small' }, 'A planilha só traz mês e ano: cada quase acidente é gravado com a data do último dia do mês.') : null,
     sel.elemento);
   montar(area, etapa1);
   let linhas = null;
@@ -311,8 +402,71 @@ function abrirImportacao(cadastros, aoImportar) {
   let analise = null;
   const acoes = h('div', { class: 'row' });
 
+  // De-para: preenchido por inteiro em `rascunho` e só aplicado à análise ao clicar em "Gravar associações".
+  // O painel é criado uma vez por planilha, para os nomes não sumirem nem perderem o que foi digitado.
+  let rascunho = {};
+  const invalidos = new Set();
+  let painelDePara = null;
+  let statusDePara = null;
+  let botaoGravar = null;
+  let botaoImportar = null;
+  let totalDePara = 0;
+
+  const dePara = () => {
+    const chaves = new Set([...Object.keys(rascunho), ...Object.keys(mapaObras)]);
+    return { pendente: invalidos.size > 0 || [...chaves].some((k) => rascunho[k] !== mapaObras[k]), associadas: Object.keys(rascunho).length };
+  };
+
+  const atualizarDePara = () => {
+    const { pendente, associadas } = dePara();
+    if (statusDePara) {
+      statusDePara.textContent = `${associadas} de ${totalDePara} associada(s)${pendente ? ' · alterações não gravadas' : associadas ? ' · gravadas' : ''}`;
+      botaoGravar.disabled = !pendente;
+    }
+    if (botaoImportar) {
+      botaoImportar.disabled = pendente || !analise?.totais.novos;
+      botaoImportar.title = pendente ? 'Grave as associações de obras antes de importar' : '';
+    }
+  };
+
+  const gravarDePara = async () => {
+    if (invalidos.size) return toast('warning', 'Obra não encontrada', `Escolha uma obra da lista ou apague o texto em ${invalidos.size} campo(s).`);
+    const anterior = mapaObras;
+    mapaObras = { ...rascunho };
+    botaoGravar.disabled = true;
+    try {
+      await analisar();
+      toast('success', 'Associações gravadas', 'A conferência da planilha foi atualizada.');
+    } catch (e) {
+      mapaObras = anterior;
+      atualizarDePara();
+      toast('error', 'Não foi possível gravar as associações', e.message, 8000);
+    }
+    return undefined;
+  };
+
+  const criarPainelDePara = (obras) => {
+    totalDePara = obras.length;
+    statusDePara = h('span', { class: 'muted small', 'aria-live': 'polite' });
+    botaoGravar = h('button', { class: 'btn primary', type: 'button', onclick: gravarDePara }, 'Gravar associações');
+    painelDePara = h('div', { class: 'card card-pad stack seg-depara' },
+      h('div', {}, h('b', {}, 'Obras da planilha que não estão no Cadastro de obras'),
+        h('p', { class: 'muted small' }, 'Digite para buscar e associe cada nome a uma obra cadastrada (vale para todas as linhas com esse nome). Preencha o que precisar e clique em Gravar associações. Nomes em branco entram com o nome da planilha.')),
+      h('div', { class: 'form-grade seg-depara-campos' }, obras.map((o) => campo(o.nome, buscaObra({
+        cadastros,
+        rotulo: o.nome,
+        aoMudar: ({ id, invalido }) => {
+          if (id) rascunho[o.chave] = id; else delete rascunho[o.chave];
+          if (invalido) invalidos.add(o.chave); else invalidos.delete(o.chave);
+          atualizarDePara();
+        },
+      })))),
+      h('div', { class: 'seg-depara-rodape' }, statusDePara, botaoGravar));
+  };
+
   const analisar = async () => {
-    analise = await api.post('/seguranca/importacao/analisar', { linhas, mapaObras });
+    analise = await api.post('/seguranca/importacao/analisar', { linhas, mapaObras, modo });
+    if (!painelDePara && analise.obrasNaoEncontradas.length) criarPainelDePara(analise.obrasNaoEncontradas);
     desenharPrevia();
   };
 
@@ -320,8 +474,9 @@ function abrirImportacao(cadastros, aoImportar) {
     const [arquivo] = sel.arquivos();
     if (!arquivo) return toast('warning', 'Escolha a planilha');
     try {
-      linhas = (await linhasComoObjetos(arquivo, ['Dados'])).map(serializarLinha);
-      if (!linhas.length) return toast('warning', 'Planilha sem linhas', 'A aba "Dados" está vazia.');
+      linhas = (await linhasComoObjetos(arquivo, quase ? ['Base Consolidada', 'Base consolidada', 'BASE CONSOLIDADA'] : ['Dados'])).map(serializarLinha);
+      if (!linhas.length) return toast('warning', 'Planilha sem linhas', `A aba "${quase ? 'Base Consolidada' : 'Dados'}" está vazia.`);
+      if (quase && !ehPlanilhaQuase(linhas)) return toast('warning', 'Planilha fora do modelo', 'Use a aba "Base Consolidada", com as colunas Obra, Mês, Descrição do Quase Acidente e Categoria Padronizada.', 8000);
       await analisar();
     } catch (e) {
       toast('error', 'Não foi possível ler a planilha', e.message, 8000);
@@ -330,10 +485,10 @@ function abrirImportacao(cadastros, aoImportar) {
 
   const confirmarImportacao = async () => {
     try {
-      const r = await api.post('/seguranca/importacao', { linhas, mapaObras });
+      const r = await api.post('/seguranca/importacao', { linhas, mapaObras, modo });
       m.fechar();
       const partes = [`${r.jaExistentes} já existente(s)`, `${r.repetidos} repetido(s) na planilha`, `${r.comErro} com erro (não importados)`];
-      toast(r.comErro ? 'warning' : 'success', `${r.importados} acidente(s) importado(s)`, partes.join(' · '), 9000);
+      toast(r.comErro ? 'warning' : 'success', `${r.importados} ${nomeRegistros} importado(s)`, partes.join(' · '), 9000);
       aoImportar?.();
     } catch (e) {
       toast('error', 'Não foi possível importar', e.message, 8000);
@@ -345,41 +500,44 @@ function abrirImportacao(cadastros, aoImportar) {
     const t = analise.totais;
     const situacoes = { novo: ['success', 'Novo'], existente: ['neutral', 'Já cadastrado'], repetido: ['warning', 'Repetido na planilha'], erro: ['error', 'Erro'] };
     const visiveis = analise.linhas.filter((l) => mostrar === 'todos' || l.situacao === mostrar);
-    const deParaObras = analise.obrasNaoEncontradas.length ? h('div', { class: 'card card-pad stack seg-depara' },
-      h('div', {}, h('b', {}, 'Obras da planilha que não estão no Cadastro de obras'),
-        h('p', { class: 'muted small' }, 'Associe cada nome a uma obra cadastrada (vale para todas as linhas com esse nome) ou deixe sem associação para não importar.')),
-      h('div', { class: 'form-grade' }, analise.obrasNaoEncontradas.map((o) => campo(o.nome, h('select', {
-        onchange: async (e) => { if (e.target.value) mapaObras[o.chave] = e.target.value; else delete mapaObras[o.chave]; await analisar(); },
-      }, h('option', { value: '' }, '— sem associação —'), cadastros.map((c) => h('option', { value: c.id, selected: mapaObras[o.chave] === c.id }, c.obra))))))) : null;
     montar(area,
       h('div', { class: 'seg-import-totais' },
         [['todos', 'Linhas lidas', t.lidas, ''], ['novo', 'Novos (serão importados)', t.novos, 'ok'], ['existente', 'Já cadastrados', t.existentes, ''],
           ['repetido', 'Repetidos na planilha', t.repetidos, 'aviso'], ['erro', 'Com erro', t.erros, 'ruim']]
           .map(([chave, rotulo, valor, classe]) => h('button', { type: 'button', class: `seg-import-total ${classe}`, 'aria-pressed': String(mostrar === chave), onclick: () => { mostrar = chave; desenharPrevia(); } },
             h('span', {}, rotulo), h('b', {}, fmtNumero(valor))))),
-      deParaObras,
+      painelDePara,
       t.erros ? alerta('warning', `${t.erros} linha(s) com erro não serão importadas`, 'Corrija na planilha e importe de novo — as linhas já importadas serão reconhecidas.') : null,
       visiveis.length ? h('div', { class: 'sheet seg-previa' }, h('table', {},
-        h('thead', {}, h('tr', {}, ['Linha', 'Situação', 'Data', 'Obra', 'Acidentado', 'Tipo', 'Parte do corpo', 'Dias', 'Observações'].map((c) => h('th', {}, c)))),
+        h('thead', {}, h('tr', {}, (quase ? ['Linha', 'Situação', 'Data', 'Obra', 'Categoria', 'Descrição', 'Observações']
+          : ['Linha', 'Situação', 'Data', 'Obra', 'Acidentado', 'Tipo', 'Parte do corpo', 'Dias', 'Observações']).map((c) => h('th', {}, c)))),
         h('tbody', {}, visiveis.slice(0, 500).map((l) => h('tr', { class: `seg-previa-${l.situacao}` },
           h('td', {}, l.linha),
           h('td', { class: 'esq' }, badge(...[situacoes[l.situacao][1], situacoes[l.situacao][0]])),
           h('td', { class: 'esq' }, l.entrada.data ? (/^\d{4}-\d{2}-\d{2}$/.test(l.entrada.data) ? fmtData(l.entrada.data) : l.entrada.data) : VAZIO),
           h('td', { class: 'esq' }, l.entrada.obra || VAZIO),
-          h('td', { class: 'esq' }, l.entrada.nomeAcidentado || VAZIO),
-          h('td', { class: 'esq' }, l.acidente?.tipo ?? (l.entrada.tipo || VAZIO)),
-          h('td', { class: 'esq' }, l.acidente?.parteCorpo ?? (l.entrada.parteCorpo || VAZIO)),
-          h('td', {}, l.acidente?.diasAfastamento ?? (l.entrada.diasAfastamento || VAZIO)),
+          quase ? [
+            h('td', { class: 'esq' }, l.acidente?.categoria ?? (l.entrada.categoria || VAZIO)),
+            h('td', { class: 'texto' }, h('span', { class: 'seg-resumo', title: l.entrada.resumo }, l.entrada.resumo || VAZIO)),
+          ] : [
+            h('td', { class: 'esq' }, l.entrada.nomeAcidentado || VAZIO),
+            h('td', { class: 'esq' }, l.acidente?.tipo ?? (l.entrada.tipo || VAZIO)),
+            h('td', { class: 'esq' }, l.acidente?.parteCorpo ?? (l.entrada.parteCorpo || VAZIO)),
+            h('td', {}, l.acidente?.diasAfastamento ?? (l.entrada.diasAfastamento || VAZIO)),
+          ],
           h('td', { class: 'texto' }, [...l.erros.map((e) => h('div', { class: 'seg-msg erro' }, e)), ...l.avisos.map((a) => h('div', { class: 'seg-msg aviso' }, a))]))))))
         : h('p', { class: 'muted' }, 'Nenhuma linha nesta situação.'),
       visiveis.length > 500 ? h('p', { class: 'muted small' }, `Mostrando 500 de ${visiveis.length} linhas.`) : null);
     montar(acoes,
-      h('button', { class: 'btn ghost', type: 'button', onclick: () => { analise = null; mapaObras = {}; montar(area, etapa1); montar(acoes, botoesInicio()); } }, 'Escolher outra planilha'),
-      botaoAcao(`Importar ${t.novos} acidente(s)`, confirmarImportacao, 'btn primary'));
-    acoes.lastChild.disabled = !t.novos;
+      h('button', { class: 'btn ghost', type: 'button', onclick: () => {
+        analise = null; mapaObras = {}; rascunho = {}; invalidos.clear(); painelDePara = null; statusDePara = null; botaoGravar = null; botaoImportar = null;
+        montar(area, etapa1); montar(acoes, botoesInicio());
+      } }, 'Escolher outra planilha'),
+      botaoImportar = botaoAcao(`Importar ${t.novos} ${nomeRegistros}`, confirmarImportacao, 'btn primary'));
+    atualizarDePara();
   };
 
   const botoesInicio = () => [h('button', { class: 'btn ghost', type: 'button', onclick: () => m.fechar() }, 'Cancelar'), botaoAcao('Conferir planilha', ler, 'btn primary')];
   montar(acoes, botoesInicio());
-  const m = abrirModal({ titulo: 'Importar acidentes', largo: true, conteudo: area, acoes: [acoes] });
+  const m = abrirModal({ titulo: quase ? 'Importar quase acidentes' : 'Importar acidentes', largo: true, conteudo: area, acoes: [acoes] });
 }

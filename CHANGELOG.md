@@ -5,7 +5,32 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | v36.4 (publicada em 25/11/2026) |
-| Dev (local) | v39 (em validação) |
+| Dev (local) | v40 (em validação) |
+
+## v40 — 26/11/2026 — Segurança do Trabalho: Pirâmide de Bird, quase acidentes, IAT e IST
+
+Traz para o app as versões v23 a v26 do módulo Segurança do Trabalho feitas à parte (repositório
+`lucaspinheirost-jpg/Apresentacao-Planejamento`, que numerava as versões a partir da v22). Nada do que já existia
+mudou além do necessário para encaixar.
+
+- **Pirâmide de Bird** como primeiro botão do Dashboard Segurança (`pages/piramide-bird.js`), com os níveis da Unità
+  (FT grave · CPT + SPT lesão leve · TRJ dano material · QA quase acidente) e cores próprias por classificação.
+- **De-para de obras com busca** na importação (`ui/busca-obra.js`, `ui/busca-lista.js`), gravado de uma vez; de-para
+  em branco importa com o nome da planilha (`obraPlanilha`).
+- **Quase acidentes** (tipo QA, 14 categorias padronizadas) e importação da aba Base Consolidada. Não entram nos
+  totais nem nos gráficos de acidentes, só na base da pirâmide.
+- **IAT, IAT Metrocasa e IST** (botões Nova IAT / Nova IST e sub-abas Ocorrências · IAT · IST), com tabelas do eSocial,
+  PDF gerado no navegador (html2canvas + jsPDF em `public/vendor`) e **envio pelo servidor** (`server/email/envio.mjs`,
+  `EMAIL_ENVIO` = `graph`, `smtp` ou `arquivo` — ver `.env.example`). O botão "Novo acidente" passa a "Nova Ocorrência".
+- **Cadastro de obras → Cadastrar e-mails** (`PUT /api/obras/cadastro/:id/emails`): cópia dos envios de IAT/IST.
+- `npm run exemplo` grava a carga de exemplo da planilha de acidentes quando `data/exemplo` está vazia;
+  `npm run exemplo:carga` recria.
+- Encaixe no app atual: as rotas de IAT/IST usam a capacidade `editarSeguranca` (como o resto da Segurança, então o
+  papel Segurança também acessa); as telas leem as obras por `estado.cadastros()` e `GET /api/seguranca/obras` passa a
+  devolver também `engenharia` (Engenheiro Residente da IAT). Os filtros de acesso por obra (v26 deste app) seguem
+  valendo nas consultas de acidentes.
+- Supabase: rodar **`007_quase_acidentes.sql`** e **`008_informativos.sql`** (no outro repositório eram 004 e 005,
+  números que aqui já estavam em uso) antes de publicar.
 
 ## v39 — 26/11/2026 — Colunas "Sem correção" de volta no Econômico do Cliente
 

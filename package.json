@@ -10,7 +10,8 @@
   "scripts": {
     "start": "node server/index.mjs",
     "dev": "node --watch server/index.mjs",
-    "exemplo": "node --env-file=.env.exemplo server/index.mjs",
+    "exemplo": "node server/tools/carga-exemplo.mjs --se-vazio && node --env-file=.env.exemplo server/index.mjs",
+    "exemplo:carga": "node server/tools/carga-exemplo.mjs",
     "vendor": "node server/tools/copiar-vendor.mjs",
     "fixture": "node tests/fixtures/gerar-exemplo.mjs",
     "test": "node --test \"tests/domain/*.test.mjs\" \"tests/api/*.test.mjs\"",
@@ -27,6 +28,11 @@
     "heic2any": "0.0.4",
     "pako": "2.1.0",
     "utif": "3.1.0",
+    "html2canvas": "1.4.1",
+    "jspdf": "4.2.1",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  },
+  "dependencies": {
+    "nodemailer": "10.5.0"
   }
 }

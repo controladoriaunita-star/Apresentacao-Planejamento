@@ -36,6 +36,8 @@ import { renderConta } from './pages/conta.js';
 import { renderGaleria } from './pages/galeria.js';
 import { renderInicio } from './pages/inicio.js';
 import { renderDefinirSenha, renderLogin, renderPopupMicrosoft, retornoDoEmail, retornoMicrosoft } from './pages/login.js';
+import { renderInformativoIat } from './pages/informativo-iat.js';
+import { renderInformativoIst } from './pages/informativo-ist.js';
 import { renderResumoEconomico } from './pages/resumo-economico.js';
 import { renderResumoFisico } from './pages/resumo-fisico.js';
 import { renderResumoGeral } from './pages/resumo-geral.js';
@@ -68,6 +70,9 @@ const SECOES_ADMIN = [
   { id: 'seguranca', nome: 'Segurança do Trabalho', render: renderAdminSeguranca, capacidade: 'editarSeguranca' },
   // Sub-aba de Segurança do Trabalho (botão "Dashboard Segurança"); não aparece na lista lateral.
   { id: 'seguranca-dashboard', nome: 'Dashboard Segurança', render: renderDashboardSeguranca, capacidade: 'editarSeguranca', dentroDe: 'seguranca' },
+  // Nova IAT / Nova IST (rota #/admin/seguranca-iat/<id|nova>), também dentro de Segurança do Trabalho.
+  { id: 'seguranca-iat', nome: 'IAT', render: renderInformativoIat, capacidade: 'editarSeguranca', dentroDe: 'seguranca' },
+  { id: 'seguranca-ist', nome: 'IST', render: renderInformativoIst, capacidade: 'editarSeguranca', dentroDe: 'seguranca' },
   { id: 'usuarios', nome: 'Usuários', render: renderAdminUsuarios, capacidade: 'administrar' },
   { id: 'fontes', nome: 'Fontes e INCC', render: renderAdminFontes, capacidade: 'editarConteudo' },
 ];
@@ -109,6 +114,7 @@ for (const visao of ['obra', 'cliente']) {
   })));
 }
 rota('/admin/:secao', ({ secao }) => paginaAdmin(SECOES_ADMIN.find((s) => s.id === secao) ?? SECOES_ADMIN[0]));
+rota('/admin/:secao/:id', ({ secao, id }) => paginaAdmin(SECOES_ADMIN.find((s) => s.id === secao) ?? SECOES_ADMIN[0], { id }));
 rota('/conta', () => paginaSimples(renderConta));
 
 // ── Shell ────────────────────────────────────────────────────────────
@@ -200,7 +206,7 @@ async function paginaApresentacao(visao, aba) {
   }
 }
 
-async function paginaAdmin(secao) {
+async function paginaAdmin(secao, params = {}) {
   if (!pode(estado.usuario.papel, secao.capacidade)) return ir(rotaInicial());
   const alvo = h('div', { class: 'painel-admin' });
   montar(raiz, cabecalho(null, null), h('main', { class: 'conteudo' }, h('div', { class: 'admin' },
@@ -213,7 +219,7 @@ async function paginaAdmin(secao) {
   const pronto = veApresentacoes() ? estado.bruto : estado.obrasSeguranca;
   if (bloqueio || !pronto) return montar(alvo, bloqueio ?? carregando(6));
   try {
-    await secao.render(alvo);
+    await secao.render(alvo, params);
   } catch (e) {
     montar(alvo, alerta('error', 'Erro ao montar a seção', e.message));
   }

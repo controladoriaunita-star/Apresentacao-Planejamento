@@ -18,6 +18,18 @@ export const TIPOS_ACIDENTE = Object.freeze([
   { sigla: 'FT', nome: 'Acidente fatal', cor: '--acidente-ft' },
 ]);
 export const SIGLAS_TIPO = TIPOS_ACIDENTE.map((t) => t.sigla);
+/** Quase acidente: registrado como um acidente, mas fora dos indicadores de acidentes (só entra na base da Pirâmide de Bird). */
+export const SIGLA_QUASE = 'QA';
+export const TIPOS_REGISTRO = Object.freeze([...TIPOS_ACIDENTE, { sigla: SIGLA_QUASE, nome: 'Quase acidente', cor: '--acidente-qa' }]);
+export const SIGLAS_REGISTRO = TIPOS_REGISTRO.map((t) => t.sigla);
+/** Categorias Padronizadas da planilha "Dashboard Consolidado - Quase Acidentes" (aba Base Consolidada). */
+export const CATEGORIAS_QUASE = Object.freeze([
+  'Instalações Elétricas / DR / Iluminação', 'Máquinas e Equipamentos', 'Proteção Contra Quedas / Periferia',
+  'Documentações e Gestão de SST', 'Área de Vivência / Bebedouros e Chuveiros', 'Aberturas de Pisos e Shafts',
+  'Uso de EPIs / Cinto de Segurança', 'Organização e Limpeza', 'Alojamentos / Conservação e Armários',
+  'Proteção Contra Incêndio', 'Área de Vivência / Projetos', 'Escadas e Rampas', 'Primeiros Socorros / Emergência',
+  'Canteiro / Caminho Seguro e Sinalização',
+]);
 /** Ordem da legenda do Modelo - Indicador Segurança do Trabalho (SPT, CPT, TRJ, FT). */
 export const ORDEM_MODELO = ['SPT', 'CPT', 'TRJ', 'FT'];
 
@@ -51,13 +63,47 @@ export const CABECALHOS_MODELO = ['Data do Acidente', 'Mês', 'Ano', 'Nome da Ob
 
 const PARTE_POR_CHAVE = new Map(PARTES_CORPO.map((p) => [semAcento(p), p]));
 const FASE_POR_CHAVE = new Map(FASES_OBRA.map((f) => [semAcento(f), f]));
+const CATEGORIA_POR_CHAVE = new Map(CATEGORIAS_QUASE.map((c) => [semAcento(c).replace(/\s*\/\s*/g, '/'), c]));
 const limpar = (v) => (v === null || v === undefined ? '' : String(v).replace(/\s+/g, ' ').trim());
 
 /** "cpt", "CPT – Acidente com perda de tempo" → "CPT"; inválido → null. */
 export function siglaTipo(valor) {
+  if (/^quase[\s-]*acidentes?$/.test(semAcento(valor))) return SIGLA_QUASE;
   const t = limpar(valor).toUpperCase();
   const sigla = t.split(/[\s–—-]/)[0];
-  return SIGLAS_TIPO.includes(sigla) ? sigla : null;
+  return SIGLAS_REGISTRO.includes(sigla) ? sigla : null;
+}
+
+/** Categoria na grafia da lista (sem diferenciar acento, caixa e espaços ao redor da barra); fora da lista → null. */
+export const categoriaQuasePadrao = (valor) => CATEGORIA_POR_CHAVE.get(semAcento(valor).replace(/\s*\/\s*/g, '/')) ?? null;
+
+const MESES_NOME = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+const fimDoMes = (ano, mes) => new Date(Date.UTC(ano, mes, 0)).toISOString().slice(0, 10);
+
+/**
+ * Último dia do mês da planilha de quase acidentes, que só traz mês e ano:
+ * "Janeiro/2026", "jan/26", "01/2026", "2026-01" ou uma data → "2026-01-31". Inválido → null.
+ */
+export function ultimoDiaDoMes(valor) {
+  const t = semAcento(valor);
+  if (!t) return null;
+  const partes = t.match(/^([a-z]+|\d{1,2})[\s/.-]*(?:de\s+)?(\d{4}|\d{2})$/);
+  const invertido = t.match(/^(\d{4})-(\d{1,2})$/);
+  let ano = null;
+  let mes = null;
+  if (invertido) {
+    ano = Number(invertido[1]);
+    mes = Number(invertido[2]);
+  } else if (partes) {
+    ano = Number(partes[2]) + (partes[2].length === 2 ? 2000 : 0);
+    mes = /^\d/.test(partes[1]) ? Number(partes[1]) : (partes[1].length >= 3 ? MESES_NOME.findIndex((m) => m.startsWith(partes[1])) + 1 : 0);
+  } else {
+    const iso = dataIso(valor);
+    if (!iso) return null;
+    ano = Number(iso.slice(0, 4));
+    mes = Number(iso.slice(5, 7));
+  }
+  return mes >= 1 && mes <= 12 ? fimDoMes(ano, mes) : null;
 }
 
 /** Parte do corpo na grafia da lista ("mão", "Abdomen" → "Mão", "Abdômen"); fora da lista → null. */
@@ -80,29 +126,37 @@ export function diasValidos(valor) {
 export function validarAcidente(entrada, { hoje = new Date().toISOString().slice(0, 10) } = {}) {
   const erros = [];
   const data = dataIso(entrada?.data);
-  if (!data) erros.push('Data inválida ou vazia.');
-  else if (data > hoje) erros.push('A data do acidente não pode ser futura.');
-  else if (data < '1990-01-01') erros.push('Data do acidente fora do intervalo aceito.');
-  const obraId = limpar(entrada?.obraId);
-  if (!obraId) erros.push('Obra não informada ou não encontrada no Cadastro de obras.');
-  const faseObra = faseObraPadrao(entrada?.faseObra);
-  if (!faseObra) erros.push(limpar(entrada?.faseObra) ? `Fase da obra "${limpar(entrada.faseObra)}" fora da lista (${FASES_OBRA.join(', ')}).` : 'Informe a fase da obra.');
-  const nomeAcidentado = limpar(entrada?.nomeAcidentado);
-  if (!nomeAcidentado) erros.push('Informe o nome do acidentado.');
-  const funcao = limpar(entrada?.funcao);
-  if (!funcao) erros.push('Informe a função.');
-  const empresa = limpar(entrada?.empresa);
-  if (!empresa) erros.push('Informe o nome da empresa.');
   const tipo = siglaTipo(entrada?.tipo);
-  if (!tipo) erros.push(limpar(entrada?.tipo) ? `Tipo "${limpar(entrada.tipo)}" inválido (use ${SIGLAS_TIPO.join(', ')}).` : 'Informe o tipo do acidente.');
-  const parteCorpo = parteCorpoPadrao(entrada?.parteCorpo);
-  if (!parteCorpo) erros.push(limpar(entrada?.parteCorpo) ? `Parte do corpo "${limpar(entrada.parteCorpo)}" fora da lista.` : 'Informe a parte do corpo atingida.');
-  const diasAfastamento = diasValidos(entrada?.diasAfastamento);
-  if (diasAfastamento === null) erros.push('Dias de afastamento: informe um número inteiro igual ou maior que zero.');
+  const quase = tipo === SIGLA_QUASE;
+  // Quase acidente da planilha fica no último dia do mês: o mês atual é aceito por inteiro.
+  const limite = quase ? fimDoMes(Number(hoje.slice(0, 4)), Number(hoje.slice(5, 7))) : hoje;
+  if (!data) erros.push('Data inválida ou vazia.');
+  else if (data > limite) erros.push('A data do acidente não pode ser futura.');
+  else if (data < '1990-01-01') erros.push('Data do acidente fora do intervalo aceito.');
+  const obraId = limpar(entrada?.obraId) || null;
+  // Importação sem de-para: a obra fica com o nome que veio na planilha, sem vínculo com o Cadastro de obras.
+  const obraPlanilha = obraId ? null : limpar(entrada?.obraPlanilha) || null;
+  if (!obraId && !obraPlanilha) erros.push('Obra não informada ou não encontrada no Cadastro de obras.');
+  const faseObra = faseObraPadrao(entrada?.faseObra);
+  // Quase acidente não tem acidentado, função, empresa, parte do corpo nem afastamento; a fase é opcional.
+  if (!faseObra && (!quase || limpar(entrada?.faseObra))) erros.push(limpar(entrada?.faseObra) ? `Fase da obra "${limpar(entrada.faseObra)}" fora da lista (${FASES_OBRA.join(', ')}).` : 'Informe a fase da obra.');
+  const nomeAcidentado = quase ? null : limpar(entrada?.nomeAcidentado);
+  if (!quase && !nomeAcidentado) erros.push('Informe o nome do acidentado.');
+  const funcao = quase ? null : limpar(entrada?.funcao) || null;
+  if (!quase && !funcao) erros.push('Informe a função.');
+  const empresa = quase ? null : limpar(entrada?.empresa) || null;
+  if (!quase && !empresa) erros.push('Informe o nome da empresa.');
+  if (!tipo) erros.push(limpar(entrada?.tipo) ? `Tipo "${limpar(entrada.tipo)}" inválido (use ${SIGLAS_REGISTRO.join(', ')}).` : 'Informe o tipo do acidente.');
+  const categoria = quase ? categoriaQuasePadrao(entrada?.categoria) : null;
+  if (quase && !categoria) erros.push(limpar(entrada?.categoria) ? `Categoria "${limpar(entrada.categoria)}" fora da lista padronizada.` : 'Selecione a categoria do quase acidente.');
+  const parteCorpo = quase ? null : parteCorpoPadrao(entrada?.parteCorpo);
+  if (!quase && !parteCorpo) erros.push(limpar(entrada?.parteCorpo) ? `Parte do corpo "${limpar(entrada.parteCorpo)}" fora da lista.` : 'Informe a parte do corpo atingida.');
+  const diasAfastamento = quase ? null : diasValidos(entrada?.diasAfastamento);
+  if (!quase && diasAfastamento === null) erros.push('Dias de afastamento: informe um número inteiro igual ou maior que zero.');
   const resumo = String(entrada?.resumo ?? '').trim();
-  if (!resumo) erros.push('Informe o resumo do acidente.');
+  if (!resumo) erros.push(quase ? 'Informe a descrição do quase acidente.' : 'Informe o resumo do acidente.');
   if (erros.length) return { acidente: null, erros };
-  const acidente = { data, obraId, faseObra, nomeAcidentado, funcao, empresa, tipo, parteCorpo, diasAfastamento, resumo };
+  const acidente = { data, obraId, obraPlanilha, faseObra, nomeAcidentado, funcao, empresa, tipo, categoria, parteCorpo, diasAfastamento, resumo };
   return { acidente: { ...acidente, chaveDedup: chaveDeduplicacao(acidente) }, erros };
 }
 
@@ -113,7 +167,24 @@ export function validarAcidente(entrada, { hoje = new Date().toISOString().slice
  * corrigidos depois (afastamento prorrogado, texto revisado) e isso não pode gerar um segundo acidente.
  */
 export function chaveDeduplicacao(a) {
-  return [a.data, a.obraId, semAcento(a.nomeAcidentado), a.tipo, semAcento(a.parteCorpo), semAcento(a.funcao), semAcento(a.empresa)].join('|');
+  // Quase acidente não tem pessoa: o que o identifica é o mês, a obra, a categoria e a descrição (resumida em hash).
+  const obra = a.obraId ?? `planilha:${chaveObra(a.obraPlanilha)}`;
+  if (a.tipo === SIGLA_QUASE) return [a.data, obra, SIGLA_QUASE, semAcento(a.categoria), hashTexto(semAcento(a.resumo))].join('|');
+  return [a.data, obra, semAcento(a.nomeAcidentado), a.tipo, semAcento(a.parteCorpo), semAcento(a.funcao), semAcento(a.empresa)].join('|');
+}
+
+/** Hash curto e estável (cyrb53): a chave vai na URL da consulta ao Supabase e a descrição pode ser longa. */
+function hashTexto(texto) {
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < texto.length; i += 1) {
+    const c = texto.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 2654435761);
+    h2 = Math.imul(h2 ^ c, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
 }
 
 const POR_CABECALHO = new Map(CAMPOS_ACIDENTE.flatMap((c) => [c.cabecalho, ...(c.outros ?? [])].map((cab) => [semAcento(cab), c.campo])));
@@ -131,6 +202,30 @@ export function entradaDeLinha(linha) {
   return entrada;
 }
 
+const CABECALHOS_QUASE = new Map([
+  ['obra', 'obra'], ['nome da obra', 'obra'],
+  ['mes', 'mes'], ['mes/ano', 'mes'], ['periodo', 'mes'],
+  ['descricao do quase acidente', 'resumo'], ['descricao do quase-acidente', 'resumo'], ['descricao', 'resumo'],
+  ['categoria padronizada', 'categoria'], ['categoria', 'categoria'],
+]);
+
+/** Linha da aba "Base Consolidada" → entrada de quase acidente, com a data no último dia do mês. */
+export function entradaQuaseDeLinha(linha) {
+  const lida = {};
+  for (const [cab, valor] of Object.entries(linha ?? {})) {
+    const campo = CABECALHOS_QUASE.get(semAcento(cab));
+    if (campo && !(campo in lida)) lida[campo] = valor;
+  }
+  if (!limpar(lida.obra) && !limpar(lida.mes) && !limpar(lida.resumo) && !limpar(lida.categoria)) return {};
+  return { obra: lida.obra, data: ultimoDiaDoMes(lida.mes) ?? limpar(lida.mes), tipo: SIGLA_QUASE, categoria: lida.categoria, resumo: lida.resumo };
+}
+
+/** A planilha tem as colunas da Base Consolidada? */
+export const ehPlanilhaQuase = (linhas) => (linhas ?? []).some((l) => {
+  const cabs = Object.keys(l ?? {}).map(semAcento);
+  return cabs.includes('categoria padronizada') && cabs.includes('mes');
+});
+
 /** Linha toda vazia nos campos do acidente (sobras de formatação, listas de validação ao lado). */
 export function linhaVazia(entrada) {
   return ['data', 'obra', 'nomeAcidentado', 'tipo', 'empresa', 'funcao'].every((c) => limpar(entrada[c]) === '');
@@ -147,6 +242,20 @@ export function encontrarObra(nome, incorporacao, cadastros, mapa = {}) {
   return cadastros.find((c) => c.chave === chave)
     ?? (incorporacao ? cadastros.find((c) => c.chave === chaveObra(`${incorporacao} ${nome}`)) : null)
     ?? null;
+}
+
+/**
+ * Busca de obra enquanto o usuário digita: todas as palavras precisam aparecer no nome ou no cliente
+ * (sem diferenciar acento e caixa). Nomes que começam com o texto vêm primeiro.
+ */
+export function filtrarObras(cadastros, texto) {
+  const busca = semAcento(texto);
+  const palavras = busca.split(' ').filter(Boolean);
+  return (cadastros ?? [])
+    .filter((c) => { const alvo = semAcento(`${c.obra} ${c.cliente ?? ''}`); return palavras.every((p) => alvo.includes(p)); })
+    .map((c, i) => ({ c, i, inicio: busca && semAcento(c.obra).startsWith(busca) ? 0 : 1 }))
+    .sort((a, b) => a.inicio - b.inicio || a.i - b.i)
+    .map(({ c }) => c);
 }
 
 /** Incorporador e método construtivo de uma obra, sempre do Cadastro de obras. */
@@ -169,18 +278,19 @@ export function pendenciasDaObra(cadastro) {
  * @param {object[]} cadastros  Cadastro de obras
  * @param {Map<string, object>} existentes  chaveDedup → acidente já gravado
  */
-export function analisarImportacao(linhas, cadastros, existentes, { mapaObras = {}, hoje } = {}) {
+export function analisarImportacao(linhas, cadastros, existentes, { mapaObras = {}, hoje, modo = 'acidentes' } = {}) {
   const vistos = new Map();
   const resultado = [];
+  const paraEntrada = modo === 'quase' ? entradaQuaseDeLinha : entradaDeLinha;
   (linhas ?? []).forEach((linha, i) => {
-    const entrada = entradaDeLinha(linha);
+    const entrada = paraEntrada(linha);
     if (linhaVazia(entrada)) return;
     const numero = Number(linha?.__linha) || i + 2;
     const cadastro = encontrarObra(entrada.obra, entrada.incorporador, cadastros, mapaObras);
     const erros = [];
     const avisos = [];
     if (!limpar(entrada.obra)) erros.push('Informe o nome da obra.');
-    else if (!cadastro) erros.push(`Obra "${limpar(entrada.obra)}" não encontrada no Cadastro de obras.`);
+    else if (!cadastro) avisos.push('Sem associação: entra com o nome da planilha.');
     else {
       const faltam = pendenciasDaObra(cadastro);
       if (faltam.length) erros.push(`Complete no Cadastro de obras de ${cadastro.obra}: ${faltam.join(' e ')}.`);
@@ -192,11 +302,13 @@ export function analisarImportacao(linhas, cadastros, existentes, { mapaObras = 
         avisos.push(`Método construtivo "${limpar(entrada.metodoConstrutivo)}" na planilha; vale o do cadastro: "${obra.metodoConstrutivo}".`);
       }
     }
-    const { acidente, erros: errosCampos } = validarAcidente({ ...entrada, obraId: cadastro?.id ?? '' }, { hoje });
+    const { acidente, erros: errosCampos } = validarAcidente({ ...entrada, obraId: cadastro?.id ?? '', obraPlanilha: cadastro ? null : entrada.obra }, { hoje });
+    // Já importado antes só com o nome da planilha e agora associado a uma obra: continua sendo o mesmo registro.
+    const chaveAlternativa = acidente && cadastro ? chaveDeduplicacao({ ...acidente, obraId: null, obraPlanilha: entrada.obra }) : null;
     erros.push(...errosCampos.filter((e) => !e.startsWith('Obra não informada')));
     let situacao = erros.length ? 'erro' : 'novo';
     if (acidente && !erros.length) {
-      const ja = existentes.get(acidente.chaveDedup);
+      const ja = existentes.get(acidente.chaveDedup) ?? (chaveAlternativa ? existentes.get(chaveAlternativa) : undefined);
       if (ja) {
         situacao = 'existente';
         if (ja.diasAfastamento !== acidente.diasAfastamento) avisos.push(`Já cadastrado com ${ja.diasAfastamento} dia(s) de afastamento (planilha: ${acidente.diasAfastamento}). O registro existente foi mantido.`);
@@ -205,7 +317,7 @@ export function analisarImportacao(linhas, cadastros, existentes, { mapaObras = 
         avisos.push(`Mesmo acidente da linha ${vistos.get(acidente.chaveDedup)} desta planilha.`);
       } else vistos.set(acidente.chaveDedup, numero);
     }
-    resultado.push({ linha: numero, situacao, erros, avisos, entrada: resumoEntrada(entrada), obraId: cadastro?.id ?? null, acidente: erros.length ? null : acidente });
+    resultado.push({ linha: numero, situacao, erros, avisos, entrada: resumoEntrada(entrada), obraId: cadastro?.id ?? null, chaveAlternativa, acidente: erros.length ? null : acidente });
   });
   const contar = (s) => resultado.filter((r) => r.situacao === s).length;
   const obrasNaoEncontradas = [...new Map(resultado
@@ -223,6 +335,7 @@ function resumoEntrada(e) {
   const saida = {};
   for (const { campo } of CAMPOS_ACIDENTE) saida[campo] = campo === 'data' ? (dataIso(e.data) ?? limpar(e.data)) : (e[campo] instanceof Date ? dataIso(e[campo]) : limpar(e[campo]));
   saida.resumo = String(e.resumo ?? '').trim();
+  saida.categoria = limpar(e.categoria);
   return saida;
 }
 
@@ -270,15 +383,21 @@ function agrupado(campo) {
  * @param {Array<{data, tipo, faseObra, funcao, empresa, parteCorpo, diasAfastamento, obra}>} acidentes
  */
 export function calcularIndicadores(acidentes) {
-  const lista = acidentes ?? [];
+  const registros = acidentes ?? [];
+  // Quase acidente não é acidente: fica fora de todos os indicadores, menos da base da Pirâmide de Bird.
+  const lista = registros.filter((a) => a.tipo !== SIGLA_QUASE);
   const total = lista.length;
   const somaDias = lista.reduce((s, a) => s + (Number(a.diasAfastamento) || 0), 0);
+  // Média como a tabela dinâmica do Excel (Tab02): acidentes sem dias informados ficam fora do divisor.
+  const comDias = lista.filter((a) => a.diasAfastamento !== null && a.diasAfastamento !== undefined && a.diasAfastamento !== '').length;
   const porMes = MESES_CURTOS.map((rotulo, i) => ({ rotulo, valor: lista.filter((a) => Number(String(a.data).slice(5, 7)) === i + 1).length }));
   const anos = contarPor(lista, (a) => String(a.data).slice(0, 4)).sort((a, b) => a.rotulo.localeCompare(b.rotulo));
+  const anosComQuase = [...new Set(registros.map((a) => String(a.data).slice(0, 4)))].sort();
   const porTipo = SIGLAS_TIPO.map((sigla) => ({ rotulo: sigla, valor: lista.filter((a) => a.tipo === sigla).length }));
   return {
     total,
-    mediaDias: total ? somaDias / total : null,
+    quaseAcidentes: registros.length - lista.length,
+    mediaDias: comDias ? somaDias / comDias : null,
     totalDias: somaDias,
     porMes,
     porAno: anos,
@@ -288,6 +407,63 @@ export function calcularIndicadores(acidentes) {
     porFuncao: primeiros(contarPor(lista, agrupado('funcao'))),
     porEmpresa: primeiros(contarPor(lista, agrupado('empresa'))),
     porParteCorpo: primeiros(contarPor(lista, agrupado('parteCorpo'))),
+    // Pirâmide de Bird: contagem por tipo em cada ano (evolução dos níveis).
+    porAnoTipo: anosComQuase.map((ano) => ({
+      ano, ...Object.fromEntries(SIGLAS_REGISTRO.map((s) => [s, registros.filter((a) => a.tipo === s && String(a.data).startsWith(ano)).length])),
+    })),
+  };
+}
+
+// ── Pirâmide de Bird ─────────────────────────────────────────────────────
+/**
+ * Níveis da pirâmide de Bird (1969: 1 : 10 : 30 : 600) e o tipo de acidente que alimenta cada um.
+ * Mapeamento definido pela Unità em 23/11/2026: FT = grave · CPT + SPT = lesão leve · TRJ = dano material · QA = quase acidente.
+ * `cor` é a cor do nível na pirâmide (vermelho, azul, verde, laranja). A classificação do acidente tem cores próprias (TIPOS_REGISTRO).
+ */
+export const PIRAMIDE_BIRD = Object.freeze([
+  { nivel: 1, tipo: 'FT', cor: '--bird-grave', nome: 'Acidente grave', descricao: 'Acidente fatal', proporcao: 1 },
+  { nivel: 2, tipo: 'CPT', cor: '--bird-leve', tipos: ['CPT', 'SPT'], nome: 'Acidente com lesão leve', descricao: 'Com ou sem perda de tempo', proporcao: 10 },
+  { nivel: 3, tipo: 'TRJ', cor: '--bird-dano', nome: 'Acidente com dano material', descricao: 'Acidente de trajeto', proporcao: 30 },
+  { nivel: 4, tipo: SIGLA_QUASE, cor: '--bird-quase', nome: 'Quase acidente', descricao: 'Incidente sem lesão nem dano', proporcao: 600 },
+]);
+
+/**
+ * Indicadores da pirâmide a partir da contagem por tipo ({FT, CPT, SPT, TRJ, QA}).
+ * - Âncora: o nível mais alto com ocorrência. Dele sai o "esperado por Bird" dos demais
+ *   (ex.: 137 lesões leves → esperados 13,7 graves, 411 danos materiais e 8.220 quase acidentes).
+ * - Proporção observada: cada nível dividido pelo mesmo fator, comparável com 1 : 10 : 30 : 600.
+ * - Cobertura: observado ÷ esperado (abaixo de 100% = menos registros do que Bird prevê).
+ * - Gravidade: % das ocorrências nos dois níveis de cima (grave + lesão).
+ * - Base por acidente com lesão: quase acidentes ÷ (graves + lesões leves); Bird espera 600 ÷ 11 ≈ 54,5.
+ */
+export function calcularPiramideBird(contagem) {
+  const qtd = (tipo) => Number(contagem?.[tipo]) || 0;
+  const doNivel = (n) => (n.tipos ?? [n.tipo]).reduce((s, t) => s + qtd(t), 0);
+  const total = PIRAMIDE_BIRD.reduce((s, n) => s + doNivel(n), 0);
+  const ancora = PIRAMIDE_BIRD.find((n) => doNivel(n) > 0) ?? null;
+  const fator = ancora ? doNivel(ancora) / ancora.proporcao : null;
+  const niveis = PIRAMIDE_BIRD.map((n) => {
+    const ocorrencias = doNivel(n);
+    const esperado = fator === null ? null : n.proporcao * fator;
+    return {
+      ...n,
+      ocorrencias,
+      percentual: total ? ocorrencias / total : null,
+      proporcaoObservada: fator ? ocorrencias / fator : null,
+      esperado,
+      cobertura: esperado ? ocorrencias / esperado : null,
+      ancora: n === ancora,
+    };
+  });
+  const comLesao = niveis[0].ocorrencias + niveis[1].ocorrencias;
+  return {
+    total,
+    ancora: ancora?.nivel ?? null,
+    niveis,
+    gravidade: total ? comLesao / total : null,
+    basePorLesao: comLesao ? niveis[3].ocorrencias / comLesao : null,
+    basePorLesaoBird: 600 / 11,
+    coberturaBase: niveis[3].cobertura,
   };
 }
 

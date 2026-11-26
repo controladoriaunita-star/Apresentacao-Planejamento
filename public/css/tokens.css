@@ -63,12 +63,20 @@
   --series-2: var(--color-secondary);
   --series-3: var(--info);
   --series-4: var(--ink-400);
-  /* Tipos de acidente (Segurança do Trabalho) — mesma leitura do "Modelo - Indicador Segurança do Trabalho":
-     SPT verde, CPT azul, TRJ laranja, FT vermelho. Só referências às cores da identidade. */
+  /* Classificação do acidente (Segurança do Trabalho) — mesma leitura do "Modelo - Indicador Segurança do Trabalho":
+     SPT verde, CPT azul, TRJ laranja, FT vermelho; QA amarelo (texto do selo mais escuro, para leitura). */
   --acidente-spt: var(--success);
   --acidente-cpt: var(--info);
   --acidente-trj: var(--color-primary);
   --acidente-ft: var(--error);
+  --acidente-qa: #f2b705;
+  --acidente-qa-soft: #fff6d1;
+  --acidente-qa-texto: #7a5c00;
+  /* Classificação da Pirâmide de Bird — cor de cada nível, independente da cor dos tipos que o alimentam. */
+  --bird-grave: var(--error);
+  --bird-leve: var(--info);
+  --bird-dano: var(--success);
+  --bird-quase: var(--color-primary);
   /* Dashboard Segurança: números da classificação no quadro de totais = rótulos dos eixos e valores dos gráficos */
   --seg-fonte-numero: 22px;
   --chart-grid: var(--ink-200);

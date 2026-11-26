@@ -7,7 +7,7 @@
  */
 import { podeVerSeguranca } from '../../public/js/domain/acesso.js';
 import {
-  analisarImportacao, anosDosAcidentes, calcularIndicadores, dadosDaObra, pendenciasDaObra, SIGLAS_TIPO, validarAcidente,
+  analisarImportacao, anosDosAcidentes, calcularIndicadores, dadosDaObra, pendenciasDaObra, SIGLA_QUASE, SIGLAS_REGISTRO, validarAcidente,
 } from '../../public/js/domain/seguranca.js';
 import { enviarJson, erro, lerJson } from '../http/respostas.mjs';
 import { ErroDuplicado } from '../store/acidentes.mjs';
@@ -17,6 +17,8 @@ const TAMANHO_MAXIMO = 200;
 const LIMITE_APRESENTACAO = 5000; // abas da apresentação: todos os acidentes das obras filtradas
 const LIMITE_LINHAS_IMPORTACAO = 20000;
 const MENSAGEM_DUPLICADO = 'Já existe um acidente com a mesma data, obra, acidentado, tipo, parte do corpo, função e empresa.';
+const MENSAGEM_DUPLICADO_QUASE = 'Já existe um quase acidente com a mesma data, obra, categoria e descrição.';
+const mensagemDuplicado = (a) => (a.tipo === SIGLA_QUASE ? MENSAGEM_DUPLICADO_QUASE : MENSAGEM_DUPLICADO);
 
 const lista = (v) => String(v ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 const dataOuNada = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(v ?? '') ? v : null);
@@ -40,7 +42,12 @@ export function registrarSeguranca(rotas, { acidentes, cadastro }) {
   /** v26: obras cujos acidentes o usuário pode ler (todas, salvo Viewer restrito por obra ou só com o Cliente). */
   const cadastrosLiberados = async (acesso) => (await cadastros()).filter((c) => !acesso.restrito || podeVerSeguranca(c, acesso));
 
-  const comObra = (porId) => ({ chaveDedup, ...a }) => ({ ...a, ...dadosDaObra(porId.get(a.obraId)) });
+  /** Sem vínculo com o cadastro, a obra aparece com o nome que veio na planilha. */
+  const comObra = (porId) => ({ chaveDedup, ...a }) => {
+    const dados = dadosDaObra(porId.get(a.obraId));
+    return { ...a, ...dados, obra: dados.obra ?? a.obraPlanilha ?? null };
+  };
+  const mapaDe = (obra) => new Map(obra ? [[obra.id, obra]] : []);
 
   rotas.adicionar('GET', '/api/seguranca/acidentes', { permissao: 'verSeguranca' }, async ({ req, res, url, acesso }) => {
     const todas = await cadastrosLiberados(acesso);
@@ -52,7 +59,7 @@ export function registrarSeguranca(rotas, { acidentes, cadastro }) {
       obraIds: obrasDoFiltro(url, todas, acesso),
       de: dataOuNada(p.get('de')),
       ate: dataOuNada(p.get('ate')),
-      tipos: lista(p.get('tipos')).filter((t) => SIGLAS_TIPO.includes(t)),
+      tipos: lista(p.get('tipos')).filter((t) => SIGLAS_REGISTRO.includes(t)),
       nome: p.get('nome')?.trim() || null,
       empresa: p.get('empresa')?.trim() || null,
       ordem: p.get('ordem') === 'asc' ? 'asc' : 'desc',
@@ -67,8 +74,8 @@ export function registrarSeguranca(rotas, { acidentes, cadastro }) {
    * carrega os dados das apresentações (orçamentos, curvas etc.).
    */
   rotas.adicionar('GET', '/api/seguranca/obras', { permissao: 'editarSeguranca' }, async ({ req, res }) => {
-    const obras = (await cadastros()).map(({ id, chave, obra, cliente, sistemaEstrutural }) => ({
-      id, chave, obra, cliente: cliente ?? null, sistemaEstrutural: sistemaEstrutural ?? null,
+    const obras = (await cadastros()).map(({ id, chave, obra, cliente, sistemaEstrutural, engenharia }) => ({
+      id, chave, obra, cliente: cliente ?? null, sistemaEstrutural: sistemaEstrutural ?? null, engenharia: engenharia ?? null,
     }));
     enviarJson(req, res, 200, obras);
   });
@@ -80,19 +87,20 @@ export function registrarSeguranca(rotas, { acidentes, cadastro }) {
     const { itens } = await acidentes.consultar({
       obraIds: obrasDoFiltro(url, todas, acesso),
       ordem: 'asc',
-      campos: ['obraId', 'data', 'tipo', 'faseObra', 'funcao', 'empresa', 'parteCorpo', 'diasAfastamento'],
+      campos: ['obraId', 'obraPlanilha', 'data', 'tipo', 'faseObra', 'funcao', 'empresa', 'parteCorpo', 'diasAfastamento'],
     });
     const anosDisponiveis = anosDosAcidentes(itens);
     const anos = new Set(lista(url.searchParams.get('anos')));
     const considerados = itens
       .filter((a) => !anos.size || anos.has(a.data.slice(0, 4)))
-      .map((a) => ({ ...a, obra: porId.get(a.obraId)?.obra ?? null }));
+      .map((a) => ({ ...a, obra: porId.get(a.obraId)?.obra ?? a.obraPlanilha ?? null }));
     enviarJson(req, res, 200, { anosDisponiveis, anos: [...anos].filter((a) => anosDisponiveis.includes(a)), indicadores: calcularIndicadores(considerados) });
   });
 
   async function validarComObra(entrada) {
     const { acidente, erros } = validarAcidente(entrada);
     if (!acidente) throw erro(400, erros.join(' '));
+    if (!acidente.obraId) return { acidente, obra: null }; // registro importado só com o nome da planilha
     const obra = await cadastro.obter(acidente.obraId);
     if (!obra) throw erro(400, 'A obra precisa existir no Cadastro de obras.');
     const faltam = pendenciasDaObra(obra);
@@ -101,12 +109,12 @@ export function registrarSeguranca(rotas, { acidentes, cadastro }) {
   }
 
   rotas.adicionar('POST', '/api/seguranca/acidentes', { permissao: 'editarSeguranca' }, async ({ req, res, usuario }) => {
-    const { acidente, obra } = await validarComObra(await lerJson(req));
+    const { acidente, obra } = await validarComObra({ ...(await lerJson(req)), obraPlanilha: null });
     try {
       const salvo = await acidentes.inserir({ ...acidente, origem: 'manual', criadoPor: usuario.email });
-      enviarJson(req, res, 201, comObra(new Map([[obra.id, obra]]))(salvo));
+      enviarJson(req, res, 201, comObra(mapaDe(obra))(salvo));
     } catch (e) {
-      if (e instanceof ErroDuplicado) throw erro(409, MENSAGEM_DUPLICADO);
+      if (e instanceof ErroDuplicado) throw erro(409, mensagemDuplicado(acidente));
       throw e;
     }
   });
@@ -114,12 +122,12 @@ export function registrarSeguranca(rotas, { acidentes, cadastro }) {
   rotas.adicionar('PUT', '/api/seguranca/acidentes/:id', { permissao: 'editarSeguranca' }, async ({ req, res, params, usuario }) => {
     const atual = await acidentes.obter(params.id);
     if (!atual) throw erro(404, 'Acidente não encontrado.');
-    const { acidente, obra } = await validarComObra({ ...atual, ...(await lerJson(req)) });
+    const { acidente, obra } = await validarComObra({ ...atual, ...(await lerJson(req)), obraPlanilha: atual.obraPlanilha ?? null });
     try {
       const salvo = await acidentes.atualizar(params.id, { ...acidente, atualizadoPor: usuario.email });
-      enviarJson(req, res, 200, comObra(new Map([[obra.id, obra]]))(salvo));
+      enviarJson(req, res, 200, comObra(mapaDe(obra))(salvo));
     } catch (e) {
-      if (e instanceof ErroDuplicado) throw erro(409, MENSAGEM_DUPLICADO);
+      if (e instanceof ErroDuplicado) throw erro(409, mensagemDuplicado(acidente));
       throw e;
     }
   });
@@ -131,15 +139,16 @@ export function registrarSeguranca(rotas, { acidentes, cadastro }) {
 
   // ── Importação da planilha (linhas já lidas no navegador, como no Cadastro de obras) ──
   async function analisar(req) {
-    const { linhas, mapaObras } = await lerJson(req, 15 * 1024 * 1024);
+    const { linhas, mapaObras, modo: modoPedido } = await lerJson(req, 15 * 1024 * 1024);
+    const modo = modoPedido === 'quase' ? 'quase' : 'acidentes';
     if (!Array.isArray(linhas)) throw erro(400, 'Envie as linhas da planilha.');
     if (linhas.length > LIMITE_LINHAS_IMPORTACAO) throw erro(413, `Planilha com mais de ${LIMITE_LINHAS_IMPORTACAO} linhas.`);
     const todas = await cadastros();
     // Pré-análise sem os existentes só para descobrir as chaves; depois busca no banco apenas essas.
-    const previa = analisarImportacao(linhas, todas, new Map(), { mapaObras: mapaObras ?? {} });
-    const chaves = previa.linhas.filter((l) => l.acidente).map((l) => l.acidente.chaveDedup);
+    const previa = analisarImportacao(linhas, todas, new Map(), { mapaObras: mapaObras ?? {}, modo });
+    const chaves = previa.linhas.filter((l) => l.acidente).flatMap((l) => [l.acidente.chaveDedup, l.chaveAlternativa].filter(Boolean));
     const existentes = await acidentes.porChaves([...new Set(chaves)]);
-    return analisarImportacao(linhas, todas, existentes, { mapaObras: mapaObras ?? {} });
+    return analisarImportacao(linhas, todas, existentes, { mapaObras: mapaObras ?? {}, modo });
   }
 
   rotas.adicionar('POST', '/api/seguranca/importacao/analisar', { permissao: 'editarSeguranca' }, async ({ req, res }) => {

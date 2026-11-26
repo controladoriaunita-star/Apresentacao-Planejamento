@@ -27,6 +27,18 @@ export const linhaCadastro = {
   },
 };
 
+/**
+ * IAT e IST: número, obra e datas em colunas; o formulário inteiro (campos, plano de ação, fotos) em `dados` (jsonb).
+ * Tabelas: supabase/migrations/008_informativos.sql.
+ */
+export const linhaDocumento = {
+  paraLinha: ({ id, numero, obraId, criadoEm, criadoPor, atualizadoEm, atualizadoPor, ...dados }) => linhaPadrao.paraLinha({ id, numero, obraId, criadoEm, criadoPor, atualizadoEm, atualizadoPor, dados }),
+  deLinha: (linha) => {
+    const { dados, ...resto } = linhaPadrao.deLinha(linha);
+    return { ...(dados ?? {}), ...resto };
+  },
+};
+
 export class ColecaoSupabase {
   constructor(cliente, tabela, { mapa = linhaPadrao, ordem = null } = {}) {
     this.cliente = cliente;

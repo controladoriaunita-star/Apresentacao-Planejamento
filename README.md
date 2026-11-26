@@ -12,6 +12,7 @@ npm install
 npm start            # dados reais (SharePoint) em http://localhost:5210 — credenciais em .env.local
                      # STORE=local (padrão) guarda usuários/anexos em data/; STORE=supabase usa o Supabase
 npm run exemplo      # demonstração com dados fictícios em http://localhost:5211
+npm run exemplo:carga  # recria em data/exemplo as obras e acidentes da planilha ../Dados/Controle de Acidentes-Dashboard.xlsx (backup do que havia)
 ```
 
 No primeiro acesso o app pede para criar o usuário **Dev**; ele cadastra os demais em Administração → Usuários.

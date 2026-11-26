@@ -33,6 +33,7 @@
 .b-warning { background: var(--warning-soft); color: var(--warning); }
 .b-error { background: var(--error-soft); color: var(--error); }
 .b-info { background: var(--info-soft); color: var(--info); }
+.b-qa { background: var(--acidente-qa-soft); color: var(--acidente-qa-texto); }
 
 /* ── Campos ── */
 .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }

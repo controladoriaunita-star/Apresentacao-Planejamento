@@ -8,7 +8,7 @@
  *   metadados na tabela `arquivos`. O navegador envia direto ao Storage por URL assinada — assim a
  *   Vercel não limita o tamanho (4,5 MB por requisição) — e a leitura redireciona para uma URL assinada.
  *
- * Interface: prepararEnvio(meta) · salvar({nome, tipo, dados, usuario}) · ler(id) · remover(id)
+ * Interface: prepararEnvio(meta) · salvar({nome, tipo, dados, usuario}) · ler(id) · lerDados(id) · remover(id)
  *   ler() devolve { registro, dados } (local) ou { registro, redirecionar } (Supabase).
  */
 import { mkdirSync } from 'node:fs';
@@ -59,6 +59,11 @@ export class RepositorioArquivosLocal {
     return { registro, dados: await readFile(join(this.pasta, id)) };
   }
 
+  /** Registro e bytes do arquivo (anexo de e-mail). */
+  async lerDados(id) {
+    return this.ler(id);
+  }
+
   async remover(id) {
     await this.meta.remover(id);
     await unlink(join(this.pasta, id)).catch(() => {});
@@ -92,6 +97,14 @@ export class RepositorioArquivosSupabase {
     const registro = await this.meta.obter(id);
     if (!registro) return null;
     return { registro, redirecionar: await this.cliente.urlDeLeitura(registro.caminho ?? this.#caminho(registro)) };
+  }
+
+  /** Registro e bytes do arquivo lidos pelo servidor (anexo de e-mail). */
+  async lerDados(id) {
+    const registro = await this.meta.obter(id);
+    if (!registro) return null;
+    const dados = await this.cliente.lerObjeto(registro.caminho ?? this.#caminho(registro));
+    return dados ? { registro, dados } : null;
   }
 
   async remover(id) {

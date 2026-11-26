@@ -6,7 +6,7 @@ import { api } from '../core/api.js';
 import { h, montar } from '../core/dom.js';
 import { fmtDataHora } from '../core/formato.js';
 import { estado } from '../core/estado.js';
-import { CAMPOS_CADASTRO, GRUPOS_CADASTRO } from '../domain/cadastro-obra.js';
+import { CAMPOS_CADASTRO, emailValido, GRUPOS_CADASTRO } from '../domain/cadastro-obra.js';
 import { abrirModal, alerta, badge, botaoAcao, campo, confirmar, toast } from '../ui/componentes.js';
 import { icone } from '../ui/icones.js';
 import { linhasComoObjetos } from '../ui/planilha.js';
@@ -44,7 +44,12 @@ export function renderAdminCadastro(alvo) {
   };
 
   // Obras das planilhas + obras só cadastradas
-  const linhas = base.obras.map((o) => ({ obra: o, cadastro: porChave.get(o.chave) }));
+  const chavesPlanilha = new Set(base.obras.map((o) => o.chave));
+  const linhas = [
+    ...base.obras.map((o) => ({ obra: o, cadastro: porChave.get(o.chave) })),
+    ...cadastros.filter((c) => c.id && !chavesPlanilha.has(c.chave)).sort((a, b) => a.obra.localeCompare(b.obra, 'pt-BR'))
+      .map((c) => ({ obra: { nome: c.obra, chave: c.chave, cliente: c.cliente }, cadastro: c })),
+  ];
   montar(alvo,
     h('div', { class: 'titulo-pagina' },
       h('div', {}, h('h1', {}, 'Cadastro de obras'),
@@ -53,13 +58,17 @@ export function renderAdminCadastro(alvo) {
         h('button', { class: 'btn secondary', type: 'button', onclick: abrirImportacao }, icone('enviar', { tamanho: 16 }), 'Importar planilha'),
         h('button', { class: 'btn primary', type: 'button', onclick: () => abrirForm({}, recarregar) }, 'Nova obra'))),
     h('div', { class: 'sheet', style: { marginTop: '16px' } }, h('table', { class: 'lista-admin' },
-      h('thead', {}, h('tr', {}, h('th', { class: 'first' }, 'Obra'), h('th', {}, 'Cliente'), h('th', {}, 'Nº UH'), h('th', {}, 'Área equiv.'), h('th', {}, 'INCC base'), h('th', {}, 'Atualizado'), h('th', {}))),
+      h('thead', {}, h('tr', {}, h('th', { class: 'first' }, 'Obra'), h('th', {}, 'Cliente'), h('th', {}, 'Nº UH'), h('th', {}, 'Área equiv.'), h('th', {}, 'INCC base'), h('th', {}, 'E-mails da obra'), h('th', {}, 'Atualizado'), h('th', {}))),
       h('tbody', {}, linhas.map(({ obra, cadastro }) => h('tr', {},
         h('td', { class: 'first' }, obra.nome, cadastro ? null : [' ', badge('sem cadastro', 'warning')]),
         h('td', { class: 'esq' }, cadastro?.cliente ?? obra.cliente ?? '—'),
         h('td', {}, cadastro?.numeroUH ?? '—'),
         h('td', {}, cadastro?.areaEquivalente ?? '—'),
         h('td', {}, cadastro?.inccBase ?? '—'),
+        h('td', { class: 'esq' }, cadastro
+          ? h('button', { class: 'btn secondary sm btn-emails', type: 'button', onclick: () => abrirEmails(cadastro, recarregar) },
+            'Cadastrar e-mails', h('span', { class: `badge ${cadastro.emails?.length ? 'b-primary' : 'b-neutral'}` }, String(cadastro.emails?.length ?? 0)))
+          : h('span', { class: 'muted small' }, 'Cadastre a obra primeiro')),
         h('td', { class: 'muted' }, cadastro ? fmtDataHora(cadastro.atualizadoEm) : '—'),
         h('td', { class: 'acoes' },
           h('button', { class: 'btn ghost sm', type: 'button', onclick: () => abrirForm(cadastro ?? { obra: obra.nome, cliente: obra.cliente, uau: obra.uau }, recarregar) }, cadastro ? 'Editar' : 'Cadastrar'),
@@ -68,6 +77,60 @@ export function renderAdminCadastro(alvo) {
             await api.del(`/obras/cadastro/${cadastro.id}`);
             await recarregar();
           } }, 'Excluir') : null)))))));
+}
+
+/** E-mails das pessoas da obra: recebem a IAT e a IST (PDF e ficha no corpo do e-mail). */
+function abrirEmails(cadastro, aoSalvar) {
+  let emails = [...(cadastro.emails ?? [])];
+  const erro = h('small', { class: 'err' });
+  const entrada = h('input', { type: 'email', placeholder: 'nome@empresa.com.br', autocomplete: 'off', 'aria-label': 'Novo e-mail' });
+  const lista = h('tbody');
+  const total = h('span', { class: 'muted' });
+  const desenhar = () => {
+    total.textContent = `${emails.length} e-mail(s)`;
+    montar(lista, emails.length
+      ? emails.map((e, i) => h('tr', {}, h('td', {}, e),
+        h('td', { class: 'acoes' }, h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': `Remover ${e}`, onclick: () => { emails.splice(i, 1); desenhar(); } }, 'Remover'))))
+      : h('tr', {}, h('td', { class: 'vazio-emails', colspan: 2 }, 'Nenhum e-mail cadastrado.')));
+  };
+  const incluir = () => {
+    const e = entrada.value.trim().toLowerCase();
+    erro.textContent = '';
+    if (!e) return;
+    if (!emailValido(e)) { erro.textContent = 'Informe um e-mail válido (nome@empresa.com.br).'; return; }
+    if (emails.includes(e)) { erro.textContent = 'Este e-mail já está na lista.'; return; }
+    emails.push(e);
+    entrada.value = '';
+    desenhar();
+    entrada.focus();
+  };
+  entrada.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); incluir(); } });
+  desenhar();
+  const m = abrirModal({
+    titulo: `E-mails da obra · ${cadastro.obra}`,
+    conteudo: h('div', { class: 'stack' },
+      h('p', { class: 'muted' }, 'Estes e-mails recebem a IAT e a IST desta obra (PDF e ficha no corpo do e-mail).'),
+      h('label', { class: 'field' }, h('span', {}, 'Novo e-mail'),
+        h('div', { class: 'row emails-novo' }, entrada, h('button', { class: 'btn secondary', type: 'button', onclick: incluir }, 'Incluir')), erro),
+      h('div', { class: 'sheet emails-lista' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'E-mail'), h('th', {}))), lista))),
+    acoes: [
+      total,
+      h('span', { class: 'emails-espaco' }),
+      h('button', { class: 'btn ghost', type: 'button', onclick: () => m.fechar() }, 'Cancelar'),
+      botaoAcao('Salvar e-mails', async () => {
+        if (entrada.value.trim()) incluir(); // e-mail digitado e não incluído também entra
+        if (erro.textContent) return;
+        try {
+          await api.put(`/obras/cadastro/${cadastro.id}/emails`, { emails });
+          m.fechar();
+          toast('success', 'E-mails salvos', `${emails.length} e-mail(s) em ${cadastro.obra}.`);
+          await aoSalvar();
+        } catch (err) {
+          toast('error', 'Não foi possível salvar os e-mails', err.message);
+        }
+      }, 'btn primary'),
+    ],
+  });
 }
 
 function abrirForm(inicial, aoSalvar) {

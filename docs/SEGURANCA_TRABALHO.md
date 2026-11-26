@@ -39,10 +39,41 @@ registro já gravado (o gravado é mantido; para corrigir, editar o acidente).
 1. O navegador lê a planilha (aba "Dados" ou a primeira) com SheetJS, como já fazia o Cadastro de obras.
 2. `POST /api/seguranca/importacao/analisar` valida cada linha com as mesmas regras do formulário e devolve
    novo / já cadastrado / repetido na planilha / erro, com mensagens por linha. Nada é gravado.
-3. Obras com nome diferente do cadastro: de-para na tela (vale para todas as linhas daquele nome).
+3. Obras com nome diferente do cadastro: de-para na tela, com busca por digitação; o usuário preenche todos os nomes e
+   clica em *Gravar associações* (vale para todas as linhas daquele nome, nesta importação).
 4. `POST /api/seguranca/importacao` reanalisa no servidor (não confia no navegador) e grava só os novos válidos num
    único comando (no Supabase, inserção em lote com `on_conflict=chave_dedup` + `ignore-duplicates`). Linhas com erro
    não afetam nada já gravado.
+
+## Quase acidentes (v25)
+
+- Mesma tabela `acidentes`, com `tipo = 'QA'` e `categoria` (lista `CATEGORIAS_QUASE`). Migração: `007_quase_acidentes.sql`.
+- Importação pela aba **Base Consolidada**: `Janeiro/2026` vira `2026-01-31` (`ultimoDiaDoMes`). O mês atual é aceito por inteiro.
+- Duplicidade: data + obra + categoria + hash da descrição (não há pessoa para identificar o registro).
+- De-para em branco: `obra_id` vazio e `obra_planilha` com o nome da planilha. Esses registros entram em "Todas as obras",
+  mas não aparecem ao filtrar obras do cadastro até serem associados (Editar → Obra).
+- Conferência com a planilha de 2026: 245 linhas e 10 obras; 2 obras batem direto com o cadastro de exemplo, 7 precisam de
+  de-para e **VIVA BENX VILA MARIANA** (2 linhas) não está no cadastro de exemplo.
+- Pirâmide de Bird (definição da Unità, 23/11/2026): FT = acidente grave · CPT + SPT = lesão leve · TRJ = dano material · QA = quase acidente.
+
+## IAT e IST (v26)
+
+- Regras e listas: `public/js/domain/informativos.js`; Tabelas 13/14/15/17 geradas da planilha por
+  `server/tools/gerar-tabelas-esocial.mjs` em `public/js/domain/tabelas-esocial.js`.
+- Telas: `pages/informativo-iat.js` (`#/admin/seguranca-iat/<id|nova>`) e `pages/informativo-ist.js`
+  (`#/admin/seguranca-ist/<id|nova>`); PDF em `ui/impressao-informativos.js` + `css/impressao-informativos.css`.
+- API: `/api/seguranca/iat` e `/api/seguranca/ist` (`server/routes/informativos.mjs`). Leitura também exige
+  `editarConteudo` (CPF, nascimento e diagnóstico). Fotos/anexos que saem do documento são apagados.
+- IAT Metrocasa: `ehMetrocasa` (Cliente do cadastro contém "Metrocasa"), `metrocasaDaIat` (fórmulas da aba) e
+  `metrocasaEfetivo` (complemento do usuário por cima). Pendências: `pendenciasIat`, `pendenciasMetrocasa`, `pendenciasIst`.
+- Envio por e-mail: PDF gerado no navegador (`ui/envio-informativo.js`), enviado como arquivo e anexado pelo servidor
+  (`server/email/envio.mjs`, modos graph | smtp | arquivo). Para produção: `EMAIL_ENVIO=graph` com `EMAIL_REMETENTE`
+  (caixa do Microsoft 365) e a permissão de aplicativo **Mail.Send** consentida no Entra para o aplicativo do SharePoint
+  — ou `EMAIL_ENVIO=smtp` com `SMTP_HOST/PORT/USUARIO/SENHA`.
+- Pontos para validar: (1) quais campos da IAT são obrigatórios para o PDF (hoje: obra, razão social, acidentado,
+  cargo, data, hora, tipo, local, tabelas 13/14/15 e descrição); (2) e-mail com anexo automático exige um serviço de
+  envio — resolvido com o envio pelo servidor (falta a conta/permissão de produção); (3) a célula I17 da aba IAT (07:00, sem rótulo) não foi reproduzida;
+  (4) a célula E12 da IST (linha mesclada sem rótulo) virou "Complemento da classificação".
 
 ## Telas e filtros
 
@@ -50,6 +81,7 @@ registro já gravado (o gravado é mantido; para corrigir, editar o acidente).
 |---|---|---|
 | Administração → Segurança do Trabalho | `#/admin/seguranca` | próprios (obras, período, tipo, pesquisa), paginação no servidor (50/página) |
 | Dashboard Segurança (sub-aba de Administração → Segurança do Trabalho) | `#/admin/seguranca-dashboard` | Obras do Cadastro de obras (padrão: todas) e segmentador Ano. Um indicador por vez (botões), ocupando o resto da tela |
+| Pirâmide de Bird (v23 — primeiro botão do Dashboard Segurança) | `#/admin/seguranca-dashboard` | Mesmos filtros do Dashboard. Níveis: FT grave · CPT + SPT lesão leve · TRJ dano material · QA quase acidente (`PIRAMIDE_BIRD`, `calcularPiramideBird`) |
 | Segurança do Trabalho | `#/obra/seguranca-trabalho`, `#/cliente/seguranca-trabalho` | Tela cheia (Apresentar): sempre a obra do filtro geral. Fora: seletor "Obra exibida" (filtro geral, todas ou uma obra) |
 
 Período do gráfico mês a mês (`mesesDoGrafico`): de 1 mês antes do primeiro acidente até 1 mês depois do último,

@@ -34,6 +34,46 @@ for (const store of ['local', 'supabase']) {
     });
     after(() => srv.fechar());
 
+    test('quase acidente: cadastro, importação com de-para e indicadores separados', async () => {
+      const q = { data: '2026-03-31', obraId: obra.id, tipo: 'QA', categoria: 'Organização e Limpeza', resumo: 'Entulho no corredor' };
+      let r = await dev('POST', '/api/seguranca/acidentes', q);
+      assert.equal(r.status, 201);
+      assert.equal(r.dados.categoria, 'Organização e Limpeza');
+      assert.equal((await dev('POST', '/api/seguranca/acidentes', q)).status, 409);
+      const linhas = [{ Obra: 'OBRA TESTE ANTIGA', Mês: 'Abril/2026', 'Descrição do Quase Acidente': 'Serra sem coifa', 'Categoria Padronizada': 'Máquinas e Equipamentos', __linha: 5 }];
+      r = await dev('POST', '/api/seguranca/importacao/analisar', { linhas, modo: 'quase' });
+      assert.deepEqual([r.dados.totais.novos, r.dados.totais.erros], [1, 0]);
+      assert.deepEqual(r.dados.obrasNaoEncontradas.map((o) => o.nome), ['OBRA TESTE ANTIGA']);
+      const mapaObras = { 'obra teste antiga': obra.id };
+      r = await dev('POST', '/api/seguranca/importacao', { linhas, mapaObras, modo: 'quase' });
+      assert.equal(r.dados.importados, 1);
+      r = await dev('POST', '/api/seguranca/importacao', { linhas, mapaObras, modo: 'quase' });
+      assert.equal(r.dados.importados, 0, 'reimportar não duplica');
+      const lista = await dev('GET', '/api/seguranca/acidentes?tipos=QA&tamanho=todos');
+      assert.equal(lista.dados.total, 2);
+      assert.ok(lista.dados.itens.some((a) => a.data === '2026-04-30'));
+      const ind = (await dev('GET', `/api/seguranca/indicadores?obras=${obra.id}`)).dados.indicadores;
+      assert.equal(ind.quaseAcidentes, 2);
+      for (const a of lista.dados.itens) assert.equal((await dev('DELETE', `/api/seguranca/acidentes/${a.id}`)).status, 200);
+    });
+
+    test('de-para em branco: grava com o nome da planilha e pode ser associado depois', async () => {
+      const linhas = [{ Obra: 'OBRA SO NA PLANILHA', Mês: 'Maio/2026', 'Descrição do Quase Acidente': 'Piso irregular', 'Categoria Padronizada': 'Organização e Limpeza', __linha: 5 }];
+      let r = await dev('POST', '/api/seguranca/importacao', { linhas, modo: 'quase' });
+      assert.deepEqual([r.dados.importados, r.dados.comErro], [1, 0]);
+      const [item] = (await dev('GET', '/api/seguranca/acidentes?tipos=QA&tamanho=todos')).dados.itens;
+      assert.equal(item.obra, 'OBRA SO NA PLANILHA');
+      assert.equal(item.obraId, null);
+      const ind = (await dev('GET', '/api/seguranca/indicadores')).dados.indicadores;
+      assert.equal(ind.quaseAcidentes, 1);
+      r = await dev('POST', '/api/seguranca/importacao', { linhas, modo: 'quase', mapaObras: { 'obra so na planilha': obra.id } });
+      assert.equal(r.dados.importados, 0, 'associar numa reimportação não duplica');
+      r = await dev('PUT', `/api/seguranca/acidentes/${item.id}`, { obraId: obra.id });
+      assert.equal(r.status, 200);
+      assert.deepEqual([r.dados.obra, r.dados.obraPlanilha], ['Obra Teste', null]);
+      assert.equal((await dev('DELETE', `/api/seguranca/acidentes/${item.id}`)).status, 200);
+    });
+
     test('exige login e só aceita obra completa do Cadastro de obras', async () => {
       assert.equal((await anonimo('GET', '/api/seguranca/acidentes')).status, 401);
       let r = await dev('POST', '/api/seguranca/acidentes', acidente({ obraId: outra.id }));
@@ -64,7 +104,7 @@ for (const store of ['local', 'supabase']) {
         linha(),
         linha({ 'Nome do Acidentado': 'Jorgeilson Santos de Jesus', 'Data do Acidente': '2026-04-09', __linha: 3 }),
         linha({ __linha: 4 }), // repetida na própria planilha
-        linha({ 'Nome da Obra': 'MC Desconhecida', __linha: 5 }),
+        linha({ Tipo: 'ABC', __linha: 5 }),
         linha({ 'Data do Acidente': '2025-02-06', 'Nome do Acidentado': 'Arlindo Vitor', Função: 'Líder de Obras', 'Nome da Empresa': 'Tr Materiais', 'Parte do Corpo Atingida': 'Punho', __linha: 6 }),
       ];
       let r = await dev('POST', '/api/seguranca/importacao/analisar', { linhas });
@@ -78,9 +118,9 @@ for (const store of ['local', 'supabase']) {
       assert.equal(r.dados.comErro, 1);
       assert.deepEqual(r.dados.erros.map((e) => e.linha), [5]);
 
-      r = await dev('POST', '/api/seguranca/importacao', { linhas, mapaObras: { 'mc desconhecida': obra.id } });
+      r = await dev('POST', '/api/seguranca/importacao', { linhas });
       assert.equal(r.dados.importados, 0, 'planilha acumulativa: nada entra de novo');
-      assert.equal(r.dados.jaExistentes, 5, 'todas as linhas, inclusive a obra associada pelo de-para, já estão gravadas');
+      assert.equal(r.dados.jaExistentes, 4, 'as linhas válidas já estão gravadas');
       assert.equal((await dev('GET', '/api/seguranca/acidentes')).dados.total, 3);
     });
 
@@ -143,7 +183,7 @@ for (const store of ['local', 'supabase']) {
       // Pode: obras resumidas (sem orçamento), acidentes, indicadores, cadastrar acidente e trocar a própria senha.
       let r = await seg('GET', '/api/seguranca/obras');
       assert.equal(r.status, 200);
-      assert.deepEqual(Object.keys(r.dados[0]).sort(), ['chave', 'cliente', 'id', 'obra', 'sistemaEstrutural']);
+      assert.deepEqual(Object.keys(r.dados[0]).sort(), ['chave', 'cliente', 'engenharia', 'id', 'obra', 'sistemaEstrutural']);
       assert.equal((await seg('GET', '/api/seguranca/acidentes')).status, 200);
       assert.equal((await seg('GET', '/api/seguranca/indicadores')).status, 200);
       r = await seg('POST', '/api/seguranca/acidentes', acidente({ nomeAcidentado: 'Fulano da Segurança', data: '2026-03-02' }));

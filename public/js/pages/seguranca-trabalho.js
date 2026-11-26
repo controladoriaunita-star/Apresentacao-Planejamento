@@ -66,7 +66,8 @@ export async function renderSegurancaTrabalho(alvo, contexto) {
     corpo));
   if (!contexto.impressao) acompanharTelaCheia(alvo, contexto);
 
-  const q = new URLSearchParams({ tamanho: 'todos', ordem: 'asc' });
+  // Esta aba segue o modelo de acidentes: quase acidentes ficam de fora.
+  const q = new URLSearchParams({ tamanho: 'todos', ordem: 'asc', tipos: TIPOS_ACIDENTE.map((t) => t.sigla).join(',') });
   if (chaves) q.set('chaves', chaves.join(','));
   let r;
   try {
