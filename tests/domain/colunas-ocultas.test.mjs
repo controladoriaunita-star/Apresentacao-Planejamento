@@ -8,9 +8,9 @@ test('colunas ocultas: só chaves conhecidas, sem repetir, na ordem das tabelas'
   assert.deepEqual(normalizarOcultas('fisico.iec'), [], 'não-lista = nenhuma');
 });
 
-test('colunas ocultas: as do grupo "Sem correção" já são fixas no Cliente e não entram na escolha', () => {
-  assert.ok(!OCULTAVEIS.some((o) => o.chave === 'economico.iecSemCorrecao'));
-  assert.deepEqual(normalizarOcultas(['economico.iecSemCorrecao']), []);
+test('colunas ocultas (v39): as do grupo "Sem correção" entram na escolha do Dev', () => {
+  assert.ok(OCULTAVEIS.some((o) => o.chave === 'economico.iecSemCorrecao' && o.contexto === 'Sem correção'));
+  assert.deepEqual(normalizarOcultas(['economico.iecSemCorrecao']), ['economico.iecSemCorrecao']);
 });
 
 test('colunas ocultas: cada tabela mantém ao menos uma coluna visível', () => {

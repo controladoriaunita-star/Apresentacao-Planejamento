@@ -5,9 +5,9 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | v36.4 (publicada em 25/11/2026) |
-| Dev (local) | v37 (em validação) |
+| Dev (local) | v40 (em validação) |
 
-## v37 — 25/11/2026 — Segurança do Trabalho: Pirâmide de Bird e de-para de obras com busca
+## v40 — 26/11/2026 — Segurança do Trabalho: Pirâmide de Bird e de-para de obras com busca
 
 Trazido do repositório lucaspinheirost-jpg/Apresentacao-Planejamento (lá numerado v23 e v24).
 
@@ -39,6 +39,13 @@ Trazido do repositório lucaspinheirost-jpg/Apresentacao-Planejamento (lá numer
 - O de-para agora é **preenchido por inteiro e gravado de uma vez** (botão *Gravar associações*). Os nomes não somem ao
   serem preenchidos e podem ser corrigidos; *Importar* fica bloqueado enquanto houver alteração não gravada.
 - As associações valem para a importação em andamento. Sem mudança de banco.
+
+## v39 — 26/11/2026 — Colunas "Sem correção" de volta no Econômico do Cliente
+
+- Resumo Econômico na apresentação **Cliente**: as colunas **Resultado s/ correção** e **IEC s/ correção** voltam a
+  aparecer (estavam ocultas por regra fixa desde a v28). Agora entram em **"Colunas do cliente"** (Dev), no grupo
+  "Sem correção", e podem ser ocultadas como as demais — na tela e no PDF. Na Obra nada muda.
+- `domain/colunas-ocultas.js` e `pages/resumo-economico.js`; testes de domínio e de tela atualizados.
 
 ## v36.4 — 25/11/2026 — TxC e fotos: filtros e exclusão em lote
 
