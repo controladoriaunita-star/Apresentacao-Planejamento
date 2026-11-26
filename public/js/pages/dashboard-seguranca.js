@@ -11,19 +11,19 @@ import { api } from '../core/api.js';
 import { h, montar, token } from '../core/dom.js';
 import { fmtNumero, fmtPercentual } from '../core/formato.js';
 import { estado } from '../core/estado.js';
-import { TIPOS_ACIDENTE } from '../domain/seguranca.js';
+import { SIGLA_QUASE, TIPOS_ACIDENTE, TIPOS_REGISTRO } from '../domain/seguranca.js';
 import { alerta, card, carregando, ocuparAteRodape, vazio } from '../ui/componentes.js';
 import { filtroExcel } from '../ui/filtro-excel.js';
 import { graficoCategorias } from '../ui/graficos.js';
 import { icone } from '../ui/icones.js';
 import { conteudoPiramideBird } from './piramide-bird.js';
 
-const TIPO = Object.fromEntries(TIPOS_ACIDENTE.map((t) => [t.sigla, t]));
+const TIPO = Object.fromEntries(TIPOS_REGISTRO.map((t) => [t.sigla, t]));
 
 /** Indicadores na ordem dos botões. `dados(ind)` → [{rotulo, valor}]. */
 const INDICADORES = [
   // v23: Pirâmide de Bird — conteúdo próprio (pages/piramide-bird.js), não é um gráfico de categorias.
-  { id: 'bird', nome: 'Pirâmide de Bird', dica: 'Proporção 1 : 10 : 30 : 600 — FT grave · CPT lesão leve · SPT dano material · TRJ quase acidente', especial: conteudoPiramideBird },
+  { id: 'bird', nome: 'Pirâmide de Bird', dica: 'Proporção 1 : 10 : 30 : 600 — FT grave · CPT + SPT lesão leve · TRJ dano material · QA quase acidente', especial: conteudoPiramideBird },
   { id: 'periodo', nome: 'Nº de acidentes por período', dica: 'Acidentes por mês do ano (jan–dez), somando os anos selecionados', dados: (i) => i.porMes, tipo: 'line', ranking: false },
   { id: 'tipo', nome: 'Classificação do acidente', dica: 'CPT, SPT, TRJ e FT', dados: (i) => i.porTipo, cores: true },
   { id: 'fase', nome: 'Acidentes por fase de obra', dica: 'Fase em que a obra estava no dia do acidente', dados: (i) => i.porFase },
@@ -79,7 +79,7 @@ export async function renderDashboardSeguranca(alvo) {
     }) : null);
 
   const ind = r.indicadores;
-  if (!ind.total) return montar(corpo, vazio('Nenhum acidente registrado', 'Não há acidentes para as obras e anos selecionados.'));
+  if (!ind.total && !ind.quaseAcidentes) return montar(corpo, vazio('Nenhum acidente registrado', 'Não há acidentes para as obras e anos selecionados.'));
 
   // ── Quadro de totais ──
   const periodo = r.anos.length ? `em ${r.anos.join(', ')}` : 'todos os anos';
@@ -91,8 +91,8 @@ export async function renderDashboardSeguranca(alvo) {
       h('span', { class: 'seg-total-icone' }, icone('calendario', { tamanho: 22 })),
       h('div', {}, h('p', { class: 'l' }, 'Média de dias de afastamento'), h('b', { class: 'v' }, fmtNumero(ind.mediaDias, 1)), h('small', {}, `${fmtNumero(ind.totalDias)} dia(s) de afastamento no total`))),
     card({ class: 'seg-total seg-total-tipos' },
-      h('p', { class: 'l' }, 'Classificação'),
-      h('div', { class: 'seg-tipos' }, ind.porTipo.map((t) => h('div', { class: 'seg-tipo-item', title: TIPO[t.rotulo].nome },
+      h('p', { class: 'l' }, 'Classificação do acidente'),
+      h('div', { class: 'seg-tipos' }, [...ind.porTipo, { rotulo: SIGLA_QUASE, valor: ind.quaseAcidentes }].map((t) => h('div', { class: 'seg-tipo-item', title: TIPO[t.rotulo].nome },
         h('i', { class: `seg-marca seg-${t.rotulo.toLowerCase()}` }), h('span', {}, t.rotulo), h('b', {}, fmtNumero(t.valor)))))));
 
   // ── Botões dos indicadores ──

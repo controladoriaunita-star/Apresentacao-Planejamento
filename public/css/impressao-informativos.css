@@ -1,0 +1,26 @@
+/* Folhas impressas (PDF) da IAT, IAT Metrocasa, IST e Contra-Relatório — mesma grade das planilhas SMS-IAT / SMS-IST.
+   Cores só por tokens (public/css/tokens.css). */
+@page { size: A4 portrait; margin: 10mm; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--surface); color: var(--ink-900); font-family: var(--font-sans, Arial, sans-serif); }
+.folha { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 8pt; line-height: 1.25; }
+.folha td { border: 0.6pt solid var(--ink-700); padding: 3pt 4pt; vertical-align: middle; overflow-wrap: anywhere; }
+.folha tr { break-inside: avoid; page-break-inside: avoid; }
+.folha .rot { background: var(--ink-100); font-weight: 600; font-size: 7.5pt; }
+.folha .rot.legenda { text-align: center; }
+.folha .val { min-height: 14pt; height: 18pt; }
+.folha .val.texto { white-space: pre-wrap; vertical-align: top; }
+.folha .sec { background: var(--color-secondary); color: var(--surface); font-weight: 700; text-align: center; letter-spacing: 0.02em; }
+.folha .nota { font-size: 7.5pt; }
+.folha .nota.destaque { background: var(--color-primary-soft); font-weight: 600; text-align: center; }
+.folha .logo { text-align: center; }
+.folha .logo img { max-width: 100%; max-height: 36pt; }
+.folha .formulario { text-align: center; font-weight: 700; font-size: 9pt; }
+.folha .titulo { text-align: center; font-weight: 800; font-size: 11pt; }
+.folha .codigo { text-align: center; font-size: 7.5pt; font-weight: 600; }
+.folha tr.alta td.val { height: 120pt; }
+.folha tr.media td.val { height: 46pt; }
+.folha tr.plano td { height: 30pt; }
+.folha .foto { height: 150pt; text-align: center; padding: 2pt; }
+.folha tr.linha-foto-ist .foto { height: 120pt; }
+.folha .foto img { max-width: 100%; max-height: 100%; object-fit: contain; }

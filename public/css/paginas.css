@@ -624,14 +624,77 @@ body.sem-rolagem { overflow: hidden; }
 .seg-msg.erro { color: var(--error); }
 .seg-msg.aviso { color: var(--warning); }
 .seg-depara { background: var(--warning-soft); border-color: var(--warning-soft); }
+
+/* Cadastro de obras → Cadastrar e-mails */
+.btn-emails { gap: 8px; }
+.emails-novo { gap: 8px; flex-wrap: nowrap; }
+.emails-novo input { flex: 1; }
+.emails-lista { max-height: 300px; border-radius: 12px; }
+.emails-lista thead th { background: var(--color-secondary); color: var(--surface); text-align: left; border-bottom: 2px solid var(--color-primary); }
+.emails-lista td { text-align: left; }
+.emails-lista td.acoes { width: 1%; white-space: nowrap; }
+.emails-lista .vazio-emails { text-align: center; color: var(--muted); padding: 22px; }
+.emails-espaco { flex: 1; }
+
+/* Envio da IAT/IST por e-mail (confirmação) */
+.envio-resumo { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 1px solid var(--border-soft); border-radius: 12px; }
+.envio-linha { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 10px; font-size: 14px; overflow-wrap: anywhere; }
+.envio-linha > b { color: var(--muted); font-weight: 600; }
+.envio-anexos { display: flex; flex-wrap: wrap; gap: 10px; }
+.envio-anexos a { display: inline-flex; align-items: center; gap: 4px; }
+.envio-corpo pre { white-space: pre-wrap; font: inherit; font-size: 13px; max-height: 260px; overflow: auto; padding: 10px; background: var(--ink-50); border-radius: 10px; }
+
+/* IAT e IST (Administração → Segurança do Trabalho → Nova IAT / Nova IST) */
+.inf-topo { align-items: flex-start; }
+.inf-acoes { gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.inf-abas { margin-top: 4px; }
+.inf-secao-titulo { font-size: 14px; letter-spacing: 0.02em; text-transform: uppercase; color: var(--color-primary); margin-bottom: 14px; }
+.inf-secao { container-type: inline-size; }
+.inf-grade { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px; }
+/* Seção estreita (tela menor ou painel lateral): 2 colunas; campos largos ocupam a linha toda. */
+@container (max-width: 820px) {
+  .inf-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .inf-grade > * { grid-column: auto !important; }
+  .inf-grade > [data-largura="12"], .inf-grade > [data-largura="9"], .inf-grade > [data-largura="6"], .inf-grade > [data-largura="5"] { grid-column: 1 / -1 !important; }
+}
+@container (max-width: 480px) {
+  .inf-grade { grid-template-columns: 1fr; }
+  .inf-grade > * { grid-column: 1 / -1 !important; }
+}
+.inf-descricao { color: var(--ink-700); }
+.inf-campo input[aria-invalid='true'] { border-color: var(--error); }
+.inf-evidencias { display: flex; flex-direction: column; gap: 10px; }
+.inf-evidencia { display: grid; grid-template-columns: minmax(0, 1fr) 130px minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--border-soft); border-radius: 12px; }
+.inf-evidencia-texto { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.inf-evidencia-anexo, .inf-anexo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.inf-anexo a { display: inline-flex; align-items: center; gap: 4px; }
+.inf-plano td { padding: 6px; }
+.inf-plano td:first-child { text-align: center; }
+.inf-fotos { display: grid; gap: 14px; }
+.inf-fotos-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.inf-fotos-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.inf-foto { display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid var(--border-soft); border-radius: 12px; background: var(--ink-50); }
+.inf-foto-area { height: 200px; display: grid; place-items: center; border-radius: 10px; background: var(--surface); overflow: hidden; }
+.inf-foto-area img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.inf-foto-vazia { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+.inf-foto-legenda { font-size: 13px; text-align: center; }
+.inf-foto-acoes { justify-content: center; gap: 6px; }
+@media (max-width: 900px) {
+  .inf-grade { grid-template-columns: 1fr; }
+  .inf-grade > * { grid-column: auto !important; }
+  .inf-evidencia { grid-template-columns: 1fr; }
+  .inf-fotos-2, .inf-fotos-3 { grid-template-columns: 1fr; }
+}
+.bird-siglas { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.seg-categoria-quase { padding: 14px; border-radius: 12px; background: var(--warning-soft); }
 .seg-depara-campos { max-height: 38vh; overflow: auto; padding: 2px; }
 .seg-depara-rodape { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
-.busca-obra[aria-invalid='true'] { border-color: var(--error); }
-.busca-obra-lista { position: fixed; z-index: 65; margin: 0; padding: 4px; list-style: none; overflow: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-overlay); }
-.busca-obra-lista li { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 7px 10px; border-radius: 7px; font-size: 14px; cursor: pointer; }
-.busca-obra-lista li small { flex: none; font-size: 12px; color: var(--muted); }
-.busca-obra-lista li:hover, .busca-obra-lista li[aria-selected='true'] { background: var(--color-primary-soft); }
-.busca-obra-lista li.vazio { color: var(--muted); cursor: default; background: none; }
+.busca-lista[aria-invalid='true'] { border-color: var(--error); }
+.busca-lista-opcoes { position: fixed; z-index: 65; margin: 0; padding: 4px; list-style: none; overflow: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-overlay); }
+.busca-lista-opcoes li { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 7px 10px; border-radius: 7px; font-size: 14px; cursor: pointer; }
+.busca-lista-opcoes li small { flex: none; font-size: 12px; color: var(--muted); }
+.busca-lista-opcoes li:hover, .busca-lista-opcoes li[aria-selected='true'] { background: var(--color-primary-soft); }
+.busca-lista-opcoes li.vazio { color: var(--muted); cursor: default; background: none; }
 
 /* Dashboard Segurança (Administração → Segurança do Trabalho): totais, botões e um indicador por vez */
 .seg-controles { gap: 10px; }
@@ -650,7 +713,7 @@ body.sem-rolagem { overflow: hidden; }
 .seg-total.destaque .v { color: var(--surface); }
 .seg-total.destaque .seg-total-icone { background: var(--color-primary); color: var(--color-primary-foreground); }
 .seg-total-tipos { flex-direction: column; align-items: stretch; justify-content: center; gap: 12px; }
-.seg-tipos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.seg-tipos { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 10px; }
 .seg-tipo-item { display: flex; align-items: center; gap: 6px; padding: 14px 14px; border-radius: 12px; background: var(--ink-50); border: 1px solid var(--border-soft); }
 .seg-tipo-item .seg-marca { width: 12px; height: 12px; }
 .seg-tipo-item span { font-size: 15px; font-weight: 600; color: var(--ink-600); }
@@ -698,6 +761,8 @@ body.sem-rolagem { overflow: hidden; }
 .seg-marca.seg-trj { background: var(--acidente-trj); }
 .seg-marca.seg-ft { background: var(--acidente-ft); }
 .seg-grafico-mes { display: flex; flex-direction: column; position: relative; }
+.seg-marca.seg-qa { background: var(--acidente-qa); }
+
 .seg-grafico-mes .grafico-area { flex: 1; min-height: 0; }
 .seg-grafico-mes .grafico { flex: 1; height: auto; min-height: 240px; }
 

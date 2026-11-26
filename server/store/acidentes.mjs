@@ -20,7 +20,7 @@ export class ErroDuplicado extends Error {}
 
 const LOTE_SUPABASE = 1000;
 
-const CAMPOS = ['id', 'obraId', 'data', 'faseObra', 'nomeAcidentado', 'funcao', 'empresa', 'tipo', 'parteCorpo', 'diasAfastamento', 'resumo', 'chaveDedup', 'origem', 'criadoPor', 'criadoEm', 'atualizadoPor', 'atualizadoEm'];
+const CAMPOS = ['id', 'obraId', 'obraPlanilha', 'data', 'faseObra', 'nomeAcidentado', 'funcao', 'empresa', 'tipo', 'categoria', 'parteCorpo', 'diasAfastamento', 'resumo', 'chaveDedup', 'origem', 'criadoPor', 'criadoEm', 'atualizadoPor', 'atualizadoEm'];
 const paraSnake = (k) => k.replace(/[A-Z]/g, (l) => `_${l.toLowerCase()}`);
 
 /** Filtro em memória (modo local) — mesmas regras da consulta no Supabase. */

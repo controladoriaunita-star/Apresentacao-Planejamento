@@ -21,16 +21,18 @@ import { registrarAuth } from './routes/auth.mjs';
 import { registrarComentarios } from './routes/comentarios.mjs';
 import { registrarConteudo } from './routes/conteudo.mjs';
 import { registrarDados } from './routes/dados.mjs';
+import { registrarInformativos } from './routes/informativos.mjs';
 import { registrarSeguranca } from './routes/seguranca.mjs';
 import { registrarUsuarios } from './routes/usuarios.mjs';
 import { RepositorioAcidentesLocal, RepositorioAcidentesSupabase } from './store/acidentes.mjs';
 import { FonteIncc } from './sources/incc.mjs';
 import { FontePlanilhas } from './sources/planilhas.mjs';
 import { supabaseConfigurado } from './config.mjs';
+import { criarEnvioEmail } from './email/envio.mjs';
 import { ArmazemLocal, ArmazemSupabase } from './store/armazem.mjs';
 import { RepositorioArquivosLocal, RepositorioArquivosSupabase } from './store/arquivos.mjs';
 import { ColecaoJson } from './store/json-store.mjs';
-import { ColecaoSupabase, linhaCadastro } from './store/supabase-store.mjs';
+import { ColecaoSupabase, linhaCadastro, linhaDocumento } from './store/supabase-store.mjs';
 import { ClienteSupabase } from './supabase/cliente.mjs';
 
 export function criarApp(config, { fetchImpl } = {}) {
@@ -45,6 +47,7 @@ export function criarApp(config, { fetchImpl } = {}) {
   registrarConteudo(rotas, deps);
   registrarComentarios(rotas, deps); // v29
   registrarSeguranca(rotas, deps);
+  registrarInformativos(rotas, deps);
 
   async function tratar(req, res) {
     const url = new URL(req.url, 'http://localhost');
@@ -92,6 +95,9 @@ function dependenciasLocais(config, fetchImpl) {
     midias: new ColecaoJson(config.dataDir, 'midias'),
     telas: new ColecaoJson(config.dataDir, 'telas'),
     acidentes: new RepositorioAcidentesLocal(config.dataDir),
+    email: criarEnvioEmail(config, { fetchImpl }),
+    iat: new ColecaoJson(config.dataDir, 'iat'),
+    ist: new ColecaoJson(config.dataDir, 'ist'),
     arquivos: new RepositorioArquivosLocal(config.dataDir),
     planilhas: new FontePlanilhas(config, fetchImpl, armazem),
     incc: new FonteIncc(config, fetchImpl, armazem),
@@ -119,6 +125,9 @@ function dependenciasSupabase(config, fetchImpl) {
     midias: new ColecaoSupabase(cliente, 'midias'),
     telas: new ColecaoSupabase(cliente, 'telas'),
     acidentes: new RepositorioAcidentesSupabase(cliente),
+    email: criarEnvioEmail(config, { fetchImpl }),
+    iat: new ColecaoSupabase(cliente, 'informativos_iat', { mapa: linhaDocumento }),
+    ist: new ColecaoSupabase(cliente, 'informativos_ist', { mapa: linhaDocumento }),
     arquivos: new RepositorioArquivosSupabase(cliente),
     planilhas: new FontePlanilhas(config, fetchImpl, armazem),
     incc: new FonteIncc(config, fetchImpl, armazem),

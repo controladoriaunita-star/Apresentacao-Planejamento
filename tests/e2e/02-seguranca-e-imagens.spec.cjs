@@ -83,7 +83,7 @@ test('papel Segurança: entra direto na Administração → Segurança do Trabal
   await expect(page.getByRole('button', { name: 'Apresentar' })).toHaveCount(0);
 
   // Formulário lista as obras do cadastro (via /api/seguranca/obras).
-  await page.getByRole('button', { name: 'Novo acidente' }).click();
+  await page.getByRole('button', { name: 'Nova Ocorrência' }).click();
   await expect(page.getByRole('dialog').getByText('Residencial Alpha').first()).toBeAttached();
   await page.getByRole('dialog').getByRole('button', { name: 'Cancelar' }).click();
 

@@ -56,6 +56,12 @@ export function carregarConfig(sobrescrever = {}) {
       atualizarOnline: env.INCC_ONLINE !== 'false',
     },
     limiteUploadMB: Number(env.UPLOAD_LIMITE_MB || 25),
+    // Envio automático da IAT/IST com o PDF anexado (server/email/envio.mjs).
+    email: {
+      modo: ['graph', 'smtp', 'arquivo'].includes(env.EMAIL_ENVIO) ? env.EMAIL_ENVIO : '',
+      remetente: env.EMAIL_REMETENTE || (env.EMAIL_ENVIO === 'arquivo' ? 'demonstracao@unitaengenharia.com.br' : ''),
+      smtp: { host: env.SMTP_HOST || '', porta: Number(env.SMTP_PORT || 587), usuario: env.SMTP_USUARIO || '', senha: env.SMTP_SENHA || '' },
+    },
   };
   return { ...config, ...sobrescrever.config };
 }

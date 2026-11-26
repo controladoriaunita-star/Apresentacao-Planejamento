@@ -65,6 +65,7 @@ export function toast(tipo, titulo, texto = null, ms = 4500) {
   const el = alerta(tipo, titulo, texto);
   pilha.append(el);
   setTimeout(() => el.remove(), ms);
+  return el; // permite fechar antes (ex.: "Gerando o PDF…")
 }
 
 // ── Modal ────────────────────────────────────────────────────────────

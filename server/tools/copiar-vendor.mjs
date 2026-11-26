@@ -5,7 +5,7 @@
  * chart.js, xlsx, heic2any, utif ou pako no package.json.
  * heic2any (HEIC/HEIF), utif + pako (TIFF) só são carregados quando alguém escolhe uma imagem nesses formatos.
  */
-import { copyFileSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -19,9 +19,27 @@ const arquivos = [
   ['node_modules/heic2any/dist/heic2any.min.js', 'heic2any.min.js'],
   ['node_modules/utif/UTIF.js', 'utif.js'],
   ['node_modules/pako/dist/pako_inflate.min.js', 'pako_inflate.min.js'],
+  // PDF da IAT/IST gerado no navegador (para baixar e anexar ao e-mail enviado pelo servidor)
+  ['node_modules/jspdf/dist/jspdf.umd.min.js', 'jspdf.umd.min.js'],
+  ['node_modules/html2canvas/dist/html2canvas.min.js', 'html2canvas.min.js'],
 ];
 
 for (const [origem, nome] of arquivos) {
-  copyFileSync(join(raiz, origem), join(destino, nome));
+  // Leitura + escrita (e não copyFile): na pasta sincronizada do OneDrive/SharePoint o copyFile falha e pode apagar o destino.
+  const alvo = join(destino, nome);
+  let dados;
+  try {
+    dados = readFileSync(join(raiz, origem));
+  } catch (e) {
+    // Arquivo só "na nuvem" (OneDrive) ou ilegível: mantém a cópia já versionada em public/vendor.
+    if (!existsSync(alvo)) throw e;
+    console.warn(`mantido: public/vendor/${nome} (não foi possível ler ${origem}: ${e.code})`);
+    continue;
+  }
+  if (existsSync(alvo) && readFileSync(alvo).equals(dados)) {
+    console.log(`igual: public/vendor/${nome}`);
+    continue;
+  }
+  writeFileSync(alvo, dados);
   console.log(`copiado ${origem} → public/vendor/${nome}`);
 }

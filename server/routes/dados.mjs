@@ -5,7 +5,7 @@
  */
 import { filtrarMatriz } from '../../public/js/domain/acesso.js';
 import { ABAS } from '../../public/js/domain/colunas.js';
-import { associarObrasConhecidas, cadastrosDePlanilha, normalizarCadastro } from '../../public/js/domain/cadastro-obra.js';
+import { associarObrasConhecidas, cadastrosDePlanilha, emailValido, normalizarCadastro, normalizarEmails } from '../../public/js/domain/cadastro-obra.js';
 import { normalizarEscalas, normalizarLayout } from '../../public/js/domain/layout-resumo.js';
 import { normalizarOcultas } from '../../public/js/domain/colunas-ocultas.js';
 import { normalizarNomes } from '../../public/js/domain/nomes-colunas.js';
@@ -153,6 +153,16 @@ export function registrarDados(rotas, { planilhas, incc, cadastro, acidentes, ar
     }
     const salvo = await cadastro.upsertPor('chave', { ...registro, atualizadoPor: usuario.email });
     enviarJson(req, res, 200, salvo);
+  });
+
+  /** E-mails da obra (Cadastro de obras → Cadastrar e-mails): recebem a IAT e a IST desta obra. */
+  rotas.adicionar('PUT', '/api/obras/cadastro/:id/emails', { permissao: 'editarConteudo' }, async ({ req, res, params, usuario }) => {
+    const { emails } = await lerJson(req);
+    if (!Array.isArray(emails)) throw erro(400, 'Envie a lista de e-mails.');
+    const invalidos = emails.filter((e) => !emailValido(e));
+    if (invalidos.length) throw erro(400, `E-mail inválido: ${invalidos.slice(0, 3).join(', ')}.`);
+    if (!(await cadastro.obter(params.id))) throw erro(404, 'Cadastro não encontrado.');
+    enviarJson(req, res, 200, await cadastro.atualizar(params.id, { emails: normalizarEmails(emails), atualizadoPor: usuario.email }));
   });
 
   /** Importação: corpo = linhas da planilha "Painel de Obras" já lidas no navegador (objetos por cabeçalho). */
