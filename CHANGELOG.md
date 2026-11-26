@@ -5,13 +5,20 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | v36.4 (publicada em 25/11/2026) |
-| Dev (local) | v38 (em validação) |
+| Dev (local) | v41 (em validação) |
 
-## v38 — 25/11/2026 — barra de rolagem no menu de abas
+## v41 — 26/11/2026 — barra de rolagem no menu de abas
 
 - Com muitas abas/novas telas, o menu do topo passa a mostrar uma barra de rolagem horizontal fina em telas menores
   (antes rolava com a barra oculta e as abas pareciam cortadas). Só `public/css/layout.css`. Com o cabeçalho em duas
   linhas (v29) as abas quebram linha e a barra não aparece.
+
+## v39 — 26/11/2026 — Colunas "Sem correção" de volta no Econômico do Cliente
+
+- Resumo Econômico na apresentação **Cliente**: as colunas **Resultado s/ correção** e **IEC s/ correção** voltam a
+  aparecer (estavam ocultas por regra fixa desde a v28). Agora entram em **"Colunas do cliente"** (Dev), no grupo
+  "Sem correção", e podem ser ocultadas como as demais — na tela e no PDF. Na Obra nada muda.
+- `domain/colunas-ocultas.js` e `pages/resumo-economico.js`; testes de domínio e de tela atualizados.
 
 ## v36.4 — 25/11/2026 — TxC e fotos: filtros e exclusão em lote
 
