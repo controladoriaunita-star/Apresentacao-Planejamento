@@ -171,9 +171,15 @@ function alternarApresentacao() {
 }
 document.addEventListener('fullscreenchange', () => document.body.classList.toggle('apresentando', Boolean(document.fullscreenElement)));
 
+/** Esquece os dados do usuário que saiu (senão o próximo a entrar nesta aba os veria até recarregar). */
+function encerrarSessao() {
+  estado.limparSessao();
+  telasExtras = [];
+}
+
 async function sair() {
   await api.post('/auth/logout').catch(() => {});
-  estado.usuario = null;
+  encerrarSessao();
   iniciar();
 }
 
@@ -297,7 +303,7 @@ window.addEventListener('hashchange', () => {
 });
 window.addEventListener('sessao-expirada', () => {
   if (!estado.usuario) return;
-  estado.usuario = null;
+  encerrarSessao();
   toast('warning', 'Sua sessão expirou', 'Entre novamente.');
   iniciar();
 });

@@ -82,6 +82,9 @@ test('papel Segurança: entra direto na Administração → Segurança do Trabal
   await expect(page.getByRole('group', { name: 'Apresentação' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Apresentar' })).toHaveCount(0);
 
+  // "Sair" do Dev não deixa os dados dele na aba: sem as apresentações carregadas, nada de "Abas da apresentação".
+  await expect(page.getByRole('navigation', { name: 'Abas da apresentação' })).toHaveCount(0);
+
   // Formulário lista as obras do cadastro (via /api/seguranca/obras).
   await page.getByRole('button', { name: 'Nova Ocorrência' }).click();
   await expect(page.getByRole('dialog').getByText('Residencial Alpha').first()).toBeAttached();
@@ -94,8 +97,7 @@ test('papel Segurança: entra direto na Administração → Segurança do Trabal
   await page.getByRole('dialog').getByLabel('Novo e-mail').fill('tst.alpha@unita.com.br');
   await page.getByRole('dialog').getByRole('button', { name: 'Salvar e-mails' }).click();
   await expect(page.getByText('E-mails salvos')).toBeVisible();
-  // Recarrega: "Sair" não limpa da memória os dados do Dev que entrou antes nesta mesma aba.
-  await page.reload();
+  // Sem recarregar: "Sair" limpa os dados do Dev que entrou antes nesta aba, e a contagem vem das obras da Segurança.
   await page.getByRole('button', { name: 'E-mails das obras' }).click();
   await page.getByRole('dialog').getByLabel('Buscar obra').fill('alpha');
   await expect(page.getByRole('dialog').getByRole('button', { name: /Cadastrar e-mails/ }).first()).toContainText('1');
