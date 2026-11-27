@@ -31,6 +31,29 @@ test('graph: token do aplicativo e sendMail com cópia e PDF em base64', async (
   assert.equal(corpo.message.body.contentType, 'HTML');
 });
 
+test('graph: sai da caixa de quem está logado (de); EMAIL_REMETENTE só sem "de"; 404 explica a caixa', async () => {
+  const urls = [];
+  let status = 202;
+  const fetchFalso = async (url) => {
+    urls.push(String(url));
+    if (String(url).includes('/oauth2/')) return new Response(JSON.stringify({ access_token: 'tk', expires_in: 3600 }), { status: 200 });
+    return status === 202 ? new Response(null, { status }) : new Response(JSON.stringify({ error: { message: 'User not found' } }), { status });
+  };
+  const envio = criarEnvioEmail(configBase({ modo: 'graph', remetente: 'seguranca@unitaengenharia.com.br' }), { fetchImpl: fetchFalso });
+  assert.deepEqual(envio.situacao('tst.obra@unitaengenharia.com.br'), { modo: 'graph', remetente: 'tst.obra@unitaengenharia.com.br' });
+  await envio.enviar({ ...mensagem, de: 'tst.obra@unitaengenharia.com.br', para: ['eng@unita.com.br', 'adm@unita.com.br'] });
+  assert.ok(urls.at(-1).endsWith('/users/tst.obra%40unitaengenharia.com.br/sendMail'));
+  await envio.enviar(mensagem);
+  assert.ok(urls.at(-1).endsWith('/users/seguranca%40unitaengenharia.com.br/sendMail'));
+  status = 404;
+  await assert.rejects(envio.enviar({ ...mensagem, de: 'cliente@outro.com' }), /cliente@outro\.com não tem caixa de e-mail/);
+
+  // Sem EMAIL_REMETENTE: o Graph funciona com a caixa de quem está logado.
+  const semRemetente = criarEnvioEmail(configBase({ modo: 'graph' }), { fetchImpl: fetchFalso });
+  assert.equal(semRemetente.situacao('tst.obra@unitaengenharia.com.br').modo, 'graph');
+  assert.equal(semRemetente.situacao().modo, null);
+});
+
 test('graph: token reaproveitado entre envios (uma autenticação só)', async () => {
   let tokens = 0;
   const fetchFalso = async (url) => {

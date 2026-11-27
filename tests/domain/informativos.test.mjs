@@ -30,15 +30,16 @@ test('IAT Metrocasa: puxa da IAT, tipo pela fórmula e complemento só onde o us
   const semEmpresa = normalizarIat({ ...iat, razaoSocial: '' });
   assert.deepEqual(pendenciasMetrocasa(semEmpresa, cadastro), ['Nome da Empresa Contratada']);
   assert.deepEqual(pendenciasMetrocasa({ ...semEmpresa, metrocasa: { empresa: 'Contratada X' } }, cadastro), [], 'complementar resolve');
-  assert.equal(emailInformativo('metrocasa', iat, cadastro).para, 'comunicacao.acidentes@metrocasa.com.br');
+  assert.deepEqual(emailInformativo('metrocasa', iat, cadastro).para, [], 'sem destinatário fixo da Metrocasa (v40.3)');
 });
 
-test('e-mail: cópia para os e-mails da obra e ficha completa no corpo', () => {
-  const cadastro = { obra: 'MC Centro', cliente: 'Metrocasa', emails: ['eng@unita.com.br', 'acidentes@unitaengenharia.com.br'] };
+test('e-mail: só para os e-mails da obra (todos em Para) e ficha completa no corpo', () => {
+  const cadastro = { obra: 'MC Centro', cliente: 'Metrocasa', emails: ['eng@unita.com.br', 'adm@unita.com.br'] };
   const iat = { ...normalizarIat({ obraId: 'o1', nomeAcidentado: 'Fulano', parteCorpo: '753030000', observacoes: 'x'.repeat(3000) }), numero: 7 };
   const e = emailInformativo('iat', iat, cadastro);
-  assert.equal(e.para, 'acidentes@unitaengenharia.com.br');
-  assert.deepEqual(e.copia, ['eng@unita.com.br'], 'o destinatário principal não se repete em cópia');
+  assert.deepEqual(e.para, ['eng@unita.com.br', 'adm@unita.com.br'], 'sem acidentes@ fixo: só os e-mails da obra');
+  assert.deepEqual(e.copia, []);
+  assert.deepEqual(emailInformativo('ist', { numero: 1 }, { obra: 'Sem e-mail' }).para, [], 'obra sem e-mail: ninguém');
   assert.match(e.assunto, /IAT nº 07 – MC Centro – Fulano/);
   assert.match(e.corpo, /III- DADOS DO ACIDENTADO\nNome do Colaborador Acidentado: Fulano/);
   assert.match(e.corpo, /753030000 – Crânio/);
