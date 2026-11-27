@@ -69,7 +69,9 @@ registro já gravado (o gravado é mantido; para corrigir, editar o acidente).
 - Envio por e-mail: PDF gerado no navegador (`ui/envio-informativo.js`), enviado como arquivo e anexado pelo servidor
   (`server/email/envio.mjs`, modos graph | smtp | arquivo). Para produção: `EMAIL_ENVIO=graph` com `EMAIL_REMETENTE`
   (caixa do Microsoft 365) e a permissão de aplicativo **Mail.Send** consentida no Entra para o aplicativo do SharePoint
-  — ou `EMAIL_ENVIO=smtp` com `SMTP_HOST/PORT/USUARIO/SENHA`.
+  — ou `EMAIL_ENVIO=smtp` com `SMTP_HOST/PORT/USUARIO/SENHA`. Anexos acima de 3 MB no total (comum com fotos, e na IST
+  com 2 PDFs) vão por rascunho + sessão de upload do Graph e exigem também **Mail.ReadWrite** (aplicativo, consentida).
+  A confirmação abre na hora; os PDFs são gerados e enviados ao armazenamento enquanto o usuário confere.
 - Pontos para validar: (1) quais campos da IAT são obrigatórios para o PDF (hoje: obra, razão social, acidentado,
   cargo, data, hora, tipo, local, tabelas 13/14/15 e descrição); (2) e-mail com anexo automático exige um serviço de
   envio — resolvido com o envio pelo servidor (falta a conta/permissão de produção); (3) a célula I17 da aba IAT (07:00, sem rótulo) não foi reproduzida;
