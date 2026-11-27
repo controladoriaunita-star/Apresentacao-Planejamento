@@ -5,7 +5,17 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | v36.4 (publicada em 25/11/2026) |
-| Dev (local) | v40.3 (em validação) |
+| Dev (local) | v40.4 (em validação) |
+
+## v40.4 — 27/11/2026 — "Sair" limpa os dados da aba
+
+- Ao clicar em **Sair** (ou quando a sessão expira), os dados do usuário que estava na aba ficavam na memória até
+  recarregar a página: quem entrasse em seguida na mesma aba podia ver obras e dados do anterior (por exemplo, o papel
+  Segurança via o Cadastro de obras completo do Dev). Agora "Sair" esquece tudo (dados das apresentações, obras da
+  Segurança, cálculos em cache e telas extras), e uma carga ainda em andamento do usuário anterior é descartada.
+- Preferências do navegador (filtro de obras e mês, colunas fixadas) continuam como antes.
+- `estado.limparSessao()` em `core/estado.js`; teste de tela do papel Segurança sem o recarregamento que contornava o
+  problema (falha com o código anterior).
 
 ## v40.3 — 27/11/2026 — IAT/IST: só para os e-mails da obra, da caixa de quem está logado
 

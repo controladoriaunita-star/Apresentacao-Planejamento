@@ -12,6 +12,8 @@ const CHAVE_FILTRO = 'apresentacao.filtro';
 const ouvintes = new Set();
 const bases = new Map(); // visão → base
 const fisicos = new Map(); // `${visao}|${obra}` → Promise<Map>
+// Muda a cada "Sair"/sessão expirada: resposta de uma carga iniciada antes é descartada (não volta a encher a aba).
+let sessaoDados = 0;
 
 export const estado = {
   usuario: null,
@@ -40,35 +42,59 @@ export const estado = {
   },
 
   async carregarDados({ forcarServidor = false } = {}) {
+    const sessao = sessaoDados;
     this.carregando = true;
     this.erro = null;
     this.avisar();
     try {
-      this.bruto = forcarServidor ? await api.post('/dados/atualizar') : await api.get('/dados/resumo');
+      const bruto = forcarServidor ? await api.post('/dados/atualizar') : await api.get('/dados/resumo');
+      if (sessao !== sessaoDados) return;
+      this.bruto = bruto;
       bases.clear();
       fisicos.clear();
       ajustarFiltro(this);
     } catch (e) {
-      this.erro = e.message;
+      if (sessao === sessaoDados) this.erro = e.message;
     } finally {
-      this.carregando = false;
-      this.avisar();
+      if (sessao === sessaoDados) {
+        this.carregando = false;
+        this.avisar();
+      }
     }
   },
 
   /** Papel Segurança: carrega só id/nome/cliente/sistema estrutural das obras do Cadastro de obras. */
   async carregarObrasSeguranca() {
+    const sessao = sessaoDados;
     this.carregando = true;
     this.erro = null;
     this.avisar();
     try {
-      this.obrasSeguranca = await api.get('/seguranca/obras');
+      const obras = await api.get('/seguranca/obras');
+      if (sessao === sessaoDados) this.obrasSeguranca = obras;
     } catch (e) {
-      this.erro = e.message;
+      if (sessao === sessaoDados) this.erro = e.message;
     } finally {
-      this.carregando = false;
-      this.avisar();
+      if (sessao === sessaoDados) {
+        this.carregando = false;
+        this.avisar();
+      }
     }
+  },
+
+  /**
+   * "Sair" ou sessão expirada: esquece tudo do usuário que estava na aba (dados das apresentações, obras da
+   * Segurança, cálculos em cache) e descarta cargas ainda em andamento. O próximo login carrega do zero.
+   */
+  limparSessao() {
+    sessaoDados += 1;
+    this.usuario = null;
+    this.bruto = null;
+    this.obrasSeguranca = null;
+    this.erro = null;
+    this.carregando = false;
+    bases.clear();
+    fisicos.clear();
   },
 
   /** Obras do Cadastro de obras (completo ou, no papel Segurança, o resumo de /seguranca/obras). */
