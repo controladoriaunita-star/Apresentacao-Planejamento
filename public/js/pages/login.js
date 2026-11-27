@@ -5,7 +5,7 @@
  * quem não tem conta no 365 (clientes) e só abrem no botão "Cliente".
  */
 import { api } from '../core/api.js';
-import { h, montar } from '../core/dom.js';
+import { h, montar, svg } from '../core/dom.js';
 import { alerta, campo } from '../ui/componentes.js';
 import { dentroDeIframe, entrarComMicrosoft, prepararPopup } from './login-microsoft.js';
 
@@ -24,15 +24,33 @@ export function retornoDoEmail() {
   return { erro: /expired|invalid/i.test(erro) ? 'O link expirou ou já foi usado. Peça um novo.' : erro };
 }
 
-function telaAcesso(alvo, form) {
-  montar(alvo, h('div', { class: 'login' },
-    h('img', { class: 'padrao', src: 'assets/brand/pattern-un.png', alt: '', 'aria-hidden': 'true' }),
-    h('div', { class: 'card' },
-      h('img', { class: 'logo', src: 'assets/brand/logo-unita.png', alt: 'Unità Engenharia' }),
-      h('div', { class: 'eyebrow' }, 'Planejamento e Controle'),
-      h('h1', { style: { margin: '4px 0 20px' } }, 'Apresentação de obras'),
-      form)));
+/**
+ * Moldura da tela de entrada no modelo do "Kit - Tela de Login Unità" (css/unita-login.css, classes `ul-`):
+ * painel grafite da marca à esquerda (faixa no topo no celular) e o cartão de acesso à direita. Só desenha:
+ * os formulários e botões de entrar continuam os do app, dentro de `.ul-conteudo`.
+ */
+function telaAcesso(alvo, form, { titulo = 'Bem-vindo', subtitulo = 'Entre para acessar a apresentação das obras.' } = {}) {
+  montar(alvo, h('div', { class: 'ul-login' },
+    h('aside', { class: 'ul-marca' },
+      h('img', { class: 'ul-padrao', src: 'assets/brand/pattern-un.png', alt: '', 'aria-hidden': 'true' }),
+      h('img', { class: 'ul-logo', src: 'assets/brand/logo-unita-white.png', alt: 'Unità Engenharia' }),
+      h('div', { class: 'ul-marca-texto' },
+        h('p', { class: 'ul-sobretitulo' }, 'Planejamento e Controle'),
+        h('h2', {}, 'Apresentação de obras'),
+        h('p', {}, 'Avanço físico, econômico, prazos e fotos de cada obra, num só lugar.'))),
+    h('section', { class: 'ul-acesso' },
+      h('div', { class: 'ul-cartao' },
+        h('p', { class: 'ul-sobretitulo' }, 'Unità · Planejamento'),
+        h('h1', {}, titulo),
+        subtitulo ? h('p', { class: 'ul-subtitulo' }, subtitulo) : null,
+        h('div', { class: 'ul-conteudo' }, form)),
+      h('p', { class: 'ul-rodape' }, 'Unità Engenharia · uso interno'))));
 }
+
+/** Logo oficial da Microsoft (4 quadrados), do kit. */
+const logoMicrosoft = () => svg('svg', { class: 'ul-ms-logo', viewBox: '0 0 21 21', 'aria-hidden': 'true' },
+  ['M0 0h10v10H0z', 'M11 0h10v10H11z', 'M0 11h10v10H0z', 'M11 11h10v10H11z']
+    .map((d, i) => svg('path', { d, style: `fill: var(--microsoft-${i + 1})` })));
 
 /** Formulário com envio assíncrono: desabilita o botão e mostra o erro da API acima dos campos. */
 function formulario(botao, enviar, ...conteudo) {
@@ -72,14 +90,14 @@ export function renderLogin(alvo, { precisaConfigurar, convite, microsoft, aviso
     form.append(h('button', { class: 'btn ghost sm', type: 'button', onclick: () => renderEsqueci(alvo, { email: email.value, voltar: () => renderLogin(alvo, { precisaConfigurar, convite, microsoft, aoEntrar }) }) }, 'Esqueci minha senha'));
   }
   if (!comMicrosoft) {
-    telaAcesso(alvo, form);
+    telaAcesso(alvo, form, { subtitulo: precisaConfigurar ? 'Configure o primeiro acesso ao app.' : 'Entre com o seu e-mail e senha.' });
     (precisaConfigurar ? nome : email).focus();
     return;
   }
   // Clientes: o formulário de e-mail e senha só aparece depois do botão "Cliente".
   form.prepend(h('p', { class: 'muted', style: { margin: 0 } }, 'Acesso de clientes: e-mail e senha do app.'));
   form.style.display = 'none';
-  const botaoCliente = h('button', { class: 'btn', type: 'button', style: { width: '100%' }, onclick: () => {
+  const botaoCliente = h('button', { class: 'ul-botao ul-botao-secundario', type: 'button', onclick: () => {
     botaoCliente.style.display = 'none';
     form.style.display = '';
     email.focus();
@@ -87,18 +105,16 @@ export function renderLogin(alvo, { precisaConfigurar, convite, microsoft, aviso
   telaAcesso(alvo, h('div', { class: 'stack' },
     aviso ? alerta('warning', aviso) : null,
     blocoMicrosoft(aoEntrar),
-    h('div', { class: 'separador-login' }, 'ou'),
+    h('div', { class: 'ul-separador' }, 'ou'),
     botaoCliente,
-    form));
+    form), { subtitulo: 'Entre com a sua conta corporativa para acessar a apresentação.' });
 }
 
 /** v35 — "Entrar com a conta Microsoft": navega na aba própria; no iframe do portal, espera o pop-up. */
 function blocoMicrosoft(aoEntrar) {
   const mensagem = h('div');
   let cancelado = false;
-  const logo = h('span', { class: 'logo-microsoft', 'aria-hidden': 'true' },
-    [1, 2, 3, 4].map((n) => h('i', { style: { background: `var(--microsoft-${n})` } })));
-  const botao = h('button', { class: 'btn primary botao-microsoft', type: 'button', onclick: async () => {
+  const botao = h('button', { class: 'ul-botao', type: 'button', onclick: async () => {
     cancelado = false;
     botao.disabled = true;
     montar(mensagem, dentroDeIframe()
@@ -113,11 +129,11 @@ function blocoMicrosoft(aoEntrar) {
       montar(mensagem, alerta('error', e.message));
     }
     botao.disabled = false;
-  } }, logo, 'Entrar com a conta Microsoft');
+  } }, logoMicrosoft(), 'Entrar com a conta Microsoft');
   return h('div', { class: 'stack' },
-    h('p', { class: 'muted', style: { margin: 0 } }, 'Equipe Unità: entre com a sua conta do Office 365.'),
     mensagem,
-    botao);
+    botao,
+    h('p', { class: 'ul-nota' }, 'Equipe Unità: use a sua conta do Office 365.'));
 }
 
 /**
@@ -129,12 +145,12 @@ export function renderPopupMicrosoft(alvo, { modo, erro }) {
   if (modo === 'fim') {
     telaAcesso(alvo, h('div', { class: 'stack' },
       erro ? alerta('error', 'Não foi possível entrar', erro) : alerta('success', 'Login concluído', 'O app já está abrindo no portal. Esta janela vai fechar.'),
-      fechar));
+      fechar), { titulo: 'Login Microsoft', subtitulo: null });
     if (!erro) setTimeout(() => window.close(), 1200);
     return;
   }
   const corpo = h('div', { class: 'stack' }, alerta('info', 'Abrindo o login da Microsoft…'));
-  telaAcesso(alvo, corpo);
+  telaAcesso(alvo, corpo, { titulo: 'Login Microsoft', subtitulo: null });
   prepararPopup()
     .then((url) => { location.href = url; })
     .catch((e) => montar(corpo, alerta('error', 'Não foi possível abrir o login', e.message), fechar));
@@ -160,7 +176,7 @@ function renderEsqueci(alvo, { email: inicial, voltar }) {
   h('p', { class: 'muted', style: { margin: 0 } }, 'Informe seu e-mail para receber o link de nova senha.'),
   campo('E-mail', email));
   form.append(h('button', { class: 'btn ghost sm', type: 'button', onclick: voltar }, 'Voltar ao login'));
-  telaAcesso(alvo, form);
+  telaAcesso(alvo, form, { titulo: 'Nova senha', subtitulo: null });
   email.focus();
 }
 
@@ -176,6 +192,6 @@ export function renderDefinirSenha(alvo, { token, hash, tipo, aoEntrar }) {
   },
   alerta('info', tipo === 'invite' ? 'Bem-vindo(a)!' : 'Nova senha', tipo === 'invite' ? 'Crie a sua senha para acessar o app.' : 'Crie uma nova senha para continuar.'),
   campo('Nova senha', senha, 'Mínimo de 8 caracteres'),
-  campo('Repita a senha', repetir)));
+  campo('Repita a senha', repetir)), { subtitulo: null });
   senha.focus();
 }

@@ -5,7 +5,19 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | v36.4 (publicada em 25/11/2026) |
-| Dev (local) | v40.5 (em validação) |
+| Dev (local) | v40.6 (em validação) |
+
+## v40.6 — 27/11/2026 — Tela de login no modelo do "Kit - Tela de Login Unità"
+
+- A tela de entrada segue o modelo único das ferramentas (Cadastro de Fornecedores): painel grafite da marca à
+  esquerda (logo branco, faixa laranja, padrão "UN" a 7%, "Planejamento e Controle · Apresentação de obras") e o
+  cartão "Unità · Planejamento / Bem-vindo" à direita; no celular o painel vira uma faixa no topo.
+- Botão "Entrar com a conta Microsoft" e "Cliente" no visual do kit (`ul-botao`), separador "ou" e nota abaixo do
+  botão. Os formulários (e-mail e senha, primeiro acesso, esqueci a senha, definir senha, pop-up do portal) e a
+  autenticação não mudam.
+- `css/unita-login.css` é o CSS do kit (isolado em `.ul-login`, sem o `@import` das fontes, que o `index.html` já
+  carrega); as imagens são as de `assets/brand/`, iguais às do kit. Saiu o CSS antigo do login de `layout.css`.
+  A checagem de cores aceita as cores do kit nesse arquivo.
 
 ## v40.5 — 27/11/2026 — IAT/IST: corpo do e-mail no layout do PDF e envio pelo papel Segurança
 
