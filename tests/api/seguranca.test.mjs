@@ -201,7 +201,7 @@ for (const store of ['local', 'supabase']) {
       // Não pode: dados das apresentações, cadastro de obras, conteúdo, usuários.
       for (const [metodo, caminho, corpo] of [
         ['GET', '/api/dados/resumo'], ['GET', '/api/obras/cadastro'], ['GET', '/api/telas'], ['GET', '/api/midias'], ['GET', '/api/incc'],
-        ['PUT', '/api/obras/cadastro', { obra: 'X' }], ['POST', '/api/arquivos/envio', { nome: 'a.png', tipo: 'image/png', tamanho: 10 }],
+        ['PUT', '/api/obras/cadastro', { obra: 'X' }],
         ['GET', '/api/usuarios'],
       ]) {
         assert.equal((await seg(metodo, caminho, corpo)).status, 403, `${metodo} ${caminho}`);

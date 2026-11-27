@@ -8,16 +8,20 @@
  */
 import { podeVerMidia, podeVerTela } from '../../public/js/domain/acesso.js';
 import { normalizarMidia, normalizarTela } from '../../public/js/domain/conteudo.js';
+import { arquivosDoInformativo } from '../../public/js/domain/informativos.js';
+import { pode } from '../../public/js/domain/permissoes.js';
 import { enviarBinario, enviarJson, erro, lerCorpo, lerJson } from '../http/respostas.mjs';
 import { TIPOS_ACEITOS } from '../store/arquivos.mjs';
 
 const MENSAGEM_TIPO = 'Tipo de arquivo não aceito. Envie imagem (PNG, JPG, WEBP, GIF — o app converte os demais formatos), PDF ou planilha (XLSX, XLS, CSV).';
 const nomeSeguro = (nome) => String(nome ?? 'arquivo').replace(/[\\/:*?"<>|]+/g, '_').slice(0, 180);
 
-export function registrarConteudo(rotas, { arquivos, midias, telas, config }) {
+export function registrarConteudo(rotas, { arquivos, midias, telas, iat, ist, config }) {
   const limite = config.limiteUploadMB * 1024 * 1024;
 
-  rotas.adicionar('POST', '/api/arquivos/envio', { permissao: 'editarConteudo' }, async ({ req, res, usuario }) => {
+  // Subir arquivo: Dev, Planejamento e também o papel Segurança (PDF do e-mail, fotos e evidências da IAT/IST).
+  // Só sobe: ligar o arquivo a uma apresentação (mídias, telas) continua exigindo editarConteudo.
+  rotas.adicionar('POST', '/api/arquivos/envio', { permissao: 'editarSeguranca' }, async ({ req, res, usuario }) => {
     const { nome, tipo, tamanho } = await lerJson(req);
     if (!TIPOS_ACEITOS[tipo]) throw erro(415, MENSAGEM_TIPO);
     if (!(Number(tamanho) > 0)) throw erro(400, 'Arquivo vazio.');
@@ -27,7 +31,7 @@ export function registrarConteudo(rotas, { arquivos, midias, telas, config }) {
   });
 
   // Envio pelo servidor: corpo binário cru (portável para PHP com php://input).
-  rotas.adicionar('POST', '/api/arquivos', { permissao: 'editarConteudo' }, async ({ req, res, usuario }) => {
+  rotas.adicionar('POST', '/api/arquivos', { permissao: 'editarSeguranca' }, async ({ req, res, usuario }) => {
     const tipo = String(req.headers['content-type'] ?? '').split(';')[0].trim().toLowerCase();
     if (!TIPOS_ACEITOS[tipo]) throw erro(415, MENSAGEM_TIPO);
     const nome = nomeSeguro(decodeURIComponent(String(req.headers['x-nome-arquivo'] ?? 'arquivo')));
@@ -36,15 +40,30 @@ export function registrarConteudo(rotas, { arquivos, midias, telas, config }) {
     enviarJson(req, res, 201, await arquivos.salvar({ nome, tipo, dados, usuario: usuario.email }));
   });
 
+  /** Arquivos da Segurança do Trabalho: fotos, evidências e PDFs enviados das IAT/IST. */
+  async function arquivoDaSeguranca(id) {
+    for (const colecao of [iat, ist]) {
+      if (colecao && (await colecao.listar()).some((d) => arquivosDoInformativo(d).includes(id))) return true;
+    }
+    return false;
+  }
+
+  /** Papel Segurança (não vê as apresentações): só os arquivos da Segurança e os que ele mesmo enviou. */
+  async function arquivoDoPapelSeguranca(id, usuario) {
+    const registro = await arquivos.registro(id).catch(() => null);
+    return Boolean(registro) && (registro.enviadoPor === usuario.email || (await arquivoDaSeguranca(id)));
+  }
+
   /** v26: usuário restrito só baixa arquivo de mídia ou tela que ele pode ver. */
-  async function arquivoLiberado(id, acesso) {
+  async function arquivoLiberado(id, acesso, usuario) {
+    if (!pode(usuario.papel, 'ver')) return arquivoDoPapelSeguranca(id, usuario);
     if (!acesso.restrito) return true;
     if ((await midias.listar()).some((m) => m.arquivoId === id && podeVerMidia(m, acesso))) return true;
     return (await telas.listar()).some((t) => t.ativa !== false && podeVerTela(t, acesso) && t.blocos.some((b) => b.arquivoId === id));
   }
 
-  rotas.adicionar('GET', '/api/arquivos/:id', { permissao: 'ver' }, async ({ res, params, acesso }) => {
-    if (!(await arquivoLiberado(params.id, acesso))) throw erro(404, 'Arquivo não encontrado.');
+  rotas.adicionar('GET', '/api/arquivos/:id', { permissao: 'verSeguranca' }, async ({ res, params, acesso, usuario }) => {
+    if (!(await arquivoLiberado(params.id, acesso, usuario))) throw erro(404, 'Arquivo não encontrado.');
     const arquivo = await arquivos.ler(params.id).catch(() => null);
     if (!arquivo) throw erro(404, 'Arquivo não encontrado.');
     if (arquivo.redirecionar) {
@@ -59,7 +78,12 @@ export function registrarConteudo(rotas, { arquivos, midias, telas, config }) {
   });
 
   /** Descarta um arquivo cujo envio direto falhou (ou que não chegou a ser usado). */
-  rotas.adicionar('DELETE', '/api/arquivos/:id', { permissao: 'editarConteudo' }, async ({ req, res, params }) => {
+  // Papel Segurança só apaga o que ele mesmo enviou (ex.: PDF de um envio cancelado).
+  rotas.adicionar('DELETE', '/api/arquivos/:id', { permissao: 'editarSeguranca' }, async ({ req, res, params, usuario }) => {
+    if (!pode(usuario.papel, 'editarConteudo')) {
+      const registro = await arquivos.registro(params.id).catch(() => null);
+      if (!registro || registro.enviadoPor !== usuario.email) throw erro(403, 'Seu perfil não tem permissão para esta ação.');
+    }
     await arquivos.remover(params.id);
     enviarJson(req, res, 200, { ok: true });
   });

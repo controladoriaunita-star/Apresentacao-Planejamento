@@ -5,7 +5,20 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | v36.4 (publicada em 25/11/2026) |
-| Dev (local) | v40.4 (em validação) |
+| Dev (local) | v40.5 (em validação) |
+
+## v40.5 — 27/11/2026 — IAT/IST: corpo do e-mail no layout do PDF e envio pelo papel Segurança
+
+- **Corpo no layout do PDF**: o e-mail leva a mesma folha da planilha (cabeçalho com o logo, faixas das seções,
+  rótulos em cinza, mesmas mesclagens), montada no navegador com estilos inline para o Outlook. As fotos ficam só no
+  PDF anexo (no corpo, "Foto no PDF anexo" no lugar). Na IST vão as duas folhas (IST e Contra-Relatório). A tela de
+  envio mostra a prévia em "Ver o corpo do e-mail". O servidor limpa do HTML scripts, iframes e eventos; sem a folha,
+  usa a ficha em texto como antes.
+- **Papel Segurança envia pelo app**: antes não conseguia subir o PDF do anexo (nem fotos e evidências da IAT/IST) nem
+  abrir arquivos. Agora sobe arquivos e vê/apaga **só os da Segurança** (fotos, evidências e PDFs das IAT/IST) e os que
+  ele mesmo enviou — nada das apresentações. Ligar arquivo a uma apresentação continua exigindo o Planejamento.
+- Testes: API (papel Segurança com arquivos próprios e de terceiros, envio com corpo em tabela e limpeza do HTML) e
+  tela (prévia do corpo; papel Segurança envia a IAT).
 
 ## v40.4 — 27/11/2026 — "Sair" limpa os dados da aba
 

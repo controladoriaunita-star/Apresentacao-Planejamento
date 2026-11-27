@@ -38,6 +38,11 @@ test('IAT: "Enviar por e-mail" abre a confirmação na hora, prepara o PDF em se
   await expect(dialogo.getByText('tst.obra@e2e.test, eng.obra@e2e.test', { exact: true })).toBeVisible();
   await expect(dialogo.getByText(DEV.email, { exact: true })).toBeVisible(); // De: quem está logado
   await expect(dialogo.locator('.envio-resumo')).not.toContainText('acidentes@');
+
+  // v40.5: corpo no layout do PDF (a mesma folha, em tabela), visto na prévia.
+  await dialogo.getByText('Ver o corpo do e-mail').click();
+  await expect(dialogo.locator('.envio-previa table')).toBeVisible();
+  await expect(dialogo.locator('.envio-previa')).toContainText('I- DADOS DE IDENTIFICAÇÃO');
   await expect(page.getByText('Gerando o PDF para anexar')).toHaveCount(0);
 
   // O anexo vira link quando o PDF fica pronto.
@@ -89,5 +94,35 @@ test('IAT: obra sem e-mails cadastrados não abre o envio e avisa onde cadastrar
   await page.getByRole('button', { name: 'Enviar por e-mail' }).click();
   await expect(page.getByText('Obra sem e-mails cadastrados')).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0);
+  await api(page, 'DELETE', `/seguranca/iat/${iat.dados.id}`);
+});
+
+test('papel Segurança envia a IAT pelo app (sobe o PDF e o e-mail sai da caixa dele)', async ({ page }) => {
+  const SEGURANCA = { email: 'seguranca@e2e.test', senha: 'senha-e2e-789' }; // criado no 02
+  await entrar(page, DEV);
+  const obra = (await api(page, 'GET', '/obras/cadastro')).dados.find((c) => c.id);
+  await api(page, 'PUT', `/obras/cadastro/${obra.id}/emails`, { emails: ['tst.obra@e2e.test'] });
+  await page.getByRole('button', { name: 'Sair' }).click();
+
+  await page.getByLabel('E-mail').fill(SEGURANCA.email);
+  await page.getByLabel('Senha').fill(SEGURANCA.senha);
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await expect(page).toHaveURL(/#\/admin\/seguranca$/);
+  const iat = await api(page, 'POST', '/seguranca/iat', {
+    obraId: obra.id, razaoSocial: 'Empreiteira S', nomeAcidentado: 'Fulano Seg', cargoFuncao: 'Pedreiro', dataAcidente: '2026-11-23',
+    horaAcidente: '08:00', tipoAcidente: 'Típico', localAcidente: 'Torre D', parteCorpo: '753030000', agenteCausador: '302010200',
+    situacaoGeradora: '200004300', observacoes: 'Queda de material.', duracaoTratamentoDias: 1,
+  });
+  expect(iat.status).toBe(201);
+  await page.goto(`/#/admin/seguranca-iat/${iat.dados.id}`);
+  await expect(page.getByRole('heading', { name: /^IAT nº/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Enviar por e-mail' }).click();
+  const dialogo = page.getByRole('dialog');
+  await expect(dialogo.getByText(SEGURANCA.email, { exact: true })).toBeVisible(); // De
+  await expect(dialogo.getByRole('link', { name: /^IAT .*\.pdf$/ })).toBeVisible({ timeout: 20000 });
+  await dialogo.getByRole('button', { name: 'Enviar e-mail' }).click();
+  await expect(page.getByText('E-mail gravado (modo demonstração)')).toBeVisible();
+  const salvo = await api(page, 'GET', `/seguranca/iat/${iat.dados.id}`);
+  expect(salvo.dados.envios[0].de).toBe(SEGURANCA.email);
   await api(page, 'DELETE', `/seguranca/iat/${iat.dados.id}`);
 });

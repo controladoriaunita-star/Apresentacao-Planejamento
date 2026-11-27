@@ -42,6 +42,59 @@ function garantirEstilo() {
   });
 }
 
+// ── Corpo do e-mail no layout do PDF ────────────────────────────────────
+// A mesma folha da planilha (tabela com as mesclagens), com os estilos copiados para atributos/inline — e-mail não lê
+// CSS de arquivo e o Outlook ignora quase todo <style>. As fotos ficam só no PDF anexo (no corpo, um aviso no lugar).
+const ESTILOS_CELULA = ['background-color', 'color', 'font-weight', 'font-size', 'text-align', 'vertical-align', 'white-space', 'line-height', 'letter-spacing'];
+
+/** HTML da folha para o corpo do e-mail. A folha original não é alterada (trabalha numa cópia). */
+export async function folhaParaEmail(folha) {
+  await garantirEstilo();
+  const copia = folha.cloneNode(true);
+  const area = h('div', { 'aria-hidden': 'true', style: { position: 'fixed', left: '-10000px', top: '0', width: `${LARGURA_PX}px` } }, copia);
+  document.body.append(area);
+  try {
+    const mesa = copia.matches('table') ? copia : copia.querySelector('table');
+    for (const tabela of [mesa, ...copia.querySelectorAll('table table')].filter(Boolean)) {
+      Object.assign(tabela, { cellPadding: '0', cellSpacing: '0', border: '0' });
+      tabela.setAttribute('width', String(LARGURA_PX));
+      tabela.setAttribute('style', `border-collapse:collapse;table-layout:fixed;width:100%;max-width:${LARGURA_PX}px;font-family:Arial,Helvetica,sans-serif;`);
+    }
+    for (const col of copia.querySelectorAll('col')) {
+      col.setAttribute('width', String(Math.round(col.getBoundingClientRect().width)));
+      col.removeAttribute('style');
+    }
+    for (const td of copia.querySelectorAll('td')) {
+      const cs = getComputedStyle(td);
+      const estilo = [`border:1px solid ${cs.borderTopColor}`, `padding:${cs.paddingTop} ${cs.paddingRight} ${cs.paddingBottom} ${cs.paddingLeft}`,
+        ...ESTILOS_CELULA.map((prop) => `${prop}:${cs.getPropertyValue(prop)}`)];
+      if (td.classList.contains('foto')) {
+        const tinhaFoto = Boolean(td.querySelector('img'));
+        montar(td, tinhaFoto ? h('span', { style: { color: cs.color, fontStyle: 'italic' } }, 'Foto no PDF anexo') : '');
+        estilo.push('height:28px', 'text-align:center');
+      } else {
+        // Altura fixa só onde a folha define (campos de valor, plano de ação); rótulos e legendas seguem o conteúdo.
+        const alturaFixa = td.classList.contains('val') || td.parentElement?.classList.contains('plano');
+        if (alturaFixa) estilo.push(`height:${Math.round(td.getBoundingClientRect().height)}px`);
+        for (const img of td.querySelectorAll('img')) {
+          const { width, height } = img.getBoundingClientRect();
+          img.setAttribute('src', new URL(img.getAttribute('src'), location.href).href); // logo público do app
+          img.setAttribute('width', String(Math.round(width)));
+          img.setAttribute('height', String(Math.round(height)));
+          img.setAttribute('style', 'display:block;margin:0 auto;border:0;');
+        }
+      }
+      td.setAttribute('style', `${estilo.join(';')};`);
+      td.removeAttribute('class');
+    }
+    for (const el of copia.querySelectorAll('[class]')) el.removeAttribute('class');
+    copia.removeAttribute('class');
+    return copia.outerHTML;
+  } finally {
+    area.remove();
+  }
+}
+
 const imagensProntas = (raiz) => Promise.all([...raiz.querySelectorAll('img')].map((img) => (img.complete ? null : new Promise((ok) => { img.onload = ok; img.onerror = ok; }))));
 
 /** Gera o PDF (Blob) com uma ou mais folhas, cada folha começando numa página nova. */
@@ -124,6 +177,7 @@ export async function enviarInformativo({ tipo, qual, doc, cadastro, pdfs, aoEnv
   const linha = (rotulo, conteudo) => h('div', { class: 'envio-linha' }, h('b', {}, rotulo), h('div', {}, conteudo));
   const de = h('span', { class: 'muted' }, '…');
   const aviso = h('div');
+  const previa = h('div', { class: 'envio-previa' }, h('span', { class: 'muted' }, 'Montando…'));
   const itensAnexo = pdfs.map((p) => h('span', { class: 'envio-anexo-preparando', title: 'Preparando o PDF' }, h('span', { class: 'spin' }), p.nome));
   let pedidoSituacao;
   let preparo;
@@ -135,7 +189,8 @@ export async function enviarInformativo({ tipo, qual, doc, cadastro, pdfs, aoEnv
     let r = null;
     try {
       const [situacao] = await Promise.all([pedidoSituacao, preparo]);
-      if (situacao.modo && !cancelado) r = await api.post(`/seguranca/${tipo}/${doc.id}/enviar`, { qual, anexos: anexos.map((a) => a.id) });
+      const html = await corpoPronto.catch(() => null); // sem o layout, o servidor usa a ficha em texto
+      if (situacao.modo && !cancelado) r = await api.post(`/seguranca/${tipo}/${doc.id}/enviar`, { qual, anexos: anexos.map((a) => a.id), html });
     } catch (e) {
       if (!cancelado && !bloqueado) toast('error', 'O e-mail não foi enviado', e.message, 10000);
     }
@@ -162,7 +217,7 @@ export async function enviarInformativo({ tipo, qual, doc, cadastro, pdfs, aoEnv
         linha('Para', paraTexto(email.para)),
         linha('Assunto', email.assunto),
         linha('Anexo(s)', h('div', { class: 'envio-anexos' }, itensAnexo))),
-      h('details', { class: 'envio-corpo' }, h('summary', {}, 'Ver o corpo do e-mail'), h('pre', {}, email.corpo))),
+      h('details', { class: 'envio-corpo' }, h('summary', {}, 'Ver o corpo do e-mail'), previa)),
     acoes: [h('button', { class: 'btn ghost', type: 'button', onclick: () => m.fechar() }, 'Cancelar'), botaoEnviar],
   });
 
@@ -184,6 +239,9 @@ export async function enviarInformativo({ tipo, qual, doc, cadastro, pdfs, aoEnv
   });
 
   // PDFs gerados um a um (usam a mesma área de desenho); cada um sobe assim que fica pronto, sem esperar o próximo.
+  const corpoPronto = Promise.all(pdfs.map((p) => folhaParaEmail(p.folha))).then((folhas) => folhas.join('<br>'));
+  corpoPronto.then((html) => { previa.innerHTML = html; }).catch(() => montar(previa, h('pre', {}, email.corpo)));
+
   preparo = (async () => {
     const subidas = [];
     for (const [i, p] of pdfs.entries()) {
