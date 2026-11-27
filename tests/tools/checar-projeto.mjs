@@ -37,7 +37,7 @@ for (const arquivo of todos.filter((a) => ['.js', '.mjs'].includes(extname(a))))
 // 2. Cores só em tokens.css (o meta theme-color do HTML é exigido pela identidade)
 const HEX = /#[0-9a-fA-F]{3,8}\b/g;
 for (const arquivo of todos.filter((a) => a.includes(`${'public'}`) && ['.css', '.js', '.html'].includes(extname(a)))) {
-  if (rel(arquivo) === 'public/css/tokens.css') continue;
+  if (rel(arquivo) === 'public/css/tokens.css' || rel(arquivo) === 'public/css/unita-login.css') continue; // o kit de login traz as cores da marca (não mudar por ferramenta)
   readFileSync(arquivo, 'utf8').split('\n').forEach((linha, i) => {
     if (linha.includes('theme-color')) return;
     const achados = linha.match(HEX)?.filter((h) => !/^#(\/|[a-z]+-)/.test(h));
