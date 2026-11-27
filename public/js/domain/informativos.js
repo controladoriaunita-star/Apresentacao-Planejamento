@@ -46,8 +46,6 @@ export const AVISO_ESOCIAL = 'Conforme legislação vigente do eSocial (informa�
 export const RODAPE_IAT = 'Após o preenchimento deste informativo, o TST da obra deverá enviar por e-mail em até 24 horas do acidente ocorrido para acidentes@unitaengenharia.com.br, com cópia para o Engenheiro Residente, Administrativo da Obra, Qualidade e responsável da empresa contratada, quando aplicável.';
 export const RODAPE_METROCASA = 'METROCASA: após o preenchimento deste informativo, o TST da obra inicialmente deverá converter este arquivo no formato PDF, e posteriormente enviar por e-mail em até 24 horas do acidente ocorrido para comunicacao.acidentes@metrocasa.com.br';
 export const RODAPE_IST = 'Após o preenchimento deste informativo, o TST da obra deverá enviar por e-mail para acidentes@unitaengenharia.com.br, com cópia para Coordenador de Engenharia, Engenheiro Residente, Administrativo da Obra, Qualidade e responsável da empresa contratada, quando aplicável.';
-export const EMAIL_ACIDENTES = 'acidentes@unitaengenharia.com.br';
-export const EMAIL_METROCASA = 'comunicacao.acidentes@metrocasa.com.br';
 
 /** Valores fixos da seção I e II da IAT (vêm preenchidos na planilha). */
 export const FIXOS_IAT = Object.freeze({ emitente: 'Empregador', tipoCat: 'Inicial', iniciativaCat: 'Empregador', fonteCadastramento: 'eSocial', tipoInscricao: 'CNPJ' });
@@ -347,20 +345,21 @@ function fichaNoCorpo(tipo, doc, cadastro) {
 }
 
 /**
- * E-mail da IAT, IAT Metrocasa ou IST: destinatário da ficha, cópia para os e-mails cadastrados na obra
- * (Cadastro de obras → Cadastrar e-mails) e a ficha preenchida no corpo. O servidor envia com o PDF anexado.
+ * E-mail da IAT, IAT Metrocasa ou IST: vai só para os e-mails cadastrados na obra (Cadastro de obras → Cadastrar
+ * e-mails), todos em "Para" — sem destinatário fixo (v40.3) — com a ficha preenchida no corpo. O servidor envia com
+ * o PDF anexado, da caixa de quem está logado. Obra sem e-mail: `para` vazio e o envio é recusado.
  */
 export function emailInformativo(tipo, doc, cadastro) {
   const obra = cadastro?.obra ?? '';
-  const copia = (cadastro?.emails ?? []).filter((e) => e !== EMAIL_ACIDENTES && e !== EMAIL_METROCASA);
+  const para = [...new Set(cadastro?.emails ?? [])];
   const anexo = tipo === 'metrocasa' ? 'o PDF do resumo da ocorrência' : tipo === 'iat' ? 'o PDF da IAT' : 'os PDFs da IST e do Contra-Relatório';
   const rodape = tipo === 'metrocasa' ? RODAPE_METROCASA : tipo === 'iat' ? RODAPE_IAT : RODAPE_IST;
   const assunto = tipo === 'metrocasa' ? `Resumo da ocorrência (Metrocasa) – ${obra} – ${dataBr(doc.dataAcidente)}`
     : tipo === 'iat' ? `IAT nº ${nr(doc.numero)} – ${obra} – ${doc.nomeAcidentado || 'acidentado'} – ${dataBr(doc.dataAcidente)}`
       : `IST nº ${nr(doc.numero)} – ${obra} – ${doc.classificacao} – ${dataBr(doc.data)}`;
   return {
-    para: tipo === 'metrocasa' ? EMAIL_METROCASA : EMAIL_ACIDENTES,
-    copia,
+    para,
+    copia: [],
     assunto,
     corpo: ['Prezados,', '', `${tipo === 'ist' ? 'Seguem' : 'Segue'} em anexo ${anexo} da obra ${obra}.`, '', ...fichaNoCorpo(tipo, doc, cadastro), '', rodape].join('\n'),
   };

@@ -38,8 +38,9 @@ function corpoHtml(texto) {
 export function registrarInformativos(rotas, { iat, ist, cadastro, arquivos, email }) {
   const colecoes = { iat, ist };
 
-  rotas.adicionar('GET', '/api/seguranca/envio', { permissao: 'editarSeguranca' }, async ({ req, res }) => {
-    enviarJson(req, res, 200, email.situacao());
+  /** Modo de envio e a caixa que envia (a de quem está logado, no Graph). */
+  rotas.adicionar('GET', '/api/seguranca/envio', { permissao: 'editarSeguranca' }, async ({ req, res, usuario }) => {
+    enviarJson(req, res, 200, email.situacao(usuario.email));
   });
 
   for (const [tipo, def] of Object.entries(TIPOS)) {
@@ -104,6 +105,9 @@ export function registrarInformativos(rotas, { iat, ist, cadastro, arquivos, ema
       if (!def.envios.includes(qual) || (qual === 'metrocasa' && !ehMetrocasa(obra))) throw erro(400, 'Envio inválido para este informativo.');
       const faltam = PENDENCIAS[qual](doc, obra);
       if (faltam.length) throw erro(400, `Complete a ${NOMES_ENVIO[qual]} antes de enviar. Falta(m): ${faltam.join(', ')}.`);
+      const mensagem = emailInformativo(qual, doc, obra);
+      // v40.3: sem destinatário fixo — vai só para os e-mails cadastrados na obra.
+      if (!mensagem.para.length) throw erro(400, `A obra ${obra?.obra ?? ''} não tem e-mails cadastrados. Cadastre em Segurança do Trabalho → E-mails das obras.`);
       if (!Array.isArray(anexos) || !anexos.length || anexos.length > 3) throw erro(400, 'Envie o PDF gerado para anexar.');
       const arquivosAnexos = [];
       for (const id of anexos) {
@@ -111,9 +115,9 @@ export function registrarInformativos(rotas, { iat, ist, cadastro, arquivos, ema
         if (!arq || arq.registro.tipo !== 'application/pdf') throw erro(400, 'Anexo não encontrado ou não é PDF.');
         arquivosAnexos.push({ nome: arq.registro.nome, tipo: 'application/pdf', dados: arq.dados });
       }
-      const mensagem = emailInformativo(qual, doc, obra);
-      const resultado = await email.enviar({ ...mensagem, texto: mensagem.corpo, html: corpoHtml(mensagem.corpo), anexos: arquivosAnexos });
-      const envio = { qual, em: new Date().toISOString(), por: usuario.email, modo: resultado.modo, para: mensagem.para, copia: mensagem.copia, assunto: mensagem.assunto, anexos: anexos.map(String) };
+      const resultado = await email.enviar({ ...mensagem, de: usuario.email, texto: mensagem.corpo, html: corpoHtml(mensagem.corpo), anexos: arquivosAnexos });
+      const de = email.situacao(usuario.email).remetente;
+      const envio = { qual, em: new Date().toISOString(), por: usuario.email, de, modo: resultado.modo, para: mensagem.para, copia: mensagem.copia, assunto: mensagem.assunto, anexos: anexos.map(String) };
       const salvo = await colecao.atualizar(params.id, { envios: [...(doc.envios ?? []), envio] });
       enviarJson(req, res, 200, { ...envio, arquivo: resultado.arquivo ?? null, envios: salvo.envios });
     });

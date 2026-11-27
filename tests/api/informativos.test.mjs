@@ -53,8 +53,8 @@ for (const store of ['local', 'supabase']) {
       assert.equal((await dev('GET', `/api/seguranca/iat/${id}`)).status, 404);
     });
 
-    test('envio automático: pendências, só PDF, e-mail com cópia da obra e anexo, histórico preservado', async () => {
-      await dev('PUT', `/api/obras/cadastro/${obra.id}/emails`, { emails: ['eng@unita.com.br', 'adm@unita.com.br'] });
+    test('envio automático: pendências, só PDF, só para os e-mails da obra, da caixa de quem está logado, histórico', async () => {
+      await dev('PUT', `/api/obras/cadastro/${obra.id}/emails`, { emails: [] });
       const completa = {
         obraId: obra.id, razaoSocial: 'Empreiteira X', nomeAcidentado: 'Fulano de Tal', cargoFuncao: 'Pedreiro', dataAcidente: '2026-11-20',
         horaAcidente: '09:30', tipoAcidente: 'Típico', localAcidente: 'Torre A', parteCorpo: '753030000', agenteCausador: '302010200',
@@ -64,7 +64,13 @@ for (const store of ['local', 'supabase']) {
       const incompleta = (await dev('POST', '/api/seguranca/iat', { obraId: obra.id })).dados;
       const pdf = await enviarArquivo(dev, srv.fetchExterno, new Uint8Array(Buffer.from('%PDF-1.4 teste')), 'application/pdf', 'IAT 01.pdf');
       const png = await enviarArquivo(dev, srv.fetchExterno, new Uint8Array(Buffer.from('png')), 'image/png', 'foto.png');
-      assert.deepEqual((await dev('GET', '/api/seguranca/envio')).dados, { modo: 'arquivo', remetente: 'demonstracao@unitaengenharia.com.br' });
+      assert.deepEqual((await dev('GET', '/api/seguranca/envio')).dados, { modo: 'arquivo', remetente: 'dev@unita.com.br' }, 'sai da caixa de quem está logado');
+
+      // Obra sem e-mails cadastrados: não envia (não há destinatário fixo).
+      let semEmail = await dev('POST', `/api/seguranca/iat/${iat.id}/enviar`, { qual: 'iat', anexos: [pdf.dados.id] });
+      assert.equal(semEmail.status, 400);
+      assert.match(semEmail.dados.erro, /não tem e-mails cadastrados/);
+      await dev('PUT', `/api/obras/cadastro/${obra.id}/emails`, { emails: ['eng@unita.com.br', 'adm@unita.com.br'] });
 
       let r = await dev('POST', `/api/seguranca/iat/${incompleta.id}/enviar`, { qual: 'iat', anexos: [pdf.dados.id] });
       assert.equal(r.status, 400);
@@ -73,16 +79,18 @@ for (const store of ['local', 'supabase']) {
       assert.equal(r.status, 400, 'só PDF');
       r = await dev('POST', `/api/seguranca/iat/${iat.id}/enviar`, { qual: 'metrocasa', anexos: [pdf.dados.id] });
       assert.equal(r.status, 200, r.dados.erro);
-      assert.equal(r.dados.para, 'comunicacao.acidentes@metrocasa.com.br');
+      assert.deepEqual(r.dados.para, ['eng@unita.com.br', 'adm@unita.com.br'], 'Metrocasa também vai só para os e-mails da obra');
       r = await dev('POST', `/api/seguranca/iat/${iat.id}/enviar`, { qual: 'iat', anexos: [pdf.dados.id] });
       assert.equal(r.status, 200, r.dados.erro);
-      assert.deepEqual([r.dados.modo, r.dados.para, r.dados.copia], ['arquivo', 'acidentes@unitaengenharia.com.br', ['eng@unita.com.br', 'adm@unita.com.br']]);
+      assert.deepEqual([r.dados.modo, r.dados.para, r.dados.copia, r.dados.de], ['arquivo', ['eng@unita.com.br', 'adm@unita.com.br'], [], 'dev@unita.com.br']);
       assert.equal(r.dados.envios.length, 2);
 
       const pasta = join(srv.config.dataDir, 'emails-enviados');
       const eml = readFileSync(join(pasta, r.dados.arquivo), 'utf8');
-      assert.match(eml, /^To: acidentes@unitaengenharia\.com\.br/m);
-      assert.match(eml, /^Cc: eng@unita\.com\.br, adm@unita\.com\.br/m);
+      assert.match(eml, /^From: dev@unita\.com\.br/m);
+      assert.match(eml, /^To: eng@unita\.com\.br, adm@unita\.com\.br/m);
+      const cabecalho = eml.split('\r\n\r\n')[0];
+      assert.doesNotMatch(cabecalho, /acidentes@|metrocasa\.com|^Cc:/m, 'destinatários só da obra (o rodapé da ficha ainda cita o endereço)');
       assert.match(eml, /Content-Type: application\/pdf; name="?IAT 01\.pdf/);
       assert.equal(readdirSync(pasta).length, 2);
 

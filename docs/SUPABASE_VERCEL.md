@@ -140,6 +140,8 @@ pessoa criar a senha). Usa o mesmo registro do Entra ID do SharePoint (`MS_GRAPH
 2. **Recomendado — limitar a uma caixa**: `Mail.Send` de aplicativo permite enviar como qualquer caixa da empresa.
    No Exchange Online (PowerShell, por um admin), restrinja o app à caixa remetente, por exemplo com
    `New-ApplicationAccessPolicy -AppId <MS_GRAPH_CLIENT_ID> -PolicyScopeGroupId <grupo com a caixa> -AccessRight RestrictAccess`.
+   **Atenção (v40.3)**: a IAT/IST sai da caixa de quem está logado. Com a política, o grupo precisa conter também as
+   caixas de quem envia IAT/IST (Dev, Planejamento e Segurança); senão o Graph recusa o envio delas.
 3. **Vercel** → `EMAIL_REMETENTE=planejamento.controle@unitaengenharia.com.br` → **Redeploy**.
 4. Teste: "Esqueci minha senha" com o e-mail de um cliente; o e-mail chega da caixa acima.
 

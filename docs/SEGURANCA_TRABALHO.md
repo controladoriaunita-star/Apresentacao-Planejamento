@@ -67,9 +67,12 @@ registro já gravado (o gravado é mantido; para corrigir, editar o acidente).
 - IAT Metrocasa: `ehMetrocasa` (Cliente do cadastro contém "Metrocasa"), `metrocasaDaIat` (fórmulas da aba) e
   `metrocasaEfetivo` (complemento do usuário por cima). Pendências: `pendenciasIat`, `pendenciasMetrocasa`, `pendenciasIst`.
 - Envio por e-mail: PDF gerado no navegador (`ui/envio-informativo.js`), enviado como arquivo e anexado pelo servidor
-  (`server/email/envio.mjs`, modos graph | smtp | arquivo). Para produção: `EMAIL_ENVIO=graph` com `EMAIL_REMETENTE`
-  (caixa do Microsoft 365) e a permissão de aplicativo **Mail.Send** consentida no Entra para o aplicativo do SharePoint
-  — ou `EMAIL_ENVIO=smtp` com `SMTP_HOST/PORT/USUARIO/SENHA`. Anexos acima de 3 MB no total (comum com fotos, e na IST
+  (`server/email/envio.mjs`, modos graph | smtp | arquivo). **Destinatários (v40.3)**: só os e-mails cadastrados na
+  obra (Segurança do Trabalho → E-mails das obras), todos em "Para" — sem endereço fixo (nem acidentes@ nem o da
+  Metrocasa); obra sem e-mail não envia. **Remetente**: no Graph, a caixa do Microsoft 365 de quem está logado (o e-mail
+  fica nos Itens Enviados dessa pessoa); no SMTP, `EMAIL_REMETENTE` com "responder para" quem enviou. Para produção:
+  `EMAIL_ENVIO=graph` e a permissão de aplicativo **Mail.Send** consentida no Entra para o aplicativo do SharePoint
+  — ou `EMAIL_ENVIO=smtp` com `SMTP_HOST/PORT/USUARIO/SENHA` e `EMAIL_REMETENTE`. Anexos acima de 3 MB no total (comum com fotos, e na IST
   com 2 PDFs) vão por rascunho + sessão de upload do Graph e exigem também **Mail.ReadWrite** (aplicativo, consentida).
   A confirmação abre na hora; os PDFs são gerados e enviados ao armazenamento enquanto o usuário confere.
 - Pontos para validar: (1) quais campos da IAT são obrigatórios para o PDF (hoje: obra, razão social, acidentado,

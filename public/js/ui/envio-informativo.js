@@ -15,6 +15,8 @@ import { icone } from './icones.js';
 const LARGURA_PX = 718; // 190 mm a 96 dpi (A4 retrato com 10 mm de margem)
 const ALTURA_PAGINA_PX = (LARGURA_PX * 277) / 190;
 const NOMES = { iat: 'IAT', metrocasa: 'IAT Metrocasa', ist: 'IST' };
+/** Destinatários: lista (v40.3) ou um endereço só (envios antigos do histórico). */
+const paraTexto = (para) => [para ?? []].flat().join(', ');
 
 const scripts = new Map();
 function carregarScript(src) {
@@ -102,13 +104,18 @@ export async function baixarPdf(folhas, nomeArquivo) {
 }
 
 /**
- * Abre na hora a confirmação (De, Para, Cópia, Assunto e corpo já estão no navegador) e, enquanto o usuário confere,
+ * Abre na hora a confirmação (De, Para, Assunto e corpo já estão no navegador) e, enquanto o usuário confere,
  * gera os PDFs e os sobe para o armazenamento. Cada anexo aparece "preparando" e vira link quando fica pronto;
  * "Enviar e-mail" espera os anexos (se clicado antes, envia assim que ficarem prontos).
  * @param {{tipo: 'iat'|'ist', qual: 'iat'|'metrocasa'|'ist', doc: object, cadastro: object, pdfs: Array<{nome: string, folha: Element}>, aoEnviar: Function}} p
  */
 export async function enviarInformativo({ tipo, qual, doc, cadastro, pdfs, aoEnviar }) {
   const email = emailInformativo(qual, doc, cadastro);
+  // Sem destinatário fixo: vai só para os e-mails cadastrados na obra (o servidor também confere).
+  if (!email.para.length) {
+    toast('warning', 'Obra sem e-mails cadastrados', `Cadastre os e-mails de ${cadastro?.obra ?? 'obra'} em Segurança do Trabalho → E-mails das obras: a ${NOMES[qual]} vai só para eles.`, 10000);
+    return;
+  }
   const anexos = [];
   let enviado = false;
   let cancelado = false;
@@ -140,7 +147,7 @@ export async function enviarInformativo({ tipo, qual, doc, cadastro, pdfs, aoEnv
     enviado = true;
     m.fechar();
     toast('success', r.modo === 'arquivo' ? 'E-mail gravado (modo demonstração)' : 'E-mail enviado',
-      r.modo === 'arquivo' ? `Arquivo: data/exemplo/emails-enviados/${r.arquivo}` : `Para ${r.para}${r.copia.length ? ` com cópia para ${r.copia.length} e-mail(s)` : ''}.`, 9000);
+      r.modo === 'arquivo' ? `Arquivo: data/exemplo/emails-enviados/${r.arquivo}` : `Para ${paraTexto(r.para)}.`, 9000);
     aoEnviar?.(r.envios);
   });
 
@@ -152,8 +159,7 @@ export async function enviarInformativo({ tipo, qual, doc, cadastro, pdfs, aoEnv
       aviso,
       h('div', { class: 'envio-resumo' },
         linha('De', de),
-        linha('Para', email.para),
-        linha('Cópia', email.copia.length ? email.copia.join(', ') : h('span', { class: 'muted' }, 'Nenhum e-mail cadastrado na obra (Cadastro de obras → Cadastrar e-mails).')),
+        linha('Para', paraTexto(email.para)),
         linha('Assunto', email.assunto),
         linha('Anexo(s)', h('div', { class: 'envio-anexos' }, itensAnexo))),
       h('details', { class: 'envio-corpo' }, h('summary', {}, 'Ver o corpo do e-mail'), h('pre', {}, email.corpo))),
@@ -215,7 +221,7 @@ export function historicoEnvios(envios = []) {
       h('tbody', {}, [...envios].reverse().map((e) => h('tr', {},
         h('td', { class: 'esq' }, fmtDataHora(e.em), e.modo === 'arquivo' ? h('small', { class: 'muted' }, ' (demonstração)') : null),
         h('td', { class: 'esq' }, NOMES[e.qual] ?? e.qual),
-        h('td', { class: 'esq' }, e.para),
+        h('td', { class: 'esq' }, paraTexto(e.para)),
         h('td', { class: 'esq' }, e.copia?.length ? e.copia.join(', ') : '—'),
         h('td', { class: 'esq' }, e.por),
         h('td', { class: 'esq' }, (e.anexos ?? []).map((id, i) => h('a', { href: api.urlArquivo(id), target: '_blank', rel: 'noopener' }, `PDF ${i + 1} `)))))))));

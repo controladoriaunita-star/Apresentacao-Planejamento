@@ -5,7 +5,19 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | v36.4 (publicada em 25/11/2026) |
-| Dev (local) | v40.2 (em validação) |
+| Dev (local) | v40.3 (em validação) |
+
+## v40.3 — 27/11/2026 — IAT/IST: só para os e-mails da obra, da caixa de quem está logado
+
+- **Sem destinatário fixo**: a IAT, a IAT Metrocasa e a IST não vão mais para acidentes@unitaengenharia.com.br nem para
+  comunicacao.acidentes@metrocasa.com.br. Vão só para os e-mails cadastrados na obra (Segurança do Trabalho → E-mails
+  das obras), todos em "Para". Para continuar mandando a um desses endereços, basta cadastrá-lo na obra.
+- Obra sem e-mail cadastrado: "Enviar por e-mail" avisa onde cadastrar e não abre o envio (o servidor também recusa).
+- **Remetente = quem está logado**: no Graph o e-mail sai da caixa do Microsoft 365 da pessoa e fica nos Itens
+  Enviados dela; a tela mostra essa caixa em "De". Conta sem caixa no 365: erro explica. No SMTP continua saindo de
+  `EMAIL_REMETENTE`, com "responder para" quem enviou. O histórico de envios guarda também `de`.
+- Os rodapés das fichas (texto das planilhas SMS-IAT/IST) não mudaram.
+- Testes: domínio, API (obra sem e-mail, remetente = usuário, cabeçalhos do .eml) e tela (06-envio-email).
 
 ## v40.2 — 27/11/2026 — Envio da IAT/IST por e-mail: anexos grandes e confirmação na hora
 

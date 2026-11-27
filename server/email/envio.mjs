@@ -1,13 +1,15 @@
 /**
  * Envio de e-mail da IAT/IST com o PDF anexado, pelo servidor. Modo por EMAIL_ENVIO:
- *   graph   → Microsoft Graph com o mesmo aplicativo do SharePoint (MS_GRAPH_*); a caixa EMAIL_REMETENTE precisa existir.
+ *   graph   → Microsoft Graph com o mesmo aplicativo do SharePoint (MS_GRAPH_*). O e-mail sai da caixa do Microsoft 365
+ *             de quem está logado (`de`); EMAIL_REMETENTE só é usado se `de` não vier.
  *             Anexos até 3 MB: sendMail (permissão de aplicativo Mail.Send). Acima: rascunho + sessão de upload + send
  *             (também Mail.ReadWrite). Permissões de aplicativo consentidas pelo administrador.
  *   smtp    → SMTP (ex.: smtp.office365.com:587) com SMTP_HOST, SMTP_PORT, SMTP_USUARIO, SMTP_SENHA e EMAIL_REMETENTE.
  *   arquivo → não envia: grava a mensagem completa (.eml, com anexos) em DATA_DIR/emails-enviados — demonstração e testes.
  *   vazio   → envio desligado (a API responde 503 explicando o que configurar).
  *
- * enviar({ para, copia, assunto, texto, html, anexos: [{ nome, tipo, dados: Buffer }] }) → { modo, id, arquivo? }
+ * enviar({ de, para, copia, assunto, texto, html, anexos: [{ nome, tipo, dados: Buffer }] }) → { modo, id, arquivo? }
+ *   de = e-mail de quem está logado (graph: a caixa que envia; smtp: responder para; arquivo: remetente).
  */
 import { mkdirSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
@@ -29,9 +31,11 @@ async function compor(mensagem, remetente) {
   return info.message;
 }
 
-const paraNodemailer = ({ para, copia = [], assunto, texto, html, anexos = [] }, remetente) => ({
+const lista = (v) => [v ?? []].flat().filter(Boolean);
+const paraNodemailer = ({ para, copia = [], assunto, texto, html, anexos = [], responderPara }, remetente) => ({
   from: remetente,
-  to: para,
+  replyTo: responderPara || undefined,
+  to: lista(para),
   cc: copia.length ? copia : undefined,
   subject: assunto,
   text: texto,
@@ -59,8 +63,8 @@ export function criarEnvioEmail(config, { fetchImpl = fetch } = {}) {
   }
 
   /** Chamada ao Graph com o token; erro vira 502 com a mensagem da Microsoft e a permissão que falta. */
-  async function graph(metodo, caminho, corpo, permissao = 'Mail.Send') {
-    const res = await fetchImpl(`${GRAPH}/users/${encodeURIComponent(remetente)}${caminho}`, {
+  async function graph(caixa, metodo, caminho, corpo, permissao = 'Mail.Send') {
+    const res = await fetchImpl(`${GRAPH}/users/${encodeURIComponent(caixa)}${caminho}`, {
       method: metodo,
       headers: { authorization: `Bearer ${await tokenGraph()}`, ...(corpo ? { 'content-type': 'application/json' } : {}) },
       body: corpo ? JSON.stringify(corpo) : undefined,
@@ -68,15 +72,16 @@ export function criarEnvioEmail(config, { fetchImpl = fetch } = {}) {
     if (!res.ok) {
       const erroGraph = await res.json().catch(() => ({}));
       if (res.status === 401) tokenCache = null;
-      const dica = res.status === 403 ? ` O aplicativo precisa da permissão ${permissao} (aplicativo) consentida pelo administrador.` : '';
+      const dica = res.status === 403 ? ` O aplicativo precisa da permissão ${permissao} (aplicativo) consentida pelo administrador.`
+        : res.status === 404 ? ` A conta ${caixa} não tem caixa de e-mail no Microsoft 365 (o e-mail sai da caixa de quem está logado).` : '';
       throw new ErroHttp(502, `O Microsoft Graph recusou o envio (${res.status}): ${erroGraph.error?.message ?? res.statusText}.${dica}`);
     }
     return res.status === 202 || res.status === 204 ? null : res.json().catch(() => null);
   }
 
   /** Anexo grande: sessão de upload do Graph, em partes (múltiplas de 320 KiB). A URL já traz a autorização. */
-  async function subirAnexo(idMensagem, anexo) {
-    const sessao = await graph('POST', `/messages/${encodeURIComponent(idMensagem)}/attachments/createUploadSession`, {
+  async function subirAnexo(caixa, idMensagem, anexo) {
+    const sessao = await graph(caixa, 'POST', `/messages/${encodeURIComponent(idMensagem)}/attachments/createUploadSession`, {
       AttachmentItem: { attachmentType: 'file', name: anexo.nome, size: anexo.dados.length, contentType: anexo.tipo },
     }, PERMISSAO_GRANDES);
     for (let inicio = 0; inicio < anexo.dados.length; inicio += PARTE_UPLOAD) {
@@ -92,30 +97,31 @@ export function criarEnvioEmail(config, { fetchImpl = fetch } = {}) {
 
   const modos = {
     async graph(m) {
+      const caixa = m.de || remetente; // v40.3: a caixa de quem está logado
       const destinos = (lista) => lista.map((endereco) => ({ emailAddress: { address: endereco } }));
       const anexos = m.anexos ?? [];
       const mensagem = {
         subject: m.assunto,
         body: { contentType: 'HTML', content: m.html },
-        toRecipients: destinos([m.para]),
+        toRecipients: destinos(lista(m.para)),
         ccRecipients: destinos(m.copia ?? []),
       };
       const tamanho = anexos.reduce((s, a) => s + a.dados.length, 0);
       if (tamanho <= LIMITE_ENVIO_DIRETO) {
         // Até ~3 MB: tudo numa chamada (o Graph recusa pedidos acima de 4 MB, e o base64 cresce ~33%).
-        await graph('POST', '/sendMail', {
+        await graph(caixa, 'POST', '/sendMail', {
           message: { ...mensagem, attachments: anexos.map((a) => ({ '@odata.type': '#microsoft.graph.fileAttachment', name: a.nome, contentType: a.tipo, contentBytes: a.dados.toString('base64') })) },
           saveToSentItems: true,
         });
         return { modo: 'graph' };
       }
       // Acima disso: rascunho → anexos por sessão de upload → enviar (vai para Itens Enviados). Exige Mail.ReadWrite.
-      const rascunho = await graph('POST', '/messages', mensagem, PERMISSAO_GRANDES);
+      const rascunho = await graph(caixa, 'POST', '/messages', mensagem, PERMISSAO_GRANDES);
       try {
-        for (const anexo of anexos) await subirAnexo(rascunho.id, anexo);
-        await graph('POST', `/messages/${encodeURIComponent(rascunho.id)}/send`);
+        for (const anexo of anexos) await subirAnexo(caixa, rascunho.id, anexo);
+        await graph(caixa, 'POST', `/messages/${encodeURIComponent(rascunho.id)}/send`);
       } catch (e) {
-        await graph('DELETE', `/messages/${encodeURIComponent(rascunho.id)}`, null, PERMISSAO_GRANDES).catch(() => {});
+        await graph(caixa, 'DELETE', `/messages/${encodeURIComponent(rascunho.id)}`, null, PERMISSAO_GRANDES).catch(() => {});
         throw e;
       }
       return { modo: 'graph' };
@@ -128,7 +134,7 @@ export function criarEnvioEmail(config, { fetchImpl = fetch } = {}) {
         auth: smtp.usuario ? { user: smtp.usuario, pass: smtp.senha } : undefined,
       });
       try {
-        const info = await transporte.sendMail(paraNodemailer(m, remetente));
+        const info = await transporte.sendMail(paraNodemailer({ ...m, responderPara: m.de }, remetente));
         return { modo: 'smtp', id: info.messageId };
       } catch (e) {
         throw new ErroHttp(502, `O servidor de e-mail recusou o envio: ${e.response ?? e.message}`);
@@ -139,7 +145,7 @@ export function criarEnvioEmail(config, { fetchImpl = fetch } = {}) {
       const pasta = join(config.dataDir, 'emails-enviados');
       mkdirSync(pasta, { recursive: true });
       const nome = `${new Date().toISOString().replace(/[:.]/g, '-')}-${nomeArquivo(m.assunto)}.eml`;
-      await writeFile(join(pasta, nome), await compor(m, remetente));
+      await writeFile(join(pasta, nome), await compor(m, m.de || remetente));
       return { modo: 'arquivo', arquivo: nome };
     },
   };
@@ -147,15 +153,20 @@ export function criarEnvioEmail(config, { fetchImpl = fetch } = {}) {
   return {
     modo,
     remetente,
-    /** O que a tela mostra antes de enviar. */
-    situacao() {
-      const configurado = modo === 'arquivo' || (modo === 'graph' && remetente && config.graph.tenantId && config.graph.clientId && config.graph.clientSecret)
+    /**
+     * O que a tela mostra antes de enviar. `de` = e-mail de quem está logado: no Graph (e no modo arquivo) o e-mail
+     * sai da caixa dessa pessoa; no SMTP sai do EMAIL_REMETENTE (o servidor SMTP só autoriza essa caixa).
+     */
+    situacao(de = null) {
+      const doUsuario = modo === 'graph' || modo === 'arquivo';
+      const caixa = (doUsuario ? de : null) || remetente;
+      const configurado = modo === 'arquivo' || (modo === 'graph' && caixa && config.graph.tenantId && config.graph.clientId && config.graph.clientSecret)
         || (modo === 'smtp' && remetente && smtp.host);
-      return { modo: configurado ? modo : null, remetente: remetente || null };
+      return { modo: configurado ? modo : null, remetente: caixa || null };
     },
     async enviar(mensagem) {
-      if (!this.situacao().modo) {
-        throw new ErroHttp(503, 'O envio automático de e-mail não está configurado no servidor (EMAIL_ENVIO = graph ou smtp, e EMAIL_REMETENTE).');
+      if (!this.situacao(mensagem.de).modo) {
+        throw new ErroHttp(503, 'O envio automático de e-mail não está configurado no servidor (EMAIL_ENVIO = graph ou smtp).');
       }
       return modos[modo](mensagem);
     },
