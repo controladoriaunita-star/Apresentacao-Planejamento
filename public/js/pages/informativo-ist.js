@@ -8,7 +8,7 @@ import { h, montar } from '../core/dom.js';
 import { estado } from '../core/estado.js';
 import { CAMPOS_IST, FOTOS_IST, normalizarIst, pendenciasIst, RODAPE_IST } from '../domain/informativos.js';
 import { alerta, botaoAcao, carregando, confirmar, toast } from '../ui/componentes.js';
-import { baixarPdf, enviarInformativo, historicoEnvios } from '../ui/envio-informativo.js';
+import { baixarPdf, enviarInformativo, historicoEnvios, prepararPdf } from '../ui/envio-informativo.js';
 import { folhaContraRelatorio, folhaIst } from '../ui/impressao-informativos.js';
 import { campoInformativo, controleField, espacoFoto, grade, numeroFormatado, secao, subAbas } from '../ui/informativo.js';
 import { icone } from '../ui/icones.js';
@@ -17,6 +17,7 @@ const cadastrosDaObra = () => estado.cadastros().filter((c) => c.id).sort((a, b)
 const campoIst = (id) => CAMPOS_IST.find((c) => c.id === id);
 
 export async function renderInformativoIst(alvo, { id } = {}) {
+  prepararPdf(); // bibliotecas do PDF já carregadas quando o usuário for gerar ou enviar
   const cadastros = cadastrosDaObra();
   montar(alvo, carregando(6));
   let doc;

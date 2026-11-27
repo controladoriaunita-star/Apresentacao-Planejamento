@@ -9,7 +9,7 @@ import { api } from '../core/api.js';
 import { h, montar, token } from '../core/dom.js';
 import { fmtDataHora } from '../core/formato.js';
 import { emailInformativo } from '../domain/informativos.js';
-import { abrirModal, alerta, botaoAcao, toast } from './componentes.js';
+import { abrirModal, alerta, toast } from './componentes.js';
 import { icone } from './icones.js';
 
 const LARGURA_PX = 718; // 190 mm a 96 dpi (A4 retrato com 10 mm de margem)
@@ -102,64 +102,107 @@ export async function baixarPdf(folhas, nomeArquivo) {
 }
 
 /**
- * Gera os PDFs, mostra destinatários e anexos para confirmar e envia pelo servidor.
+ * Abre na hora a confirmação (De, Para, Cópia, Assunto e corpo já estão no navegador) e, enquanto o usuário confere,
+ * gera os PDFs e os sobe para o armazenamento. Cada anexo aparece "preparando" e vira link quando fica pronto;
+ * "Enviar e-mail" espera os anexos (se clicado antes, envia assim que ficarem prontos).
  * @param {{tipo: 'iat'|'ist', qual: 'iat'|'metrocasa'|'ist', doc: object, cadastro: object, pdfs: Array<{nome: string, folha: Element}>, aoEnviar: Function}} p
  */
 export async function enviarInformativo({ tipo, qual, doc, cadastro, pdfs, aoEnviar }) {
-  const aviso = toast('info', 'Preparando o e-mail…', 'Gerando o PDF para anexar.', 60000);
-  let situacao;
-  const anexos = [];
-  try {
-    situacao = await api.get('/seguranca/envio');
-    for (const p of pdfs) {
-      const blob = await gerarPdf([p.folha]);
-      anexos.push(await api.enviarArquivo(new File([blob], p.nome, { type: 'application/pdf' })));
-    }
-  } catch (e) {
-    aviso?.remove?.();
-    for (const a of anexos) api.del(`/arquivos/${a.id}`).catch(() => {});
-    return toast('error', 'Não foi possível preparar o e-mail', e.message, 8000);
-  }
-  aviso?.remove?.();
   const email = emailInformativo(qual, doc, cadastro);
+  const anexos = [];
   let enviado = false;
-  const descartar = () => { if (!enviado) for (const a of anexos) api.del(`/arquivos/${a.id}`).catch(() => {}); };
+  let cancelado = false;
+  const descartar = () => { if (!enviado) for (const a of anexos) if (a) api.del(`/arquivos/${a.id}`).catch(() => {}); };
+
   const linha = (rotulo, conteudo) => h('div', { class: 'envio-linha' }, h('b', {}, rotulo), h('div', {}, conteudo));
+  const de = h('span', { class: 'muted' }, '…');
+  const aviso = h('div');
+  const itensAnexo = pdfs.map((p) => h('span', { class: 'envio-anexo-preparando', title: 'Preparando o PDF' }, h('span', { class: 'spin' }), p.nome));
+  let pedidoSituacao;
+  let preparo;
+  let bloqueado = false; // envio não configurado ou anexo com erro: o botão não religa
+  const botaoEnviar = h('button', { class: 'btn primary', type: 'button' }, 'Enviar e-mail');
+  botaoEnviar.addEventListener('click', async () => {
+    botaoEnviar.disabled = true;
+    montar(botaoEnviar, h('span', { class: 'spin' }), 'Enviando…');
+    let r = null;
+    try {
+      const [situacao] = await Promise.all([pedidoSituacao, preparo]);
+      if (situacao.modo && !cancelado) r = await api.post(`/seguranca/${tipo}/${doc.id}/enviar`, { qual, anexos: anexos.map((a) => a.id) });
+    } catch (e) {
+      if (!cancelado && !bloqueado) toast('error', 'O e-mail não foi enviado', e.message, 10000);
+    }
+    if (!r) {
+      montar(botaoEnviar, 'Enviar e-mail');
+      botaoEnviar.disabled = bloqueado;
+      return;
+    }
+    enviado = true;
+    m.fechar();
+    toast('success', r.modo === 'arquivo' ? 'E-mail gravado (modo demonstração)' : 'E-mail enviado',
+      r.modo === 'arquivo' ? `Arquivo: data/exemplo/emails-enviados/${r.arquivo}` : `Para ${r.para}${r.copia.length ? ` com cópia para ${r.copia.length} e-mail(s)` : ''}.`, 9000);
+    aoEnviar?.(r.envios);
+  });
+
   const m = abrirModal({
     titulo: `Enviar ${NOMES[qual]} por e-mail`,
     largo: true,
-    aoFechar: descartar,
+    aoFechar: () => { cancelado = true; descartar(); },
     conteudo: h('div', { class: 'stack' },
-      !situacao.modo ? alerta('error', 'Envio automático não configurado no servidor', 'Configure EMAIL_ENVIO (graph ou smtp) e EMAIL_REMETENTE. Enquanto isso, use "Gerar PDF".')
-        : situacao.modo === 'arquivo' ? alerta('info', 'Modo demonstração', 'O e-mail não é enviado de verdade: fica salvo, com o PDF, em data/exemplo/emails-enviados (abra o .eml no Outlook para ver).')
-          : null,
+      aviso,
       h('div', { class: 'envio-resumo' },
-        linha('De', situacao.remetente ?? '—'),
+        linha('De', de),
         linha('Para', email.para),
         linha('Cópia', email.copia.length ? email.copia.join(', ') : h('span', { class: 'muted' }, 'Nenhum e-mail cadastrado na obra (Cadastro de obras → Cadastrar e-mails).')),
         linha('Assunto', email.assunto),
-        linha('Anexo(s)', h('div', { class: 'envio-anexos' }, anexos.map((a) => h('a', { href: api.urlArquivo(a.id), target: '_blank', rel: 'noopener' }, icone('texto', { tamanho: 14 }), a.nome))))),
+        linha('Anexo(s)', h('div', { class: 'envio-anexos' }, itensAnexo))),
       h('details', { class: 'envio-corpo' }, h('summary', {}, 'Ver o corpo do e-mail'), h('pre', {}, email.corpo))),
-    acoes: [
-      h('button', { class: 'btn ghost', type: 'button', onclick: () => m.fechar() }, 'Cancelar'),
-      (() => {
-        const b = botaoAcao('Enviar e-mail', async () => {
-          try {
-            const r = await api.post(`/seguranca/${tipo}/${doc.id}/enviar`, { qual, anexos: anexos.map((a) => a.id) });
-            enviado = true;
-            m.fechar();
-            toast('success', r.modo === 'arquivo' ? 'E-mail gravado (modo demonstração)' : 'E-mail enviado',
-              r.modo === 'arquivo' ? `Arquivo: data/exemplo/emails-enviados/${r.arquivo}` : `Para ${r.para}${r.copia.length ? ` com cópia para ${r.copia.length} e-mail(s)` : ''}.`, 9000);
-            aoEnviar?.(r.envios);
-          } catch (e) {
-            toast('error', 'O e-mail não foi enviado', e.message, 10000);
-          }
-        }, 'btn primary');
-        b.disabled = !situacao.modo;
-        return b;
-      })(),
-    ],
+    acoes: [h('button', { class: 'btn ghost', type: 'button', onclick: () => m.fechar() }, 'Cancelar'), botaoEnviar],
   });
+
+  const bloquear = (alertaEl) => {
+    bloqueado = true;
+    montar(aviso, alertaEl);
+    botaoEnviar.disabled = true;
+  };
+
+  pedidoSituacao = api.get('/seguranca/envio').then((situacao) => {
+    montar(de, situacao.remetente ?? '—');
+    de.className = situacao.remetente ? '' : 'muted';
+    if (!situacao.modo) {
+      bloquear(alerta('error', 'Envio automático não configurado no servidor', 'Configure EMAIL_ENVIO (graph ou smtp) e EMAIL_REMETENTE. Enquanto isso, use "Gerar PDF".'));
+    } else if (situacao.modo === 'arquivo') {
+      montar(aviso, alerta('info', 'Modo demonstração', 'O e-mail não é enviado de verdade: fica salvo, com o PDF, em data/exemplo/emails-enviados (abra o .eml no Outlook para ver).'));
+    }
+    return situacao;
+  });
+
+  // PDFs gerados um a um (usam a mesma área de desenho); cada um sobe assim que fica pronto, sem esperar o próximo.
+  preparo = (async () => {
+    const subidas = [];
+    for (const [i, p] of pdfs.entries()) {
+      if (cancelado) break;
+      const blob = await gerarPdf([p.folha]);
+      subidas.push(api.enviarArquivo(new File([blob], p.nome, { type: 'application/pdf' })).then((a) => {
+        anexos[i] = a;
+        if (cancelado) return api.del(`/arquivos/${a.id}`).catch(() => {});
+        itensAnexo[i].replaceWith(h('a', { href: api.urlArquivo(a.id), target: '_blank', rel: 'noopener' }, icone('texto', { tamanho: 14 }), a.nome));
+        return null;
+      }));
+    }
+    await Promise.all(subidas);
+  })();
+  preparo.catch((e) => {
+    if (cancelado) return;
+    for (const item of itensAnexo) if (item.isConnected) item.classList.add('falhou');
+    bloquear(alerta('error', 'Não foi possível preparar o anexo', `${e.message} Feche e tente de novo, ou use "Gerar PDF".`));
+  });
+  pedidoSituacao.catch((e) => bloquear(alerta('error', 'Não foi possível consultar o envio no servidor', e.message)));
+}
+
+/** Carrega antes as bibliotecas e o estilo do PDF (tela da IAT/IST aberta), para o envio não esperar por eles. */
+export function prepararPdf() {
+  Promise.all([carregarScript('vendor/html2canvas.min.js'), carregarScript('vendor/jspdf.umd.min.js'), garantirEstilo()]).catch(() => {});
 }
 
 /** Histórico de envios por e-mail do informativo. */

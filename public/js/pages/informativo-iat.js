@@ -12,7 +12,7 @@ import {
   metrocasaDaIat, metrocasaEfetivo, normalizarIat, pendenciasIat, pendenciasMetrocasa, RODAPE_IAT, RODAPE_METROCASA, SECOES_IAT, SIM_NAO,
 } from '../domain/informativos.js';
 import { alerta, botaoAcao, campo, carregando, confirmar, toast } from '../ui/componentes.js';
-import { baixarPdf, enviarInformativo, historicoEnvios } from '../ui/envio-informativo.js';
+import { baixarPdf, enviarInformativo, historicoEnvios, prepararPdf } from '../ui/envio-informativo.js';
 import { folhaIat, folhaMetrocasa } from '../ui/impressao-informativos.js';
 import { anexoPdf, campoInformativo, controleField, espacoFoto, grade, numeroFormatado, secao, subAbas } from '../ui/informativo.js';
 import { icone } from '../ui/icones.js';
@@ -20,6 +20,7 @@ import { icone } from '../ui/icones.js';
 const cadastrosDaObra = () => estado.cadastros().filter((c) => c.id).sort((a, b) => a.obra.localeCompare(b.obra, 'pt-BR'));
 
 export async function renderInformativoIat(alvo, { id } = {}) {
+  prepararPdf(); // bibliotecas do PDF já carregadas quando o usuário for gerar ou enviar
   const cadastros = cadastrosDaObra();
   montar(alvo, carregando(6));
   let doc;

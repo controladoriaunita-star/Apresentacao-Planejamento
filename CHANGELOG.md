@@ -5,7 +5,23 @@ Cada versão só é fechada com `npm run verificar` passando.
 | Ambiente | Versão |
 |---|---|
 | Produção | v36.4 (publicada em 25/11/2026) |
-| Dev (local) | v40.1 (em validação) |
+| Dev (local) | v40.2 (em validação) |
+
+## v40.2 — 27/11/2026 — Envio da IAT/IST por e-mail: anexos grandes e confirmação na hora
+
+- **Anexos grandes**: o Microsoft Graph recusa pedidos acima de 4 MB, e os PDFs com fotos (principalmente a IST, com
+  2 PDFs) passavam disso — o e-mail não saía. Até 3 MB no total continua o `sendMail` de antes; acima, o servidor cria
+  o rascunho, sobe cada PDF por **sessão de upload** (em partes) e envia (fica em Itens Enviados). Esse caminho exige a
+  permissão de aplicativo **Mail.ReadWrite** além da Mail.Send; sem ela, a mensagem de erro diz qual falta.
+- O token da Microsoft é reaproveitado até perto de expirar (antes era pedido a cada envio).
+- **Confirmação na hora**: "Enviar por e-mail" abre direto a tela com De, Para, Cópia, Assunto e corpo, sem o aviso
+  "Gerando o PDF para anexar". Os PDFs são gerados e enviados ao armazenamento enquanto o usuário confere; cada anexo
+  aparece "preparando" e vira link quando fica pronto. Na IST, cada PDF sobe assim que fica pronto. "Enviar e-mail"
+  mostra "Enviando…" e, se clicado antes dos anexos, envia assim que eles ficam prontos.
+- As bibliotecas do PDF começam a carregar ao abrir a IAT/IST, e não no clique.
+- Nada muda no conteúdo do PDF, nos destinatários, nas pendências nem no histórico de envios.
+- Testes: Graph simulado (token reaproveitado, anexo grande em partes, falta de Mail.ReadWrite) e tela
+  (`tests/e2e/06-envio-email.spec.cjs`, com `EMAIL_ENVIO=arquivo`).
 
 ## v40.1 — 26/11/2026 — Papel Segurança cadastra os e-mails das obras
 
