@@ -24,6 +24,27 @@ const PENDENCIAS = { iat: (d) => pendenciasIat(d), metrocasa: (d, c) => pendenci
 const NOMES_ENVIO = { iat: 'IAT', metrocasa: 'IAT Metrocasa', ist: 'IST' };
 
 const escapar = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+/**
+ * Corpo no layout do PDF (v40.5): a folha montada no navegador, com estilos inline. Limpa o que não é de e-mail
+ * (scripts, estilos, iframes, eventos, javascript:) — vem do navegador de quem envia, da caixa dele mesmo.
+ */
+const LIMITE_HTML = 2 * 1024 * 1024;
+const TAGS_PROIBIDAS = 'script|style|iframe|object|embed|link|meta|base|form';
+function limparHtml(html) {
+  return String(html)
+    .replace(new RegExp(`<(${TAGS_PROIBIDAS})\\b[\\s\\S]*?<\\/\\1\\s*>`, 'gi'), '')
+    .replace(new RegExp(`<\\/?(${TAGS_PROIBIDAS})\\b[^>]*>`, 'gi'), '')
+    .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/javascript:/gi, '');
+}
+
+/** Saudação e a frase do anexo (as linhas 1 e 3 do corpo em texto) + a(s) folha(s). */
+function corpoComFolhas(texto, folhas) {
+  const [saudacao, , frase] = texto.split('\n');
+  return '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.45">'
+    + `<p style="margin:0 0 4px">${escapar(saudacao)}</p><p style="margin:0 0 16px">${escapar(frase)}</p>${limparHtml(folhas)}</div>`;
+}
+
 /** Corpo HTML a partir do texto da ficha: títulos de seção (em maiúsculas) em negrito, "Rótulo: valor" com rótulo em negrito. */
 function corpoHtml(texto) {
   const linhas = texto.split('\n').map((l) => {
@@ -100,7 +121,7 @@ export function registrarInformativos(rotas, { iat, ist, cadastro, arquivos, ema
     rotas.adicionar('POST', `${base}/:id/enviar`, { permissao: 'editarSeguranca' }, async ({ req, res, params, usuario }) => {
       const doc = await colecao.obter(params.id);
       if (!doc) throw erro(404, `${def.nome} não encontrada.`);
-      const { qual = tipo, anexos = [] } = await lerJson(req);
+      const { qual = tipo, anexos = [], html = null } = await lerJson(req, LIMITE_HTML + 64 * 1024);
       const obra = await cadastro.obter(doc.obraId);
       if (!def.envios.includes(qual) || (qual === 'metrocasa' && !ehMetrocasa(obra))) throw erro(400, 'Envio inválido para este informativo.');
       const faltam = PENDENCIAS[qual](doc, obra);
@@ -115,7 +136,10 @@ export function registrarInformativos(rotas, { iat, ist, cadastro, arquivos, ema
         if (!arq || arq.registro.tipo !== 'application/pdf') throw erro(400, 'Anexo não encontrado ou não é PDF.');
         arquivosAnexos.push({ nome: arq.registro.nome, tipo: 'application/pdf', dados: arq.dados });
       }
-      const resultado = await email.enviar({ ...mensagem, de: usuario.email, texto: mensagem.corpo, html: corpoHtml(mensagem.corpo), anexos: arquivosAnexos });
+      // Corpo no layout do PDF quando a tela manda a folha; senão, a ficha em texto (como antes).
+      const comFolhas = typeof html === 'string' && html.trim() && html.length <= LIMITE_HTML;
+      const corpo = comFolhas ? corpoComFolhas(mensagem.corpo, html) : corpoHtml(mensagem.corpo);
+      const resultado = await email.enviar({ ...mensagem, de: usuario.email, texto: mensagem.corpo, html: corpo, anexos: arquivosAnexos });
       const de = email.situacao(usuario.email).remetente;
       const envio = { qual, em: new Date().toISOString(), por: usuario.email, de, modo: resultado.modo, para: mensagem.para, copia: mensagem.copia, assunto: mensagem.assunto, anexos: anexos.map(String) };
       const salvo = await colecao.atualizar(params.id, { envios: [...(doc.envios ?? []), envio] });

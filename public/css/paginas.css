@@ -646,6 +646,7 @@ body.sem-rolagem { overflow: hidden; }
 .envio-anexo-preparando .spin { width: 12px; height: 12px; }
 .envio-anexo-preparando.falhou { color: var(--error); }
 .envio-anexo-preparando.falhou .spin { display: none; }
+.envio-previa { max-height: 420px; overflow: auto; padding: 10px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: 10px; }
 .envio-corpo pre { white-space: pre-wrap; font: inherit; font-size: 13px; max-height: 260px; overflow: auto; padding: 10px; background: var(--ink-50); border-radius: 10px; }
 
 /* IAT e IST (Administração → Segurança do Trabalho → Nova IAT / Nova IST) */

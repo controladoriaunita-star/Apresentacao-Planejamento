@@ -101,6 +101,56 @@ for (const store of ['local', 'supabase']) {
       assert.equal((await dev('GET', `/api/arquivos/${pdf.dados.id}`)).status, 404, 'excluir a IAT apaga os PDFs enviados');
     });
 
+    test('papel Segurança: sobe o PDF, vê e apaga só os próprios arquivos e envia a IAT com o corpo no layout do PDF', async () => {
+      const email = 'seg.envio@unita.com.br';
+      const senha = 'senha-forte-9';
+      const seg = cliente(srv.base, srv.fetchExterno);
+      if (store === 'local') {
+        assert.equal((await dev('POST', '/api/usuarios', { nome: 'Seg', email, papel: 'seguranca', senha })).status, 201);
+        assert.equal((await seg('POST', '/api/auth/login', { email, senha })).status, 200);
+      } else {
+        assert.equal((await dev('POST', '/api/usuarios', { nome: 'Seg', email, papel: 'seguranca' })).status, 201);
+        const convite = srv.supabase.emails.at(-1);
+        assert.equal((await seg('POST', '/api/auth/definir-senha', { token: convite.token, senha })).status, 200);
+      }
+      await dev('PUT', `/api/obras/cadastro/${obra.id}/emails`, { emails: ['tst@unita.com.br'] });
+
+      // Arquivo de apresentação (enviado pelo Dev, fora da Segurança): o papel Segurança não vê nem apaga.
+      const doDev = await enviarArquivo(dev, srv.fetchExterno, new Uint8Array(Buffer.from('png')), 'image/png', 'fachada.png');
+      assert.equal((await seg('GET', `/api/arquivos/${doDev.dados.id}`)).status, 404);
+      assert.equal((await seg('DELETE', `/api/arquivos/${doDev.dados.id}`)).status, 403);
+
+      // O próprio: sobe, vê e apaga.
+      const pdf = await enviarArquivo(seg, srv.fetchExterno, new Uint8Array(Buffer.from('%PDF-1.4 seg')), 'application/pdf', 'IAT 01.pdf');
+      assert.equal(pdf.status, 201, JSON.stringify(pdf.dados));
+      assert.notEqual((await seg('GET', `/api/arquivos/${pdf.dados.id}`)).status, 404);
+      const descartado = await enviarArquivo(seg, srv.fetchExterno, new Uint8Array(Buffer.from('%PDF-1.4 x')), 'application/pdf', 'x.pdf');
+      assert.equal((await seg('DELETE', `/api/arquivos/${descartado.dados.id}`)).status, 200);
+
+      // Foto da IAT enviada pelo Dev: o papel Segurança vê (é arquivo da Segurança).
+      const fotoDev = await enviarArquivo(dev, srv.fetchExterno, new Uint8Array(Buffer.from('png')), 'image/png', 'foto.png');
+      const iat = (await seg('POST', '/api/seguranca/iat', {
+        obraId: obra.id, razaoSocial: 'Empreiteira X', nomeAcidentado: 'Fulano de Tal', cargoFuncao: 'Pedreiro', dataAcidente: '2026-11-20',
+        horaAcidente: '09:30', tipoAcidente: 'Típico', localAcidente: 'Torre A', parteCorpo: '753030000', agenteCausador: '302010200',
+        situacaoGeradora: '200004300', observacoes: 'Bateu a cabeça na viga.', duracaoTratamentoDias: 2, fotos: [fotoDev.dados.id],
+      })).dados;
+      assert.notEqual((await seg('GET', `/api/arquivos/${fotoDev.dados.id}`)).status, 404);
+
+      // Corpo no layout do PDF: a folha vai no corpo; script, iframe e eventos são removidos.
+      const folha = '<table width="718" style="border-collapse:collapse"><tr><td style="background-color:rgb(0, 80, 120)" onclick="x()">I- DADOS DE IDENTIFICAÇÃO</td></tr></table>'
+        + '<script>alert(1)</script><iframe src="https://exemplo"></iframe>';
+      const r = await seg('POST', `/api/seguranca/iat/${iat.id}/enviar`, { qual: 'iat', anexos: [pdf.dados.id], html: folha });
+      assert.equal(r.status, 200, JSON.stringify(r.dados));
+      assert.deepEqual([r.dados.de, r.dados.para], [email, ['tst@unita.com.br']]);
+      const eml = readFileSync(join(srv.config.dataDir, 'emails-enviados', r.dados.arquivo), 'utf8').replace(/=\r?\n/g, '');
+      assert.match(eml, /<table width=3D"718"/);
+      assert.match(eml, /background-color:rgb\(0, 80, 120\)/);
+      assert.doesNotMatch(eml, /<script|<iframe|onclick/i);
+      assert.match(eml, /Prezados,/);
+      await dev('DELETE', `/api/seguranca/iat/${iat.id}`);
+      await dev('DELETE', `/api/arquivos/${doDev.dados.id}`);
+    });
+
     test('e-mails da obra: só válidos, sem repetição, preservados ao editar o cadastro', async () => {
       assert.equal((await dev('PUT', `/api/obras/cadastro/${obra.id}/emails`, { emails: ['ok@unita.com.br', 'invalido'] })).status, 400);
       let r = await dev('PUT', `/api/obras/cadastro/${obra.id}/emails`, { emails: [' Eng@Unita.com.br ', 'eng@unita.com.br', 'adm@unita.com.br'] });
