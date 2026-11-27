@@ -74,8 +74,8 @@ export function registrarSeguranca(rotas, { acidentes, cadastro }) {
    * carrega os dados das apresentações (orçamentos, curvas etc.).
    */
   rotas.adicionar('GET', '/api/seguranca/obras', { permissao: 'editarSeguranca' }, async ({ req, res }) => {
-    const obras = (await cadastros()).map(({ id, chave, obra, cliente, sistemaEstrutural, engenharia }) => ({
-      id, chave, obra, cliente: cliente ?? null, sistemaEstrutural: sistemaEstrutural ?? null, engenharia: engenharia ?? null,
+    const obras = (await cadastros()).map(({ id, chave, obra, cliente, sistemaEstrutural, engenharia, emails }) => ({
+      id, chave, obra, cliente: cliente ?? null, sistemaEstrutural: sistemaEstrutural ?? null, engenharia: engenharia ?? null, emails: emails ?? [],
     }));
     enviarJson(req, res, 200, obras);
   });

@@ -11,8 +11,10 @@ import {
   CABECALHOS_MODELO, CATEGORIAS_QUASE, dadosDaObra, ehPlanilhaQuase, FASES_OBRA, PARTES_CORPO, pendenciasDaObra, SIGLA_QUASE, TIPOS_ACIDENTE,
   TIPOS_REGISTRO, validarAcidente,
 } from '../domain/seguranca.js';
+import { pode } from '../domain/permissoes.js';
 import { buscaObra } from '../ui/busca-obra.js';
 import { abrirModal, alerta, badge, botaoAcao, campo, carregando, confirmar, toast, vazio } from '../ui/componentes.js';
+import { abrirEmailsDasObras } from '../ui/emails-obra.js';
 import { filtroExcel } from '../ui/filtro-excel.js';
 import { icone } from '../ui/icones.js';
 import { baixarPlanilha, linhasComoObjetos } from '../ui/planilha.js';
@@ -36,6 +38,8 @@ export async function renderAdminSeguranca(alvo) {
   const incompletos = cadastros.filter((c) => pendenciasDaObra(c).length);
   const resultado = h('div', { class: 'seg-historico' });
 
+  // Depois de salvar os e-mails de uma obra: recarrega as obras (papel Segurança só tem o resumo de /seguranca/obras).
+  const recarregarObras = () => (pode(estado.usuario?.papel, 'ver') ? estado.carregarDados() : estado.carregarObrasSeguranca());
   const recarregar = () => (abaAtual === 'ocorrencias' ? carregarTabela(resultado, cadastros, recarregar) : carregarInformativos(resultado, abaAtual));
   const abas = h('div');
   const desenharAbas = () => montar(abas, h('div', { class: 'seg-botoes', role: 'tablist', 'aria-label': 'Registros' },
@@ -54,6 +58,7 @@ export async function renderAdminSeguranca(alvo) {
         h('button', { class: 'btn secondary', type: 'button', onclick: () => abrirImportacao(cadastros, recarregar, { quase: true }) }, icone('enviar', { tamanho: 16 }), 'Importar quase acidentes'),
         h('a', { class: 'btn secondary', href: '#/admin/seguranca-iat/nova' }, 'Nova IAT'),
         h('a', { class: 'btn secondary', href: '#/admin/seguranca-ist/nova' }, 'Nova IST'),
+        h('button', { class: 'btn ghost', type: 'button', onclick: () => abrirEmailsDasObras(cadastros, recarregarObras) }, 'E-mails das obras'),
         h('button', { class: 'btn primary', type: 'button', onclick: () => abrirFormAcidente({}, cadastros, recarregar) }, 'Nova Ocorrência'))),
     cadastros.length ? null : alerta('warning', 'Nenhuma obra no Cadastro de obras', 'Cadastre as obras em Administração → Cadastro de obras antes de registrar acidentes.'),
     incompletos.length ? alerta('info', `${incompletos.length} obra(s) sem Cliente ou Sistema estrutural no Cadastro de obras`,

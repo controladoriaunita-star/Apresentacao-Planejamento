@@ -23,6 +23,16 @@ Cada versão só é fechada com `npm run verificar` passando.
 - Testes: Graph simulado (token reaproveitado, anexo grande em partes, falta de Mail.ReadWrite) e tela
   (`tests/e2e/06-envio-email.spec.cjs`, com `EMAIL_ENVIO=arquivo`).
 
+## v40.1 — 26/11/2026 — Papel Segurança cadastra os e-mails das obras
+
+- Segurança do Trabalho ganhou o botão **E-mails das obras**: lista das obras (com busca) e a contagem de e-mails de
+  cada uma; "Cadastrar e-mails" abre o mesmo diálogo do Cadastro de obras. Assim o papel **Segurança**, que não abre o
+  Cadastro de obras, mantém quem recebe a IAT e a IST em cópia.
+- `PUT /api/obras/cadastro/:id/emails` passa a exigir `editarSeguranca` (Dev, Planejamento e Segurança) em vez de
+  `editarConteudo` (Dev e Planejamento). `GET /api/seguranca/obras` devolve também `emails`.
+- O diálogo de e-mails saiu de `pages/admin-cadastro.js` para `ui/emails-obra.js` (o Cadastro de obras não muda).
+- Testes: API (Segurança grava, Viewer não) e tela (papel Segurança cadastra um e-mail). Sem mudança de banco.
+
 ## v40 — 26/11/2026 — Segurança do Trabalho: Pirâmide de Bird, quase acidentes, IAT e IST
 
 Traz para o app as versões v23 a v26 do módulo Segurança do Trabalho feitas à parte (repositório

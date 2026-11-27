@@ -183,9 +183,15 @@ for (const store of ['local', 'supabase']) {
       // Pode: obras resumidas (sem orçamento), acidentes, indicadores, cadastrar acidente e trocar a própria senha.
       let r = await seg('GET', '/api/seguranca/obras');
       assert.equal(r.status, 200);
-      assert.deepEqual(Object.keys(r.dados[0]).sort(), ['chave', 'cliente', 'engenharia', 'id', 'obra', 'sistemaEstrutural']);
+      assert.deepEqual(Object.keys(r.dados[0]).sort(), ['chave', 'cliente', 'emails', 'engenharia', 'id', 'obra', 'sistemaEstrutural']);
       assert.equal((await seg('GET', '/api/seguranca/acidentes')).status, 200);
       assert.equal((await seg('GET', '/api/seguranca/indicadores')).status, 200);
+      // E-mails da obra (cópia da IAT/IST): o papel Segurança grava, mesmo sem acesso ao Cadastro de obras.
+      const obraId = r.dados[0].id;
+      const emails = await seg('PUT', `/api/obras/cadastro/${obraId}/emails`, { emails: ['tst@unita.com.br'] });
+      assert.equal(emails.status, 200, JSON.stringify(emails.dados));
+      assert.deepEqual((await seg('GET', '/api/seguranca/obras')).dados.find((o) => o.id === obraId).emails, ['tst@unita.com.br']);
+      assert.equal((await seg('PUT', `/api/obras/cadastro/${obraId}/emails`, { emails: [] })).status, 200);
       r = await seg('POST', '/api/seguranca/acidentes', acidente({ nomeAcidentado: 'Fulano da Segurança', data: '2026-03-02' }));
       assert.equal(r.status, 201, JSON.stringify(r.dados));
       assert.equal((await seg('POST', '/api/seguranca/importacao/analisar', { linhas: [] })).status, 200);
@@ -208,6 +214,7 @@ for (const store of ['local', 'supabase']) {
         assert.equal((await ver('POST', '/api/auth/login', { email: 'ver-seg@unita.com.br', senha })).status, 200);
         assert.equal((await ver('GET', '/api/seguranca/acidentes')).status, 200);
         assert.equal((await ver('GET', '/api/seguranca/obras')).status, 403);
+        assert.equal((await ver('PUT', `/api/obras/cadastro/${obraId}/emails`, { emails: [] })).status, 403);
         assert.equal((await ver('POST', '/api/seguranca/acidentes', acidente())).status, 403);
       }
     });
